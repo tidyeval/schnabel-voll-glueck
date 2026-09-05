@@ -55,21 +55,39 @@ export function fish(c, x, y, scale = 1, golden = false, t = 0) {
   if (golden) { c.strokeStyle = '#fff0bd'; c.lineWidth = 1.7; c.beginPath(); c.moveTo(-4, -19); c.lineTo(-4, -27); c.moveTo(-8, -23); c.lineTo(0, -23); c.stroke(); }
   c.restore();
 }
+function pelicanWing(c, lift, fold, back) {
+  c.save(); c.translate(back ? -14 : -10, back ? -5 : 0);
+  if (back) c.scale(.88, .9);
+  const elbow = -23 + fold * 6, tip = -57 + fold * 18;
+  const ey = -lift * 24, ty = -lift * 57;
+  path(c, back ? '#dce7d3' : gradient(c, -55, 55, '#fffbed', '#d1dfca'), p => {
+    p.moveTo(2,-4); p.quadraticCurveTo(-9,-11,elbow,ey-7);
+    p.quadraticCurveTo(tip+13,ty-7,tip,ty);
+    p.quadraticCurveTo(tip-4,ty+5,tip+8,ty+7);
+    p.quadraticCurveTo(tip-1,ty+13,tip+14,ty+13);
+    p.quadraticCurveTo(tip+8,ty+20,tip+23,ty+17);
+    p.quadraticCurveTo(elbow-2,ey+15,-7,10);p.quadraticCurveTo(3,7,2,-4);
+  },back?'#a4b9a3':'#87957b',1.1);
+  for(let i=0;i<3;i++) path(c,null,p=>{p.moveTo(elbow+8,ey+3+i*2);p.quadraticCurveTo(tip+25,ty+7+i*3,tip+9+i*6,ty+6+i*5)},'#b7cbb2',1);
+  c.restore();
+}
 export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = false, happy = false, gulp = 0, breach = 0, cargo = 0, breath = WORLD.breath, reducedMotion = false) {
   c.save(); c.translate(x, y); c.rotate(tilt); c.scale(scale, scale);
   const fullness = cargo / WORLD.capacity;
   const lowAir = wet && breath < 3, urgency = lowAir ? (3 - breath) / 3 : 0;
   const wobble = Math.sin(t * 6) * fullness * 3;
   const bite = gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : 0;
-  const flap = Math.sin(t * (wet ? 7 : 11 + fullness * 4)) * (wet ? .15 : 1) + breach;
+  // Shared, stable phase: brisk downstroke and slower, folded recovery.
+  const cycle = (t * 1.3) % 1, down = cycle < .42;
+  const progress = down ? cycle / .42 : (cycle - .42) / .58;
+  const lift = Math.cos(progress * Math.PI) * (down ? 1 : -1);
+  const fold = down ? 0 : Math.sin(progress * Math.PI);
+  const flap = wet ? Math.sin(t * 7) * .15 : lift;
   const outline = '#786f5d';
   // A soft painted shadow and separated tail feathers keep Pip readable over sea and sky.
   ellipse(c, -5, 17, 47, 25, '#315e5a22', -.12);
   path(c, '#d8e3ce', p => { p.moveTo(-39, 7); p.lineTo(-68, -4); p.quadraticCurveTo(-62, 10, -39, 20); p.moveTo(-40, 11); p.lineTo(-65, 17); p.quadraticCurveTo(-53, 25, -31, 22); }, outline, 1.2);
-  if (!wet) {
-    path(c, '#e8edda', p => { p.moveTo(-22, -4); p.bezierCurveTo(-49, -17, -70, -35 - flap * 43, -46, -26 - flap * 42); p.quadraticCurveTo(-25, -23, 2, 2); p.closePath(); }, outline, 1.2);
-    for (let i = 0; i < 3; i++) path(c, null, p => { p.moveTo(-48 + i * 8, -20 - flap * (29 - i * 5)); p.quadraticCurveTo(-35 + i * 5, -13, -20 + i * 7, -5); }, '#c8d7c2', 1.2);
-  }
+  if (!wet) pelicanWing(c, lift, fold, true);
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#d9955c'; c.lineWidth = 5; c.lineCap = 'round';
   for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(-17 + i * 17, 27); c.lineTo(-24 + i * 19, 36 + flap * 2); c.stroke();
@@ -97,11 +115,12 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   else { ellipse(c, 25, -46, 4.4, 5.4, '#294b49'); ellipse(c, 26.4, -48.2, 1.3, 1.5, '#fffdf1'); }
   if (!lowAir) path(c, null, p => { p.moveTo(18, -53); p.quadraticCurveTo(25, -57, 32, -52); }, '#aa9271', 1.1);
   ellipse(c, 21, -35, 5.6, 3.3, '#e8aa94');
-  c.save(); if (wet) { c.translate(-12, 5); c.scale(.8, .6); }
-  else { c.translate(-30, 0); c.rotate(-.35 - flap * 1.05); c.scale(1, 1.65); c.translate(30, 0); }
+  if (wet) {
+  c.save(); c.translate(-12, 5); c.scale(.8, .6);
   path(c, gradient(c, 0, 35, '#f3f5e4', '#ccdcca'), p => { p.moveTo(-35, -3); p.bezierCurveTo(-16, -7, 0, 7, -5, 22); p.quadraticCurveTo(-14, 32, -23, 26); p.quadraticCurveTo(-37, 25, -43, 12); p.quadraticCurveTo(-48, 3, -35, -3); }, outline, 1);
   for (let i = 0; i < 4; i++) path(c, null, p => { p.moveTo(-36 + i * 8, 10); p.quadraticCurveTo(-31 + i * 8, 19, -25 + i * 7, 21); }, i === 3 ? '#b4c9b7' : '#c1d3c0', 1.1);
   c.restore();
+  } else pelicanWing(c, lift, fold, false);
   if (wet) {
     for (let i = 0; i < 3; i++) ellipse(c, -36 + i * 12, -4 + Math.sin(t * 5 + i) * 2, 1.4, 3, '#d8f2deaa', -.2);
   }
