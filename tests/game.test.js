@@ -331,3 +331,14 @@ test('organic terrain collision follows the visible corner and retains the passa
   assert.equal(hitsTerrain({x:100,y:313},island),true);
   assert.equal(hitsTerrain({x:100,y:530},{kind:'reef',x:100}),false);
 });
+
+test('successive fishermen keep four distinct stable looks', () => {
+  const g=createGame();
+  for(let i=0;i<5;i++) {
+    g.wave=0;g.items=[];g.distance=g.nextEncounter;
+    step(g,.01,false);
+    const boat=g.items.find(item=>item.kind==='boat');
+    assert.equal(boat.look,i%4);
+    step(g,.01,false);assert.equal(boat.look,i%4);
+  }
+});

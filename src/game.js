@@ -98,7 +98,7 @@ function encounter(game) {
       : [430,460,500,535,550,540,510,475,440,415,395];
   const offset = kind === 'calm' ? game.random() * 35 : 0;
   depths.forEach((y, i) => game.items.push({ kind: 'fish', x: 540 + i * 64, y: y + offset, golden: false, route: game.wave }));
-  if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
+  if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false, look: game.boats++ % 4 });
   for (let i = 0; i < swimmers; i++) {
     const y = i === 1 ? 440 : 660;
     game.items.push({ kind: i === 1 && game.wave % 4 !== 0 ? 'turtle' : 'shark', x: 880 + (i >= 2 ? 140 + (i - 2) * 90 : 0), y, baseY: y, lane: i === 1 ? 'shallow' : 'deep' });
@@ -133,7 +133,7 @@ export function createGame(random = Math.random) {
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
-    nextEncounter: 520, wave: 0, ended: false,
+    nextEncounter: 520, wave: 0, boats: 0, ended: false,
   };
 }
 

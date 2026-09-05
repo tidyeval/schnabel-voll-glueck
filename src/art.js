@@ -153,7 +153,25 @@ function turtle(c, item, t) {
   ellipse(c, -13, 21, 25, 10, '#93bd96', -.6 - paddle);
   c.restore();
 }
+function fishWing(c, item, t, back) {
+  c.save(); c.translate(item.x + (back ? 3 : -2), item.y + (back ? -3 : 2));
+  c.rotate((back ? -.25 : .2) + Math.sin(t * 7 + item.x * .008) * (back ? .35 : -.5));
+  c.scale(back ? .85 : 1, back ? 1 : -1);
+  path(c, back ? '#d5e9df' : '#fff4da', p => {
+    p.moveTo(0,0); p.bezierCurveTo(3,-14,20,-34,30,-29);
+    p.quadraticCurveTo(34,-26,23,-18); p.quadraticCurveTo(34,-20,28,-13);
+    p.quadraticCurveTo(24,-8,17,-7); p.quadraticCurveTo(24,-7,19,-2); p.quadraticCurveTo(9,5,0,0);
+  }, '#7fa79b', 1.1);
+  for(let i=0;i<3;i++) path(c,null,p=>{p.moveTo(4+i*3,-2-i*3);p.quadraticCurveTo(14,-10-i*3,23,-13-i*5)},'#b9cfbd',.9);
+  c.restore();
+}
 function boat(c, item, water, t) {
+  const [coat, shade, hull, hullShade] = [
+    ['#efd08a','#dca956','#d48b64','#aa674e'],
+    ['#a6c9bd','#6a9e94','#91b8cb','#567f99'],
+    ['#e9aaa0','#c77f78','#b5c797','#7d956d'],
+    ['#b9b4d5','#8d88b1','#e4b779','#b78a54'],
+  ][item.look ?? 0];
   const age = item.cast, windup = clamp(age / .85, 0, 1), throwing = clamp((age - .85) / .6, 0, 1);
   const hauling = age >= 2.55, resting = age < 0 || age >= 3.25;
   const bob = Math.sin(t * 2) * 2;
@@ -187,7 +205,7 @@ function boat(c, item, water, t) {
   ellipse(c, 0, 24, 73, 7, '#28697120');
   // Bow, cabin-side planks and an open deck give the little boat depth.
   path(c, '#815445', p => { p.moveTo(-77, -17); p.quadraticCurveTo(0, -6, 77, -17); p.quadraticCurveTo(63, 24, 29, 28); p.lineTo(-30, 28); p.quadraticCurveTo(-63, 23, -77, -17); });
-  path(c, gradient(c, -15, 26, '#d48b64', '#aa674e'), p => { p.moveTo(-71, -9); p.quadraticCurveTo(0, 0, 71, -9); p.quadraticCurveTo(57, 21, 25, 23); p.lineTo(-26, 23); p.quadraticCurveTo(-55, 21, -71, -9); });
+  path(c, gradient(c, -15, 26, hull, hullShade), p => { p.moveTo(-71, -9); p.quadraticCurveTo(0, 0, 71, -9); p.quadraticCurveTo(57, 21, 25, 23); p.lineTo(-26, 23); p.quadraticCurveTo(-55, 21, -71, -9); });
   for (const y of [3, 13]) path(c, null, p => { p.moveTo(-61 + y, y); p.quadraticCurveTo(0, y + 5, 61 - y, y); }, '#88574599', 1.2);
   for (const x of [-40, -8, 31]) { path(c, null, p => { p.moveTo(x, 1); p.lineTo(x + 3, 20); }, '#9b614ccc', 1); ellipse(c, x, 6, 1.1, 1.1, '#f7cba0'); }
   path(c, null, p => { p.moveTo(-75, -16); p.quadraticCurveTo(0, -4, 75, -16); }, '#f4c492', 5);
@@ -204,24 +222,24 @@ function boat(c, item, water, t) {
   c.fillStyle = '#ffebc3'; c.font = "bold 7px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText('LÜTTE LOTTE', -24, 14);
   // Pip gets an expressive opponent: raincoat, rosy nose and a very serious moustache.
   c.save(); c.translate(-7, -17); c.rotate(hauling && !item.hit ? Math.sin(t * 12) * .06 : -windup * (1 - throwing) * .08);
-  path(c, gradient(c, -45, 2, '#efd08a', '#dca956'), p => { p.moveTo(-22, 0); p.lineTo(-20, -32); p.quadraticCurveTo(-18, -48, -1, -47); p.quadraticCurveTo(19, -48, 23, -30); p.lineTo(25, 0); p.closePath(); }, '#c89a54', 1);
+  path(c, gradient(c, -45, 2, coat, shade), p => { p.moveTo(-22, 0); p.lineTo(-20, -32); p.quadraticCurveTo(-18, -48, -1, -47); p.quadraticCurveTo(19, -48, 23, -30); p.lineTo(25, 0); p.closePath(); }, shade, 1);
   path(c, null, p => { p.moveTo(1, -36); p.lineTo(3, -1); }, '#fff0bb', 1.5);
   for (let i = 0; i < 3; i++) ellipse(c, 5, -25 + i * 9, 1.5, 1.5, '#a87944');
   path(c, '#c66f5c', p => { p.moveTo(-11, -37); p.lineTo(1, -30); p.lineTo(12, -39); p.lineTo(3, -35); p.lineTo(5, -25); p.closePath(); }, '#99594d', .7);
   ellipse(c, -2, -55, 17, 20, '#edc3a0');
   ellipse(c, -15, -49, 6, 4, '#e7a58c'); ellipse(c, 11, -49, 4, 3, '#e7a58c');
-  path(c, '#e2b267', p => { p.moveTo(-24, -64); p.lineTo(-17, -82); p.quadraticCurveTo(0, -89, 15, -79); p.lineTo(22, -63); p.closePath(); });
+  path(c, shade, p => { p.moveTo(-24, -64); p.lineTo(-17, -82); p.quadraticCurveTo(0, -89, 15, -79); p.lineTo(22, -63); p.closePath(); });
   path(c, '#8c7451', p => { p.moveTo(-20, -69); p.quadraticCurveTo(0, -62, 19, -68); p.lineTo(21, -63); p.quadraticCurveTo(-1, -56, -23, -63); p.closePath(); });
-  path(c, null, p => { p.moveTo(-26, -63); p.quadraticCurveTo(-2, -57, 23, -63); }, '#f8d994', 6);
+  path(c, null, p => { p.moveTo(-26, -63); p.quadraticCurveTo(-2, -57, 23, -63); }, coat, 6);
   const annoyed = age >= 0;
   path(c, null, p => { p.moveTo(-15, -57 - (annoyed ? 2 : 0)); p.lineTo(-8, -55); p.moveTo(0, -55); p.lineTo(7, -57 - (annoyed ? 2 : 0)); }, '#725c48', 2.3);
   ellipse(c, -11, -52, 1.6, 2, '#3e514a'); ellipse(c, 3, -52, 1.6, 2, '#3e514a');
   ellipse(c, -5, -45, 6, 4.5, '#dfaa89');
   path(c, '#fff1d8', p => { p.moveTo(-5, -43); p.quadraticCurveTo(-16, -47, -22, -37); p.quadraticCurveTo(-13, -31, -5, -39); p.quadraticCurveTo(6, -31, 15, -39); p.quadraticCurveTo(4, -47, -5, -43); });
   ellipse(c, -4, -32, hauling ? 4 : 2, hauling ? 3 : 1, '#9b7157'); c.restore();
-  path(c, null, p => { p.moveTo(8, -48); p.quadraticCurveTo(24, -40, hand.x, hand.y); }, '#e5b96b', 9);
+  path(c, null, p => { p.moveTo(8, -48); p.quadraticCurveTo(24, -40, hand.x, hand.y); }, shade, 9);
   ellipse(c, hand.x, hand.y, 5.5, 5, '#efc7a1');
-  path(c, null, p => { p.moveTo(-25, -43); p.quadraticCurveTo(-38, -26, -16, -24); }, '#e9be70', 8);
+  path(c, null, p => { p.moveTo(-25, -43); p.quadraticCurveTo(-38, -26, -16, -24); }, coat, 8);
   ellipse(c, -16, -24, 5, 4, '#efc7a1');
   if (!net) {
     for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(hand.x + 2, hand.y + 8 + i * 3, 10 + i, 4, -.2, 0, TAU); c.strokeStyle = '#dfc38f'; c.lineWidth = 1.5; c.stroke(); }
@@ -396,8 +414,9 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         ellipse(c, item.x - 5, item.y - 6, 4, 5, '#ffffffcc');
         c.fillStyle = '#eafff6'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center'; c.fillText('+2s', item.x, item.y + 32);
       }
-      if (item.flying) { const leap = Math.sin(motion * 8) * 5; path(c, '#eef4db', p => { p.moveTo(item.x + 2, item.y); p.quadraticCurveTo(item.x + 10, item.y - 25 - leap, item.x + 20, item.y - 2); p.quadraticCurveTo(item.x + 10, item.y - 10, item.x + 2, item.y); }, '#a9b994', .8); }
+      if (item.flying) fishWing(c, item, motion, true);
       if (item.kind === 'fish') fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion);
+      if (item.flying) fishWing(c, item, motion, false);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);
       if (item.kind === 'boat') boat(c, item, water, motion);

@@ -138,8 +138,7 @@ function frame(now) {
       audio.effect(event.kind);
       if (event.kind === 'islandWarning') toast('Insel voraus! Jetzt auftauchen und darüberfliegen ↑');
       if (event.kind === 'reefWarning') toast('Felsen voraus! Folge den Fischen durch die Mitte.');
-      if (event.kind === 'nestWarning') toast('Nest voraus! Zum Füttern auftauchen ↑');
-      if (event.kind === 'delivery') { holding = false; prefs.record = Math.max(prefs.record, game.score); persist(); toast(`Küken satt! ${event.count} Fische · +${event.points} Punkte`); }
+      if (event.kind === 'delivery') { holding = false; prefs.record = Math.max(prefs.record, game.score); persist(); }
       if (event.kind === 'outsmart') toast('Ausgetrickst! +25 Punkte');
       if (event.kind === 'trick') toast(`${event.turns === 2 ? 'Doppelter Überschlag' : 'Überschlag'}! +${event.points} Punkte`);
       if (event.kind === 'airBonus') toast('Luftblase! +2 Sekunden Tauchluft');
