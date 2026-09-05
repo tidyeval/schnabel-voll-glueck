@@ -76,9 +76,9 @@ function encounter(game) {
   if (game.time >= 20 && game.wave % 10 === 4) kind = 'island';
   if (game.time >= 30 && game.wave % 10 === 8) kind = 'reef';
   if (kind === 'surfer' && game.player.breath < 4) kind = 'jelly';
-  if (game.time >= 25 && game.wave % 6 === 0 && !['island', 'reef'].includes(kind)) kind = 'shoal';
-  const swimmers = ['shark', 'shoal'].includes(kind) ? 1 + Number(game.time >= 50) + Number(game.time >= 95) : 0;
-  const layered = swimmers > 1 || game.time >= 40 && game.wave % 4 === 0 && !['boat', 'island', 'reef', 'shoal'].includes(kind);
+  if (game.time >= 10 && game.wave % 6 === 0 && !['island', 'reef'].includes(kind)) kind = 'shoal';
+  const swimmers = ['shark', 'shoal'].includes(kind) ? (game.time < 10 ? 1 : Math.min(4, 2 + Math.floor((game.time - 10) / 20))) : 0;
+  const layered = swimmers > 1 || game.time >= 10 && game.wave % 4 === 0 && !['boat', 'island', 'reef', 'shoal'].includes(kind);
   const depths = kind === 'island' ? [420,360,290,250,250,250,250,265,320,410,430]
     : kind === 'reef' ? [440,470,490,510,520,530,530,510,470,435,395]
     : layered ? [430,475,510,530,530,530,510,480,440,415,395] : kind === 'boat'
@@ -91,7 +91,7 @@ function encounter(game) {
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
   for (let i = 0; i < swimmers; i++) {
     const y = i === 1 ? 440 : 660;
-    game.items.push({ kind: i === 1 && game.wave % 4 !== 0 ? 'turtle' : 'shark', x: 880 + (i === 2 ? 180 : 0), y, baseY: y, lane: i === 1 ? 'shallow' : 'deep' });
+    game.items.push({ kind: i === 1 && game.wave % 4 !== 0 ? 'turtle' : 'shark', x: 880 + (i >= 2 ? 140 + (i - 2) * 90 : 0), y, baseY: y, lane: i === 1 ? 'shallow' : 'deep' });
   }
   if (['island', 'reef'].includes(kind)) game.items.push({ kind, x: 890 });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'island' ? 245 : kind === 'reef' ? 530 : kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
@@ -193,7 +193,7 @@ export function step(game, dt, holding) {
       item.y = item.baseY + Math.sin(game.time * 1.8) * 10;
     }
     if (item.kind === 'shark') {
-      item.x -= (12 + Math.min(28, game.time * .2)) * dt;
+      item.x -= (12 + Math.min(28, Math.floor(game.time / 20) * 4)) * dt;
       const pursuit = 16 + Math.min(54, Math.max(0, game.time - 20) * .3);
       if (!p.wet || item.x < p.x - 65) { item.phase = 'cruise'; item.attackTime = 0; }
       else if (item.x < 480) {

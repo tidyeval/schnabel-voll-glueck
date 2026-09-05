@@ -54,11 +54,11 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 - Pip trägt bis zu 20 Fische im sichtbar wachsenden Kehlsack. Volle Ladung verlangsamt das Auftauchen um bis zu etwa 21 Prozent. Weitere Fische geben weiterhin Fangpunkte und Energie.
 - In regelmäßigen ruhigen Abschnitten erscheinen Nester. Über Wasser anfliegen zum Füttern oder unter Wasser weiterziehen. Die 1,8 Sekunden lange Fütterung pausiert die Spielwelt; jeder abgelieferte Fisch gibt 15 Bonuspunkte, leert den Schnabel und füllt die Tauchluft. Der Rekord wird beim Abliefern gespeichert.
 
-- Haie schwimmen der Spielrichtung entgegen und werden allmählich schneller. Ab 25 Sekunden werden zusätzliche Hai-Begegnungen freigeschaltet. Ab 50 Sekunden kommen Zweiergruppen auf zwei Tiefen, ab 95 Sekunden ein drittes Tier hinzu. Manche Gruppen kombinieren Haie mit sanft paddelnden Schildkröten. Die mittlere Passage bleibt frei; Kontakt mit einer Schildkröte beendet die Runde ebenfalls.
+- Haie schwimmen der Spielrichtung entgegen und werden allmählich schneller. Ab 10 Sekunden werden zusätzliche Hai-Begegnungen und Zweiergruppen auf zwei Tiefen freigeschaltet, ab 30 Sekunden drei Tiere und ab 50 Sekunden vier. Das Gegenschwimmtempo der Haie steigt alle 20 Sekunden; die Gruppengröße bleibt bei maximal vier. Manche Gruppen kombinieren Haie mit sanft paddelnden Schildkröten. Die mittlere Passage bleibt frei; Kontakt mit einer Schildkröte beendet die Runde ebenfalls.
 - Ab 15 Sekunden können Taucher erscheinen: bewegliche Ziellinie, 0,6 Sekunden festes Ziel, Harpunenschuss und Nachladen. Erfolgreich vorbeigelassene Harpunen geben einmalig 25 Punkte.
 - Ab 25 Sekunden kommen Surfer dazu. Bei knapper Luft drehen sie ab; bei ausreichender Luft blockieren sie die Oberfläche kurz.
 - Ab 20 Sekunden werden Inseln freigeschaltet, die vollständig überflogen werden müssen; ab 30 Sekunden Felsen mit einer mittleren Unterwasserpassage. Fischspuren und Warnungen zeigen den Weg. Ab 75 Sekunden können Möwen über dem Riff oder ein tiefer Hai hinter der Insel dazukommen. Inselbegegnungen lassen mehr Abstand zum nächsten Hindernis.
-- Ab 40 Sekunden enthalten ausgewählte Begegnungen zwei Gefahrenebenen mit mittlerem Durchgang. Danach folgen eine Luftblase, zusätzliche Fische und weiterhin ruhige Begegnungen.
+- Ab 10 Sekunden enthalten ausgewählte Begegnungen zwei Gefahrenebenen mit mittlerem Durchgang. Danach folgen eine Luftblase, zusätzliche Fische und weiterhin ruhige Begegnungen.
 
 - Nach und nach kommen Möwen, pulsierende Quallen, Treibholz und Wasserwirbel dazu. Jede zweite Begegnung bleibt ruhig. Möwen, Quallen und Treibholz sind bei Kontakt tödlich; Wirbel ziehen nach unten, lassen sich aber durch Loslassen verlassen.
 

@@ -305,8 +305,8 @@ test('islands force flight, reefs leave a clear passage and full cargo can ascen
 
 
 test('counter-swimming groups grow, share two depths and turtles collide without chasing', () => {
-  for (const [time, count] of [[30, 1], [60, 2], [110, 3]]) {
-    const g = createGame(); g.time = time; g.wave = 6; g.items = []; g.distance = g.nextEncounter;
+  for (const [time, count] of [[9, 1], [10, 2], [29, 2], [30, 3], [49, 3], [50, 4], [110, 4]]) {
+    const g = createGame(); g.time = time; g.wave = 2; g.items = []; g.distance = g.nextEncounter;
     step(g, .01, false);
     const swimmers = g.items.filter(i => ['shark', 'turtle'].includes(i.kind));
     assert.equal(swimmers.length, count);
