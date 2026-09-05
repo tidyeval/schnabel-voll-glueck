@@ -76,18 +76,23 @@ function encounter(game) {
   if (game.time >= 20 && game.wave % 10 === 4) kind = 'island';
   if (game.time >= 30 && game.wave % 10 === 8) kind = 'reef';
   if (kind === 'surfer' && game.player.breath < 4) kind = 'jelly';
-  const layered = game.time >= 40 && game.wave % 4 === 0 && !['boat', 'island', 'reef'].includes(kind);
+  if (game.time >= 25 && game.wave % 6 === 0 && !['island', 'reef'].includes(kind)) kind = 'shoal';
+  const swimmers = ['shark', 'shoal'].includes(kind) ? 1 + Number(game.time >= 50) + Number(game.time >= 95) : 0;
+  const layered = swimmers > 1 || game.time >= 40 && game.wave % 4 === 0 && !['boat', 'island', 'reef', 'shoal'].includes(kind);
   const depths = kind === 'island' ? [420,360,290,250,250,250,250,265,320,410,430]
     : kind === 'reef' ? [440,470,490,510,520,530,530,510,470,435,395]
     : layered ? [430,475,510,530,530,530,510,480,440,415,395] : kind === 'boat'
     ? [432,475,530,595,620,620,615,560,490,435,395]
-    : kind === 'shark'
+    : swimmers
       ? [440,425,414,410,410,415,420,440,465,440,395]
       : [430,460,500,535,550,540,510,475,440,415,395];
   const offset = kind === 'calm' ? game.random() * 35 : 0;
   depths.forEach((y, i) => game.items.push({ kind: 'fish', x: 540 + i * 64, y: y + offset, golden: false, route: game.wave }));
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
-  if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640, lane: layered ? 'deep' : undefined });
+  for (let i = 0; i < swimmers; i++) {
+    const y = i === 1 ? 440 : 660;
+    game.items.push({ kind: i === 1 && game.wave % 4 !== 0 ? 'turtle' : 'shark', x: 880 + (i === 2 ? 180 : 0), y, baseY: y, lane: i === 1 ? 'shallow' : 'deep' });
+  }
   if (['island', 'reef'].includes(kind)) game.items.push({ kind, x: 890 });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'island' ? 245 : kind === 'reef' ? 530 : kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
@@ -95,7 +100,7 @@ function encounter(game) {
   if (kind === 'surfer') game.items.push({ kind, x: 890, y: WORLD.water, escaping: false });
   if (game.time >= 75 && kind === 'reef') game.items.push({ kind: 'gull', x: 840, y: 285 });
   if (game.time >= 75 && kind === 'island') game.items.push({ kind: 'shark', x: 1140, y: 660, lane: 'deep' });
-  if (layered) {
+  if (layered && !swimmers) {
     // Separated heights leave a corridor around y=530, including during a shark dash.
     if (['jelly', 'whirlpool', 'diver', 'shark'].includes(kind)) {
       game.items.push({ kind: 'shark', x: 840, y: 435, lane: 'shallow' });
@@ -183,7 +188,12 @@ export function step(game, dt, holding) {
       }
       continue;
     }
+    if (item.kind === 'turtle') {
+      item.x -= (18 + Math.min(15, game.time * .1)) * dt;
+      item.y = item.baseY + Math.sin(game.time * 1.8) * 10;
+    }
     if (item.kind === 'shark') {
+      item.x -= (12 + Math.min(28, game.time * .2)) * dt;
       const pursuit = 16 + Math.min(54, Math.max(0, game.time - 20) * .3);
       if (!p.wet || item.x < p.x - 65) { item.phase = 'cruise'; item.attackTime = 0; }
       else if (item.x < 480) {
@@ -281,6 +291,7 @@ export function step(game, dt, holding) {
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
         : ['island', 'reef'].includes(item.kind) ? hitsTerrain(p, item)
+        : item.kind === 'turtle' ? Math.hypot((item.x - p.x) / 1.6, item.y - p.y) < 36
         : item.kind === 'diver' ? Math.abs(item.x - p.x) < 45 && Math.abs(item.y - p.y) < 30
         : item.kind === 'harpoon' ? Math.hypot(item.x - p.x, item.y - p.y) < 25
         : item.kind === 'surfer' ? Math.abs(item.x - p.x) < 65 && p.y > WORLD.water - 90 && p.y < WORLD.water + 30

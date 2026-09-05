@@ -96,6 +96,23 @@ function shark(c, item, t) {
   for (let i = 0; i < 3; i++) path(c, null, p => { p.moveTo(-7 + i * 5, -5); p.quadraticCurveTo(-11 + i * 5, 1, -7 + i * 5, 7); }, '#597e88', 1.4);
   c.restore();
 }
+function turtle(c, item, t) {
+  c.save(); c.translate(item.x, item.y);
+  const paddle = Math.sin(t * 3 + item.baseY) * .35;
+  ellipse(c, 24, -18, 22, 8, '#77ad91', -.5 - paddle);
+  ellipse(c, -14, -21, 24, 9, '#83ba98', .6 + paddle);
+  ellipse(c, 29, 18, 22, 8, '#77ad91', .5 + paddle);
+  ellipse(c, 1, 2, 36, 26, '#c9d6a2');
+  ellipse(c, 2, -3, 34, 25, gradient(c, -28, 24, '#a7c982', '#658e72'));
+  path(c, '#90b67b', p => { p.moveTo(-11, -17); p.lineTo(9, -20); p.lineTo(21, -3); p.lineTo(9, 12); p.lineTo(-10, 9); p.lineTo(-19, -4); p.closePath(); }, '#d3dfa6', 1.8);
+  for (const [x, y, ex, ey] of [[-11,-17,-18,-25],[9,-20,17,-25],[21,-3,35,-3],[9,12,17,20],[-10,9,-20,16],[-19,-4,-31,-7]]) path(c, null, p => { p.moveTo(x,y); p.lineTo(ex,ey); }, '#d3dfa6', 1.5);
+  ellipse(c, -37, -3, 19, 15, '#a4caa0', -.1);
+  ellipse(c, -43, -7, 4, 5, '#2b5050'); ellipse(c, -44, -9, 1.4, 1.6, '#fff8dc');
+  ellipse(c, -44, 3, 5, 3, '#eab6a0');
+  path(c, null, p => { p.moveTo(-54, 1); p.quadraticCurveTo(-50, 6, -46, 3); }, '#557e6d', 1.4);
+  ellipse(c, -13, 21, 25, 10, '#93bd96', -.6 - paddle);
+  c.restore();
+}
 function boat(c, item, water, t) {
   const age = item.cast, windup = clamp(age / .85, 0, 1), throwing = clamp((age - .85) / .6, 0, 1);
   const hauling = age >= 2.55, resting = age < 0 || age >= 3.25;
@@ -305,6 +322,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       }
       if (item.flying) { path(c, '#def5df', p => { p.moveTo(item.x, item.y); p.lineTo(item.x + 12, item.y - 22); p.lineTo(item.x + 20, item.y - 2); }); }
       if (item.kind === 'fish') fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, t);
+      if (item.kind === 'turtle') turtle(c, item, t);
       if (item.kind === 'shark') shark(c, item, t);
       if (item.kind === 'boat') boat(c, item, water, t);
     }

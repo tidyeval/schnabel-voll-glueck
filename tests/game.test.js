@@ -206,7 +206,7 @@ test('new hazards unlock gradually; quiet waves remain and every hazard appears'
     if (i % 2) assert.equal(hazards.length, 0);
     hazards.forEach(item => seen.add(item.kind));
   }
-  assert.deepEqual([...seen].sort(), ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool', 'diver', 'surfer', 'island', 'reef'].sort());
+  assert.deepEqual([...seen].sort(), ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool', 'diver', 'surfer', 'island', 'reef', 'turtle'].sort());
   const early = createGame(); early.wave = 4; early.distance = early.nextEncounter; step(early, .01, false);
   assert.ok(!early.items.some(item => ['gull', 'jelly', 'driftwood', 'whirlpool'].includes(item.kind)));
 });
@@ -257,7 +257,7 @@ test('surfers leave a low-air ascent clear; later layers retain a middle corrido
   assert.equal(surfer.escaping, true); assert.equal(g.ended, false); assert.equal(g.player.wet, false);
   const hit = createGame(); hit.player.y = 350; hit.items = [{ kind: 'surfer', x: 118, y: WORLD.water }]; step(hit, .01, false);
   assert.equal(hit.endReason, 'surfer');
-  const late = createGame(); late.time = 105; late.wave = 12; late.distance = late.nextEncounter; late.items = [];
+  const late = createGame(); late.time = 105; late.wave = 20; late.distance = late.nextEncounter; late.items = [];
   step(late, .01, false);
   assert.ok(late.items.filter(i => !['fish', 'bubble'].includes(i.kind)).length === 2);
   assert.ok(late.items.some(i => i.kind === 'bubble'));
@@ -301,4 +301,24 @@ test('islands force flight, reefs leave a clear passage and full cargo can ascen
   assert.ok(step(g, .01, false).some(e => e.kind === 'islandWarning'));
   for (let i = 0; i < 240 && !g.ended; i++) step(g, 1 / 60, false);
   assert.equal(g.ended, false); assert.equal(g.player.wet, false);
+});
+
+
+test('counter-swimming groups grow, share two depths and turtles collide without chasing', () => {
+  for (const [time, count] of [[30, 1], [60, 2], [110, 3]]) {
+    const g = createGame(); g.time = time; g.wave = 6; g.items = []; g.distance = g.nextEncounter;
+    step(g, .01, false);
+    const swimmers = g.items.filter(i => ['shark', 'turtle'].includes(i.kind));
+    assert.equal(swimmers.length, count);
+    if (count > 1) assert.deepEqual(new Set(swimmers.map(i => i.lane)), new Set(['deep', 'shallow']));
+    for (const item of swimmers) {
+      const x = item.x; step(g, .01, false);
+      assert.ok(x - item.x > g.speed * .01, 'swims toward Pip faster than the scenery');
+    }
+  }
+  const g = createGame(); g.items = [{ kind: 'turtle', x: 350, y: 440, baseY: 440 }]; g.nextEncounter = Infinity;
+  const turtle = g.items[0];
+  for (let i = 0; i < 60; i++) { step(g, 1 / 60, false); assert.ok(turtle.y >= 430 && turtle.y <= 450); }
+  g.player.y = turtle.y; g.player.wet = true; turtle.x = g.player.x;
+  step(g, .001, false); assert.equal(g.endReason, 'turtle');
 });
