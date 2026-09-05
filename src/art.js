@@ -227,7 +227,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   }
   for (const e of effects) {
     c.save(); c.globalAlpha = Math.min(1, e.life * 2);
-    if (e.kind === 'catch' || e.kind === 'mission') {
+    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick') {
       c.fillStyle = '#fff1aa'; c.font = `800 ${e.kind === 'mission' ? 20 : 18}px 'Trebuchet MS', sans-serif`; c.textAlign = 'center'; c.fillText(e.kind === 'mission' ? '+100 ✦' : '+' + e.points, e.x, e.y - (1 - e.life) * 48 - 18);
       for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
     } else if (['splash', 'breach', 'netSplash'].includes(e.kind)) {

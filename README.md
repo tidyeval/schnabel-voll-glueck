@@ -51,6 +51,8 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 ## Spielumfang
 
+- Nach dem Auftauchen innerhalb von 1,2 Sekunden zweimal kurz tippen für einen Überschlag (+50), dreimal für einen doppelten (+120). Zwischen den Tipps höchstens 0,32 Sekunden. Punkte erst nach vollständiger Drehung, einmal pro Auftauchen; Wasserkontakt bricht den Trick ab. Halten taucht weiterhin ab. Boote, Fischer und Netze bleiben während des Tricks tödlich.
+
 - Haie verfolgen Pip zunehmend schneller, warnen vor einem Sprint und behalten dabei dessen Richtung. Auftauchen beendet die Verfolgung.
 - Luftblasen geben bis zu zwei Sekunden Tauchluft zurück. Fliegende Fische belohnen Luftpausen in ruhigen Abschnitten.
 - Das Startmenü bietet Installation (oder eine Anleitung) und Update-Prüfung. Ein bereitstehendes Update wird erst durch Antippen aktiviert; Rekorde bleiben erhalten.

@@ -1,7 +1,7 @@
 import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { createGame, step, WORLD } from './game.js';
+import { createGame, step, press, WORLD } from './game.js';
 import { drawWorld } from './art.js';
 import { createAudio } from './audio.js';
 
@@ -97,11 +97,11 @@ $('settings-dialog').addEventListener('cancel', event => { event.preventDefault(
 $('result-dialog').addEventListener('cancel', event => { event.preventDefault(); home(); });
 app.addEventListener('pointerdown', event => {
   if (mode !== 'playing' || event.target.closest('button, dialog, input')) return;
-  event.preventDefault(); holding = true; app.setPointerCapture(event.pointerId);
+  event.preventDefault(); if (!holding) press(game); holding = true; app.setPointerCapture(event.pointerId);
 });
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) app.addEventListener(name, () => { holding = false; });
 window.addEventListener('keydown', event => {
-  if (event.code === 'Space' && mode === 'playing' && !event.target.closest('button, input, dialog')) { event.preventDefault(); holding = true; }
+  if (event.code === 'Space' && mode === 'playing' && !event.target.closest('button, input, dialog')) { event.preventDefault(); if (!event.repeat && !holding) press(game); holding = true; }
   if (event.code === 'Escape' && mode === 'playing') { event.preventDefault(); pause(); }
 });
 window.addEventListener('keyup', event => { if (event.code === 'Space') { holding = false; if (mode === 'playing') event.preventDefault(); } });
@@ -131,6 +131,7 @@ function frame(now) {
       if (event.kind === 'end') { finish(); break; }
       if (event.x !== undefined) effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
+      if (event.kind === 'trick') toast(`${event.turns === 2 ? 'Doppelter Überschlag' : 'Überschlag'}! +${event.points} Punkte`);
       if (event.kind === 'airBonus') toast('Luftblase! +2 Sekunden Tauchluft');
       if (event.kind === 'mission') toast('✦ Fünf auf einen Tauchgang! +100 Punkte');
       if (event.kind === 'airWarning') toast('Luft wird knapp! Loslassen zum Auftauchen ↑');

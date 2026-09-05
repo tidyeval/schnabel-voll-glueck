@@ -1,6 +1,6 @@
 export const WORLD = { width: 480, height: 850, water: 360, duration: 150, breath: 8 };
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-export const playerTilt = player => clamp(player.vy / 340, -.5, .78);
+export const playerTilt = player => clamp(player.vy / 340, -.5, .78) - (player.spin || 0);
 export function beakPosition(player) {
   const angle = playerTilt(player);
   return { x: player.x + .76 * (66 * Math.cos(angle) + 27 * Math.sin(angle)), y: player.y + .76 * (66 * Math.sin(angle) - 27 * Math.cos(angle)) };
@@ -40,6 +40,26 @@ export function hitsNet(player, net) {
   return inside;
 }
 
+// One trick attempt per breach; a third quick press upgrades the running spin.
+export function press(game) {
+  const p = game.player;
+  if (game.ended || p.wet || game.time > p.trickUntil) return;
+  if (p.trickUsed) {
+    if (p.turns === 1 && game.time - p.tapAt <= .32) p.turns = 2;
+    return;
+  }
+  p.taps = game.time - p.tapAt <= .32 ? p.taps + 1 : 1;
+  p.tapAt = game.time;
+  if (p.taps === 2) { p.turns = 1; p.spin = 0; p.trickUsed = true; }
+}
+
+export function hitsBoat(player, boat) {
+  const x = player.x, y = player.y - 8, radius = 18;
+  // Hull and fisherman, matching the visible drawing rather than its center only.
+  return [[-77, 77, -17, 28], [-30, 25, -100, -17]].some(([left, right, top, bottom]) =>
+    Math.hypot(x - clamp(x, boat.x + left, boat.x + right), y - clamp(y, WORLD.water + top, WORLD.water + bottom)) < radius);
+}
+
 function encounter(game) {
   const kind = game.wave % 2 ? 'calm' : game.wave % 4 === 0 ? 'boat' : 'shark';
   const depths = kind === 'boat'
@@ -62,7 +82,7 @@ export function createGame(random = Math.random) {
   return {
     random, time: 0, distance: 0, speed: 150, energy: 100, score: 0, fish: 0,
     combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
-    player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath },
+    player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
     nextEncounter: 520, wave: 0, ended: false,
   };
@@ -91,10 +111,11 @@ export function step(game, dt, holding) {
   const wet = p.y > WORLD.water + 12;
   if (wet !== p.wet) {
     events.push({ kind: wet ? 'splash' : 'breach', x: p.x, y: WORLD.water });
-    if (wet) game.diveFish = 0;
-    else { p.breach = .6; p.vy = -235; }
+    if (wet) { game.diveFish = 0; p.turns = 0; p.spin = 0; p.trickUntil = -1; }
+    else { p.breach = .6; p.vy = -235; p.trickUntil = game.time + 1.2; p.taps = 0; p.tapAt = -10; p.trickUsed = false; }
     p.wet = wet;
   }
+  if (p.turns && !p.wet) p.spin = Math.min(p.turns * Math.PI * 2, p.spin + dt * Math.PI * 2 / .65);
   if (game.time > 8) game.energy = Math.max(0, game.energy - dt * .85);
   game.comboTime = Math.max(0, game.comboTime - dt);
   if (!game.comboTime) game.combo = 0;
@@ -159,7 +180,7 @@ export function step(game, dt, holding) {
       const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
-        : (Math.abs(item.x - p.x) < 57 && p.y > WORLD.water - 65 && p.y < WORLD.water + 38) || (Math.abs(item.x - 7 - p.x) < 35 && p.y > WORLD.water - 105 && p.y < WORLD.water - 35) || netHit;
+        : hitsBoat(p, item) || netHit;
       if (hit) {
         game.ended = true;
         game.endReason = item.kind === 'shark' ? 'shark' : netHit ? 'net' : 'fisher';
@@ -167,6 +188,11 @@ export function step(game, dt, holding) {
         return events;
       }
     }
+  }
+  if (p.turns && p.spin >= p.turns * Math.PI * 2 && game.energy > 0) {
+    const points = p.turns === 2 ? 120 : 50;
+    game.score += points; events.push({ kind: 'trick', x: p.x, y: p.y, points, turns: p.turns });
+    p.turns = 0; p.spin = 0;
   }
   game.items = game.items.filter(item => !item.caught && item.x > -180);
   if (game.energy <= 0 || game.time >= WORLD.duration) {
