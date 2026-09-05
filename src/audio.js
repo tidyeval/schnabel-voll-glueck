@@ -1,8 +1,9 @@
+import musicURL from './assets/bumpin.mp3?url';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export function createAudio(settings) {
-  let context, master, sea, seaGain, noteAt = 0, note = 0, active = false;
+  let context, master, sea, seaGain, musicGain, musicStart = 0, musicDuration = 0, active = false;
   function init() {
     if (!context) {
       const Audio = window.AudioContext || window.webkitAudioContext;
@@ -13,6 +14,14 @@ export function createAudio(settings) {
       let last = 0;
       for (let i = 0; i < data.length; i++) { last = (last + (Math.random() * 2 - 1) * .025) / 1.025; data[i] = last; }
       sea = context.createBufferSource(); sea.buffer = buffer; sea.loop = true;
+      musicGain = context.createGain(); musicGain.gain.value = 0; musicGain.connect(master);
+      fetch(musicURL).then(response => {
+        if (!response.ok) throw new Error('Music unavailable');
+        return response.arrayBuffer();
+      }).then(data => context.decodeAudioData(data)).then(buffer => {
+        const music = context.createBufferSource(); music.buffer = buffer; music.loop = true;
+        music.connect(musicGain); musicDuration = buffer.duration; musicStart = context.currentTime; music.start();
+      }).catch(() => { /* Sound effects and gameplay remain available if music cannot load. */ });
       seaGain = context.createGain(); seaGain.gain.value = 0; sea.connect(seaGain); seaGain.connect(master); sea.start();
     }
     context.resume().catch(() => {});
@@ -32,9 +41,11 @@ export function createAudio(settings) {
     update(time) {
       if (!context || !active) return;
       seaGain.gain.setTargetAtTime(settings.sound ? .27 + Math.sin(time * .5) * .08 : 0, context.currentTime, .15);
-      if (context.currentTime > noteAt) {
-        if (settings.music) { const notes = [523.25, 659.25, 783.99, 659.25, 587.33, 440, 523.25, 392]; tone(notes[note % notes.length], 1.3, .045); if (note % 4 === 0) tone(notes[note % notes.length] / 2, 2, .04); }
-        note++; noteAt = context.currentTime + .55;
+      if (musicDuration) {
+        const position = (context.currentTime - musicStart) % musicDuration;
+        // Fade for the last six seconds, then gently bring the next loop back in.
+        const envelope = Math.min(1, position / 1.5, (musicDuration - position) / Math.min(6, musicDuration / 2));
+        musicGain.gain.setTargetAtTime(settings.music ? envelope * .8 : 0, context.currentTime, .05);
       }
     },
     effect(kind) {
