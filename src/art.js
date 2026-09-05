@@ -204,6 +204,37 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, 217, 418 + Math.sin(t * 1.6) * (reducedMotion ? 0 : 5), 1.72, t, -.06, outfit);
   } else {
     for (const item of game.items) {
+      if (item.kind === 'diver') {
+        if (['aim', 'locked'].includes(item.phase)) {
+          c.save(); c.setLineDash(item.phase === 'aim' ? [5, 8] : []);
+          path(c, null, p => { p.moveTo(item.x - 30, item.y); p.lineTo(item.aimX, item.aimY); }, item.phase === 'locked' ? '#ffd28a' : '#c2e8d277', 2); c.restore();
+        }
+        ellipse(c, item.x + 8, item.y, 31, 16, '#446b7b');
+        ellipse(c, item.x + 12, item.y - 16, 21, 8, '#e1bb6e');
+        for (let i = 0; i < 2; i++) path(c, '#dda25c', p => { p.moveTo(item.x + 30, item.y + i * 7); p.lineTo(item.x + 62, item.y - 5 + i * 19 + Math.sin(t * 5) * 4); p.lineTo(item.x + 48, item.y + 13 + i * 8); });
+        ellipse(c, item.x - 23, item.y - 4, 15, 15, '#e7b899');
+        path(c, '#8bc8ca', p => p.roundRect(item.x - 39, item.y - 14, 25, 14, 5), '#31596a', 3);
+        ellipse(c, item.x - 30, item.y - 8, 2, 3, '#31596a');
+        path(c, null, p => { p.moveTo(item.x - 18, item.y + 13); p.lineTo(item.x - 49, item.y + 4); }, '#e1be86', 5);
+        path(c, null, p => { p.moveTo(item.x - 53, item.y + 3); p.lineTo(item.x - 20, item.y + 3); }, '#4b646b', 5);
+        if (item.phase === 'locked') { c.fillStyle = '#ffe6a1'; c.font = 'bold 22px sans-serif'; c.fillText('!', item.x - 5, item.y - 36); }
+      }
+      if (item.kind === 'harpoon') {
+        c.save(); c.translate(item.x, item.y); c.rotate(Math.atan2(item.vy, item.vx));
+        path(c, null, p => { p.moveTo(-22, 0); p.lineTo(12, 0); p.moveTo(5, -5); p.lineTo(12, 0); p.lineTo(5, 5); }, '#fff2c4', 3); c.restore();
+      }
+      if (item.kind === 'surfer') {
+        const bob = Math.sin(t * 4) * 3;
+        path(c, null, p => { p.moveTo(item.x + 60, WORLD.water + 10); p.quadraticCurveTo(item.x + 15, WORLD.water - 20, item.x - 65, WORLD.water + 7); }, '#e8fae5aa', 5);
+        ellipse(c, item.x, WORLD.water + bob, 49, 7, '#f1aa77');
+        c.save(); c.translate(item.x, WORLD.water + bob); c.scale(item.escaping ? -1 : 1, 1);
+        path(c, null, p => { p.moveTo(-20, -4); p.lineTo(-5, -28); p.lineTo(14, -4); }, '#dbae83', 9);
+        path(c, '#75a5a0', p => { p.moveTo(-12, -27); p.lineTo(-14, -56); p.lineTo(8, -59); p.lineTo(14, -27); p.closePath(); });
+        path(c, null, p => { p.moveTo(-10, -49); p.lineTo(-36, -39); p.moveTo(7, -50); p.lineTo(31, -61); }, '#edc39a', 7);
+        ellipse(c, -4, -71, 12, 13, '#edc39a');
+        path(c, '#98644d', p => { p.arc(-4, -75, 13, Math.PI, Math.PI * 2); p.lineTo(9, -71); p.closePath(); });
+        ellipse(c, -9, -72, 2, 2, '#315852'); c.restore();
+      }
       if (item.kind === 'gull') {
         const wing = Math.sin(t * 10) * 18;
         path(c, null, p => { p.moveTo(item.x - 36, item.y - wing); p.quadraticCurveTo(item.x - 16, item.y - 18, item.x, item.y); p.quadraticCurveTo(item.x + 16, item.y - 18, item.x + 36, item.y - wing); }, '#fff9df', 8);
@@ -250,7 +281,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   }
   for (const e of effects) {
     c.save(); c.globalAlpha = Math.min(1, e.life * 2);
-    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick') {
+    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick' || e.kind === 'outsmart') {
       c.fillStyle = '#fff1aa'; c.font = `800 ${e.kind === 'mission' ? 20 : 18}px 'Trebuchet MS', sans-serif`; c.textAlign = 'center'; c.fillText(e.kind === 'mission' ? '+100 ✦' : '+' + e.points, e.x, e.y - (1 - e.life) * 48 - 18);
       for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
     } else if (['splash', 'breach', 'netSplash'].includes(e.kind)) {

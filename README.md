@@ -51,6 +51,10 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 ## Spielumfang
 
+- Ab 35 Sekunden können Taucher erscheinen: bewegliche Ziellinie, 0,6 Sekunden festes Ziel, Harpunenschuss und Nachladen. Erfolgreich vorbeigelassene Harpunen geben einmalig 25 Punkte.
+- Ab 50 Sekunden kommen Surfer dazu. Bei knapper Luft drehen sie ab; bei ausreichender Luft blockieren sie die Oberfläche kurz.
+- Ab 65 Sekunden enthalten ausgewählte Begegnungen zwei Gefahrenebenen mit mittlerem Durchgang. Danach folgen eine Luftblase, zusätzliche Fische und weiterhin ruhige Begegnungen.
+
 - Nach und nach kommen Möwen, pulsierende Quallen, Treibholz und Wasserwirbel dazu. Jede zweite Begegnung bleibt ruhig. Möwen, Quallen und Treibholz sind bei Kontakt tödlich; Wirbel ziehen nach unten, lassen sich aber durch Loslassen verlassen.
 
 - Nach dem Auftauchen innerhalb von 1,2 Sekunden zweimal kurz tippen für einen Überschlag (+50), dreimal für einen doppelten (+120). Zwischen den Tipps höchstens 0,32 Sekunden. Punkte erst nach vollständiger Drehung, einmal pro Auftauchen; Wasserkontakt bricht den Trick ab. Halten taucht weiterhin ab. Boote, Fischer und Netze bleiben während des Tricks tödlich.

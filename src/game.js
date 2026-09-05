@@ -63,8 +63,11 @@ export function hitsBoat(player, boat) {
 function encounter(game) {
   const hazards = ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool'];
   const unlocked = Math.min(hazards.length, 2 + Math.floor(game.time / 25));
-  const kind = game.wave % 2 ? 'calm' : hazards[Math.floor(game.wave / 2) % unlocked];
-  const depths = kind === 'boat'
+  const available = [...hazards.slice(0, unlocked), ...(game.time >= 35 ? ['diver'] : []), ...(game.time >= 50 ? ['surfer'] : [])];
+  let kind = game.wave % 2 ? 'calm' : available[Math.floor(game.wave / 2) % available.length];
+  if (kind === 'surfer' && game.player.breath < 4) kind = 'jelly';
+  const layered = game.time >= 65 && game.wave % 4 === 0 && kind !== 'boat';
+  const depths = layered ? [430,475,510,530,530,530,510,480,440,415,395] : kind === 'boat'
     ? [432,475,530,595,620,620,615,560,490,435,395]
     : kind === 'shark'
       ? [440,425,414,410,410,415,420,440,465,440,395]
@@ -72,10 +75,22 @@ function encounter(game) {
   const offset = kind === 'calm' ? game.random() * 35 : 0;
   depths.forEach((y, i) => game.items.push({ kind: 'fish', x: 540 + i * 64, y: y + offset, golden: false, route: game.wave }));
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
-  if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640 });
+  if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640, lane: layered ? 'deep' : undefined });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
+  if (kind === 'diver') game.items.push({ kind, x: 890, y: 620, phase: 'idle', timer: 0 });
+  if (kind === 'surfer') game.items.push({ kind, x: 890, y: WORLD.water, escaping: false });
+  if (layered) {
+    // Separated heights leave a corridor around y=530, including during a shark dash.
+    if (['jelly', 'whirlpool', 'diver', 'shark'].includes(kind)) {
+      game.items.push({ kind: 'shark', x: 840, y: 435, lane: 'shallow' });
+    } else game.items.push({ kind: 'jelly', x: 890, y: 650, phase: 0 });
+  }
   game.items.push({ kind: 'bubble', x: 1120, y: 540 });
+  if (kind !== 'calm') {
+    // A short reward tail follows the danger before the next quiet encounter.
+    for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', x: 1240 + i * 38, y: 420 + i * 10, golden: false });
+  }
   if (kind === 'calm') for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', flying: true, x: 650 + i * 85, y: 280, baseY: 280, golden: false });
   game.wave++;
   game.nextEncounter += 980 - Math.min(100, Math.max(0, game.time - 20) * .45);
@@ -142,7 +157,38 @@ export function step(game, dt, holding) {
           if (item.attackTime <= 0) item.phase = 'spent';
         }
       }
-      item.y = clamp(item.y, WORLD.water + 70, 720);
+      item.y = clamp(item.y, item.lane === 'deep' ? 620 : WORLD.water + 70, item.lane === 'shallow' ? 450 : 720);
+    }
+    if (item.kind === 'diver') {
+      if (item.phase === 'idle' && item.x < 475 && p.wet) { item.phase = 'aim'; item.timer = 1.1; }
+      if (item.phase === 'aim') {
+        item.aimX = p.x; item.aimY = p.y; item.timer -= dt;
+        if (item.timer <= 0) { item.phase = 'locked'; item.timer = .6; events.push({ kind: 'warning', x: item.x, y: item.y - 50 }); }
+      } else if (item.phase === 'locked') {
+        item.timer -= dt;
+        if (item.timer <= 0) {
+          const dx = item.aimX - item.x, dy = item.aimY - item.y, length = Math.hypot(dx, dy) || 1;
+          const speed = 180 + Math.min(65, game.time * .35);
+          game.items.push({ kind: 'harpoon', x: item.x - 30, y: item.y, vx: dx / length * speed, vy: dy / length * speed, life: 2.8, firedAt: game.time });
+          item.phase = 'reload'; item.timer = 3;
+        }
+      } else if (item.phase === 'reload') {
+        item.timer -= dt; if (item.timer <= 0 && item.x > p.x + 120) item.phase = 'idle';
+      }
+    }
+    if (item.kind === 'harpoon') {
+      item.x += item.vx * dt; item.y += item.vy * dt; item.life -= dt;
+      if (item.life <= 0 || item.y < WORLD.water + 18 || item.y > 760) { item.caught = true; continue; }
+      const wood = game.items.find(other => other.kind === 'driftwood' && Math.abs(other.x - item.x) < 55 && Math.abs(other.y - item.y) < 25);
+      if (wood) { item.caught = true; events.push({ kind: 'netSplash', x: item.x, y: item.y }); continue; }
+      if (item.x < p.x - 35 && !item.rewarded) { item.rewarded = true; game.score += 25; events.push({ kind: 'outsmart', points: 25, x: p.x, y: p.y }); }
+    }
+    if (item.kind === 'surfer') {
+      if (!item.warned && item.x < 480) { item.warned = true; events.push({ kind: 'warning', x: item.x, y: WORLD.water - 100 }); }
+      // With low air the surfer turns away before entering Pip's ascent corridor.
+      if (p.wet && p.breath < 3 && item.x > p.x - 85) item.escaping = true;
+      if (item.escaping) { item.x += (game.speed + 220) * dt; if (item.x > 600) item.caught = true; }
+      else item.x -= 15 * dt;
     }
     if (item.kind === 'gull') {
       if (!item.warned && item.x < 480) { item.warned = true; events.push({ kind: 'warning', x: item.x, y: item.y - 40 }); }
@@ -192,6 +238,9 @@ export function step(game, dt, holding) {
       const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
+        : item.kind === 'diver' ? Math.abs(item.x - p.x) < 45 && Math.abs(item.y - p.y) < 30
+        : item.kind === 'harpoon' ? Math.hypot(item.x - p.x, item.y - p.y) < 25
+        : item.kind === 'surfer' ? Math.abs(item.x - p.x) < 65 && p.y > WORLD.water - 90 && p.y < WORLD.water + 30
         : item.kind === 'gull' ? Math.abs(item.x - p.x) < 36 && Math.abs(item.y - p.y) < 30
         : item.kind === 'jelly' ? Math.abs(item.x - p.x) < 35 && p.y > item.y - 35 && p.y < item.y + 20 + item.phase * 65
         : item.kind === 'driftwood' ? Math.abs(item.x - p.x) < 65 && Math.abs(p.y - WORLD.water) < 30

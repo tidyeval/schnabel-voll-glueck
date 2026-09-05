@@ -102,7 +102,7 @@ test('encounters alternate routes and rest, with a safe route below the net and 
   const g = createGame(() => .5); g.items = []; g.distance = 519.9;
   step(g, .01, false);
   assert.equal(g.items.filter(i => i.kind === 'boat').length, 1);
-  const route = g.items.filter(i => i.kind === 'fish' && !i.golden);
+  const route = g.items.filter(i => i.kind === 'fish' && !i.golden && i.route !== undefined);
   assert.equal(route.length, 11);
   assert.ok(route[0].y < route[4].y && route[10].y < route[4].y);
   assert.ok(route.slice(4, 7).every(i => i.y >= 615), 'route clears the sunken net');
@@ -200,13 +200,13 @@ test('water and surface collisions cancel incomplete tricks without bonus', () =
 
 test('new hazards unlock gradually; quiet waves remain and every hazard appears', () => {
   const g = createGame(); g.time = 105; const seen = new Set();
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 16; i++) {
     g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
     const hazards = g.items.filter(item => !['fish', 'bubble'].includes(item.kind));
     if (i % 2) assert.equal(hazards.length, 0);
     hazards.forEach(item => seen.add(item.kind));
   }
-  assert.deepEqual([...seen], ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool']);
+  assert.deepEqual([...seen].sort(), ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool', 'diver', 'surfer'].sort());
   const early = createGame(); early.wave = 4; early.distance = early.nextEncounter; step(early, .01, false);
   assert.ok(!early.items.some(item => ['gull', 'jelly', 'driftwood', 'whirlpool'].includes(item.kind)));
 });
@@ -227,4 +227,39 @@ test('gulls and driftwood collide, jelly tentacles pulse, whirlpools pull withou
   const before = g.player.y; step(g, .01, false); assert.ok(g.player.y > before); assert.equal(g.ended, false);
   for (let i = 0; i < 120; i++) step(g, 1 / 60, false);
   assert.equal(g.player.wet, false, 'releasing escapes the pull');
+});
+
+test('diver locks aim before firing, reloads, and missed harpoons award only once', () => {
+  const g = createGame(); g.nextEncounter = Infinity; g.player.y = 470; g.player.wet = true;
+  const diver = { kind: 'diver', x: 470, y: 620, phase: 'idle' }; g.items = [diver];
+  for (let i = 0; i < 23; i++) step(g, .05, true);
+  assert.equal(diver.phase, 'locked'); assert.ok(!g.items.some(item => item.kind === 'harpoon'));
+  const aim = [diver.aimX, diver.aimY]; g.player.y = 430;
+  for (let i = 0; i < 10; i++) step(g, .05, false);
+  assert.deepEqual([diver.aimX, diver.aimY], aim);
+  for (let i = 0; i < 3; i++) step(g, .05, false);
+  assert.equal(diver.phase, 'reload');
+  const shot = g.items.find(item => item.kind === 'harpoon'); assert.ok(shot);
+  const direction = [shot.vx, shot.vy]; g.player.y = 265; g.player.wet = false;
+  step(g, .01, false); assert.deepEqual([shot.vx, shot.vy], direction);
+  const safe = createGame(); safe.items = [{ kind: 'harpoon', x: 70, y: 500, vx: -200, vy: 0, life: 2 }];
+  assert.equal(step(safe, .01, false).filter(e => e.kind === 'outsmart').length, 1);
+  step(safe, .01, false); assert.equal(safe.score, 25);
+  const hit = createGame(); hit.player.y = 500; hit.player.wet = true;
+  hit.items = [{ kind: 'harpoon', x: 120, y: 500, vx: -200, vy: 0, life: 2 }]; step(hit, .01, false);
+  assert.equal(hit.endReason, 'harpoon');
+});
+
+test('surfers leave a low-air ascent clear; later layers retain a middle corridor and rewards', () => {
+  const g = createGame(); g.nextEncounter = Infinity; g.player.y = 470; g.player.wet = true; g.player.breath = 2.8;
+  const surfer = { kind: 'surfer', x: 180, y: WORLD.water }; g.items = [surfer];
+  for (let i = 0; i < 90 && !g.ended; i++) step(g, 1 / 60, false);
+  assert.equal(surfer.escaping, true); assert.equal(g.ended, false); assert.equal(g.player.wet, false);
+  const hit = createGame(); hit.player.y = 350; hit.items = [{ kind: 'surfer', x: 118, y: WORLD.water }]; step(hit, .01, false);
+  assert.equal(hit.endReason, 'surfer');
+  const late = createGame(); late.time = 105; late.wave = 4; late.distance = late.nextEncounter; late.items = [];
+  step(late, .01, false);
+  assert.ok(late.items.filter(i => !['fish', 'bubble'].includes(i.kind)).length === 2);
+  assert.ok(late.items.some(i => i.kind === 'bubble'));
+  assert.ok(late.items.filter(i => i.kind === 'fish' && i.x > 1200).length >= 3);
 });
