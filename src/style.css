@@ -7,3 +7,5 @@
 .top-actions{margin-left:auto}.intro h1{font-size:clamp(28px,8vw,44px);white-space:nowrap;letter-spacing:-2px}
 
 .start-bottom{top:auto;bottom:max(12px,env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px}.record{margin-bottom:4px}.start-bottom .quiet-button{margin-top:0;padding:8px 0;min-height:44px}.control-hint{display:block;margin:0;padding:12px 0;text-align:center}.basic-controls{display:flex;justify-content:center;gap:16px;font-size:clamp(10px,2.8cqw,13px)}.basic-controls span{white-space:nowrap}.control-hint p{margin:6px 0 0;font-size:clamp(9px,2.4cqw,11px);color:#d9eee2}.app-actions{display:flex;gap:8px;border-top:1px solid #d1f3df33;padding-top:4px}.app-actions .quiet-button{flex:1;font-size:12px;color:#fff6d7;letter-spacing:0;border-radius:12px;background:#164a4938}.app-actions:has(button:not([hidden])){min-height:48px}.app-actions:not(:has(button:not([hidden]))){display:none}
+
+.cargo{position:absolute;top:27%;left:7%;right:7%;display:flex;justify-content:space-between;align-items:center;color:#315e55;font-size:2.1cqw;letter-spacing:.06em}.cargo strong{font-size:3cqw;color:#98602e}

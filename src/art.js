@@ -46,12 +46,14 @@ export function fish(c, x, y, scale = 1, golden = false, t = 0) {
   if (golden) { c.strokeStyle = '#fff0bd'; c.lineWidth = 1.7; c.beginPath(); c.moveTo(-4, -19); c.lineTo(-4, -27); c.moveTo(-8, -23); c.lineTo(0, -23); c.stroke(); }
   c.restore();
 }
-export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = false, happy = false, gulp = 0, breach = 0) {
+export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = false, happy = false, gulp = 0, breach = 0, cargo = 0) {
   c.save(); c.translate(x, y); c.rotate(tilt); c.scale(scale, scale);
   // Soft layers give Pip volume without image downloads or sprite sheets.
   path(c, '#d9e8d9', p => { p.moveTo(-43, 9); p.lineTo(-63, -6); p.quadraticCurveTo(-62, 15, -39, 22); });
+  const fullness = cargo / WORLD.capacity;
+  const wobble = Math.sin(t * 6) * fullness * 3;
   const bite = gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : 0;
-  const flap = Math.sin(t * (wet ? 7 : 11)) * (wet ? .15 : 1) + breach;
+  const flap = Math.sin(t * (wet ? 7 : 11 + fullness * 4)) * (wet ? .15 : 1) + breach;
   if (!wet) path(c, '#e6efdf', p => { p.moveTo(-24, -6); p.bezierCurveTo(-56, -17, -67, -32 - flap * 45, -44, -25 - flap * 43); p.quadraticCurveTo(-15, -24, 4, 0); });
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#dc9c64'; c.lineWidth = 5; c.lineCap = 'round';
@@ -61,7 +63,11 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   ellipse(c, -17, 7, 38, 30 + bite * 2, gradient(c, -20, 38, '#fffdee', '#e4ead4'), -.16);
   path(c, gradient(c, -57, 21, '#fffdf0', '#f3f2dc'), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); });
   path(c, '#fffdee', p => { p.moveTo(4, -56); p.quadraticCurveTo(-3, -69, 4, -72); p.quadraticCurveTo(8, -70, 12, -61); p.quadraticCurveTo(10, -75, 17, -74); p.quadraticCurveTo(22, -68, 21, -61); });
-  path(c, gradient(c, -35, 2, '#f2c16f', '#e2a363'), p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(71, -16 + bite * 12, 55, 8 + bite * 14, 39, -9); p.quadraticCurveTo(31, -19, 37, -40); });
+  path(c, gradient(c, -35, 2, '#f2c16f', '#e2a363'), p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(71, -16 + bite * 12, 55, 8 + bite * 14 + fullness * 35 + wobble, 39, -9); p.quadraticCurveTo(31, -19, 37, -40); });
+  if (fullness > .3) for (let i = 0; i < Math.ceil(fullness * 3); i++) {
+    ellipse(c, 49 + i * 7, -13 + fullness * 8 + Math.sin(t * 5 + i) * 2, 5, 2.5, '#ce94594d', -.4);
+  }
+  if (fullness > .75) path(c, '#efb595', p => { p.moveTo(73, -26); p.lineTo(83, -41 + Math.sin(t * 8) * 3); p.lineTo(88, -29); p.closePath(); });
   c.save(); c.translate(35, -40); c.rotate(-bite * .22); c.translate(-35, 40);
   path(c, '#ffda85', p => { p.moveTo(35, -43); p.quadraticCurveTo(67, -38, 94, -27); p.quadraticCurveTo(101, -22, 87, -22); p.lineTo(35, -30); p.closePath(); }, '#dea05e', .7);
   c.restore();
@@ -204,6 +210,26 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, 217, 418 + Math.sin(t * 1.6) * (reducedMotion ? 0 : 5), 1.72, t, -.06, outfit);
   } else {
     for (const item of game.items) {
+      if (item.kind === 'nest') {
+        path(c, '#92aa97', p => { p.moveTo(item.x - 62, water + 7); p.lineTo(item.x - 33, water - 34); p.lineTo(item.x + 32, water - 36); p.lineTo(item.x + 65, water + 7); p.closePath(); });
+        ellipse(c, item.x, water - 26, 53, 13, '#a27a51');
+        for (let j = 0; j < 2; j++) {
+          const eager = Math.abs(item.x - game.player.x) < 250;
+          const hop = eager ? Math.max(0, Math.sin(t * 9 + j * 2)) * 9 : 0;
+          const x = item.x - 18 + j * 34, y = water - 43 - hop;
+          ellipse(c, x, y, 15, 18, '#fff3ce'); ellipse(c, x - 2, y - 18, 13, 13, '#fff8de');
+          ellipse(c, x - 7, y - 21, 2.2, 3, '#345b52'); ellipse(c, x - 7.5, y - 22, .7, 1, '#fff');
+          path(c, '#f2bd6f', p => { p.moveTo(x - 12, y - 18); p.lineTo(x - 30, y - (eager ? 25 : 14)); p.lineTo(x - 13, y - 9); p.closePath(); });
+          ellipse(c, x - 8, y - 12, 3.5, 2, '#edb6a0');
+          path(c, '#fff8de', p => { p.moveTo(x, y - 29); p.lineTo(x - 4, y - 38); p.lineTo(x + 5, y - 28); });
+        }
+        for (let j = 0; j < 8; j++) path(c, null, p => { p.moveTo(item.x - 48 + j * 11, water - 26); p.lineTo(item.x - 30 + j * 9, water - 17); }, '#dfbd80', 3);
+        if (game.feeding && item.served && item.celebration > 0) {
+          const phase = (t * 4) % 1;
+          fish(c, item.x - 25 + phase * 40, water - 71 - Math.sin(phase * Math.PI) * 20, .4, false, t);
+          c.fillStyle = '#f7c3ab'; c.font = '18px sans-serif'; c.fillText('♥', item.x + 12, water - 99 - Math.sin(t * 3) * 4);
+        }
+      }
       if (item.kind === 'diver') {
         if (['aim', 'locked'].includes(item.phase)) {
           c.save(); c.setLineDash(item.phase === 'aim' ? [5, 8] : []);
@@ -274,14 +300,14 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(t * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
     }
     c.save();
-    pelican(c, p.x, p.y, .76, t, playerTilt(p), outfit, p.wet, p.gulp > .1, p.gulp, p.breach); c.restore();
+    pelican(c, p.feedX ?? p.x, p.y, .76, t, game.feeding ? -.12 + Math.sin(t * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo); c.restore();
   }
   for (let i = 0; i < 4; i++) {
     path(c, null, p => { for (let x = -10; x <= 490; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + t * 1.6 + i * .3) * 3; if (x === -10) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#eef5d7aa', '#d5f1d366', '#c3ead444', '#b7e4cc22'][i], i === 0 ? 2 : 1);
   }
   for (const e of effects) {
     c.save(); c.globalAlpha = Math.min(1, e.life * 2);
-    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick' || e.kind === 'outsmart') {
+    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick' || e.kind === 'outsmart' || e.kind === 'delivery') {
       c.fillStyle = '#fff1aa'; c.font = `800 ${e.kind === 'mission' ? 20 : 18}px 'Trebuchet MS', sans-serif`; c.textAlign = 'center'; c.fillText(e.kind === 'mission' ? '+100 ✦' : '+' + e.points, e.x, e.y - (1 - e.life) * 48 - 18);
       for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
     } else if (['splash', 'breach', 'netSplash'].includes(e.kind)) {

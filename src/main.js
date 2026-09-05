@@ -54,6 +54,8 @@ function finish() {
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
 }
 function updateHud() {
+  text('cargo-value', `${game.cargo}/${WORLD.capacity}`);
+  text('cargo-label', game.feeding ? 'KÜKEN FÜTTERN ♥' : game.cargo >= WORLD.capacity ? 'SCHNABEL VOLL · ZUM NEST ↑' : 'BEUTE IM SCHNABEL');
   text('score', game.score); text('time', clock(Math.ceil(WORLD.duration - game.time)));
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
@@ -131,6 +133,8 @@ function frame(now) {
       if (event.kind === 'end') { finish(); break; }
       if (event.x !== undefined) effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
+      if (event.kind === 'nestWarning') toast('Nest voraus! Zum Füttern auftauchen ↑');
+      if (event.kind === 'delivery') { holding = false; prefs.record = Math.max(prefs.record, game.score); persist(); toast(`Küken satt! ${event.count} Fische · +${event.points} Punkte`); }
       if (event.kind === 'outsmart') toast('Ausgetrickst! +25 Punkte');
       if (event.kind === 'trick') toast(`${event.turns === 2 ? 'Doppelter Überschlag' : 'Überschlag'}! +${event.points} Punkte`);
       if (event.kind === 'airBonus') toast('Luftblase! +2 Sekunden Tauchluft');

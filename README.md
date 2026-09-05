@@ -51,6 +51,9 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 ## Spielumfang
 
+- Pip trägt bis zu 20 Fische im sichtbar wachsenden Kehlsack. Volle Ladung verlangsamt das Auftauchen um bis zu etwa 21 Prozent. Weitere Fische geben weiterhin Fangpunkte und Energie.
+- In regelmäßigen ruhigen Abschnitten erscheinen Nester. Über Wasser anfliegen zum Füttern oder unter Wasser weiterziehen. Die 1,8 Sekunden lange Fütterung pausiert die Spielwelt; jeder abgelieferte Fisch gibt 15 Bonuspunkte, leert den Schnabel und füllt die Tauchluft. Der Rekord wird beim Abliefern gespeichert.
+
 - Ab 35 Sekunden können Taucher erscheinen: bewegliche Ziellinie, 0,6 Sekunden festes Ziel, Harpunenschuss und Nachladen. Erfolgreich vorbeigelassene Harpunen geben einmalig 25 Punkte.
 - Ab 50 Sekunden kommen Surfer dazu. Bei knapper Luft drehen sie ab; bei ausreichender Luft blockieren sie die Oberfläche kurz.
 - Ab 65 Sekunden enthalten ausgewählte Begegnungen zwei Gefahrenebenen mit mittlerem Durchgang. Danach folgen eine Luftblase, zusätzliche Fische und weiterhin ruhige Begegnungen.

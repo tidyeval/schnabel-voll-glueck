@@ -121,7 +121,7 @@ test('the main fish routes can be followed through a full round without hits or 
   for (const seed of [0, .5, .99]) {
     const g = createGame(() => seed);
     let hits = 0, outOfAir = false;
-    for (let i = 0; i < 150 * 60; i++) {
+    for (let i = 0; i < 170 * 60 && !g.ended; i++) {
       const p = g.player;
       const next = g.items.filter(item => item.kind === 'fish' && !item.golden && item.x > p.x - 12).sort((a, b) => a.x - b.x)[0];
       const target = next && next.x < p.x + 150 && p.breath > 2 ? next.y : 265;
@@ -202,7 +202,7 @@ test('new hazards unlock gradually; quiet waves remain and every hazard appears'
   const g = createGame(); g.time = 105; const seen = new Set();
   for (let i = 0; i < 16; i++) {
     g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
-    const hazards = g.items.filter(item => !['fish', 'bubble'].includes(item.kind));
+    const hazards = g.items.filter(item => !['fish', 'bubble', 'nest'].includes(item.kind));
     if (i % 2) assert.equal(hazards.length, 0);
     hazards.forEach(item => seen.add(item.kind));
   }
@@ -262,4 +262,29 @@ test('surfers leave a low-air ascent clear; later layers retain a middle corrido
   assert.ok(late.items.filter(i => !['fish', 'bubble'].includes(i.kind)).length === 2);
   assert.ok(late.items.some(i => i.kind === 'bubble'));
   assert.ok(late.items.filter(i => i.kind === 'fish' && i.x > 1200).length >= 3);
+});
+
+
+test('full cargo slows ascent, caps at capacity and feeding unloads once before flight resumes', () => {
+  const empty = createGame(), loaded = createGame();
+  for (const g of [empty, loaded]) { g.items = []; g.player.y = 600; g.player.wet = true; g.nextEncounter = Infinity; }
+  loaded.cargo = WORLD.capacity;
+  for (let i = 0; i < 30; i++) { step(empty, 1 / 60, false); step(loaded, 1 / 60, false); }
+  assert.ok(loaded.player.y > empty.player.y + 10);
+  loaded.items = [{ kind: 'fish', ...beakPosition(loaded.player) }]; step(loaded, .001, false);
+  assert.equal(loaded.cargo, WORLD.capacity);
+  loaded.player.wet = false; loaded.player.y = 280;
+  const nest = { kind: 'nest', x: 180, y: WORLD.water, served: false, celebration: 0 }; loaded.items = [nest];
+  step(loaded, .01, false); assert.equal(loaded.feeding, 1.8);
+  const score = loaded.score, time = loaded.time, x = nest.x;
+  step(loaded, .05, true); assert.equal(loaded.time, time); assert.equal(nest.x, x); assert.equal(loaded.score, score);
+  const events = [];
+  for (let i = 0; i < 36; i++) events.push(...step(loaded, .05, false));
+  assert.equal(loaded.cargo, 0); assert.equal(loaded.delivered, WORLD.capacity);
+  assert.equal(loaded.score, score + WORLD.capacity * 15);
+  assert.equal(events.filter(e => e.kind === 'delivery').length, 1);
+  step(loaded, .01, false); assert.equal(loaded.score, score + WORLD.capacity * 15);
+  const skip = createGame(); skip.player.y = 550; skip.player.wet = true; skip.cargo = 10;
+  skip.items = [{ kind: 'nest', x: 118, y: WORLD.water, served: false, celebration: 0 }]; step(skip, .01, true);
+  assert.equal(skip.feeding, 0); assert.equal(skip.cargo, 10); assert.equal(skip.ended, false);
 });

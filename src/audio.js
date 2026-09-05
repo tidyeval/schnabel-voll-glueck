@@ -55,7 +55,7 @@ export function createAudio(settings) {
         if (kind === 'breach') { tone(392, .18, .06); tone(587, .25, .04, 'sine', .08); }
         if (kind === 'warning' || kind === 'airWarning') { tone(660, .13, .07, 'triangle'); tone(520, .18, .05, 'triangle', .15); }
         if (kind === 'hurt') { tone(160, .22, .08, 'triangle'); tone(120, .22, .05, 'triangle', .12); }
-        if (kind === 'mission' || kind === 'trick' || kind === 'end') [523, 659, 784, 1046].forEach((f, i) => tone(f, .4, .08, 'sine', i * .1));
+        if (kind === 'mission' || kind === 'trick' || kind === 'delivery' || kind === 'end') [523, 659, 784, 1046].forEach((f, i) => tone(f, .4, .08, 'sine', i * .1));
       }
       if (settings.haptics && ['catch', 'hurt', 'mission'].includes(kind)) {
         if (Capacitor.isNativePlatform()) Haptics.impact({ style: kind === 'hurt' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});

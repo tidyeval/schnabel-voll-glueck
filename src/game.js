@@ -1,4 +1,4 @@
-export const WORLD = { width: 480, height: 850, water: 360, duration: 150, breath: 8 };
+export const WORLD = { capacity: 20, width: 480, height: 850, water: 360, duration: 150, breath: 8 };
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 export const playerTilt = player => clamp(player.vy / 340, -.5, .78) - (player.spin || 0);
 export function beakPosition(player) {
@@ -43,7 +43,7 @@ export function hitsNet(player, net) {
 // One trick attempt per breach; a third quick press upgrades the running spin.
 export function press(game) {
   const p = game.player;
-  if (game.ended || p.wet || game.time > p.trickUntil) return;
+  if (game.ended || game.feeding || p.wet || game.time > p.trickUntil) return;
   if (p.trickUsed) {
     if (p.turns === 1 && game.time - p.tapAt <= .32) p.turns = 2;
     return;
@@ -92,6 +92,7 @@ function encounter(game) {
     for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', x: 1240 + i * 38, y: 420 + i * 10, golden: false });
   }
   if (kind === 'calm') for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', flying: true, x: 650 + i * 85, y: 280, baseY: 280, golden: false });
+  if (kind === 'calm' && game.wave % 6 === 3) game.items.push({ kind: 'nest', x: 1360, y: WORLD.water, served: false, celebration: 0 });
   game.wave++;
   game.nextEncounter += 980 - Math.min(100, Math.max(0, game.time - 20) * .45);
 }
@@ -99,7 +100,7 @@ function encounter(game) {
 export function createGame(random = Math.random) {
   return {
     random, time: 0, distance: 0, speed: 150, energy: 100, score: 0, fish: 0,
-    combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
+    cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
     nextEncounter: 520, wave: 0, ended: false,
@@ -111,6 +112,18 @@ export function step(game, dt, holding) {
   dt = clamp(dt, 0, .05);
   const events = [];
   const p = game.player;
+  if (game.feeding > 0) {
+    game.feeding = Math.max(0, game.feeding - dt);
+    const remaining = Math.ceil(game.feedingTotal * game.feeding / 1.8);
+    game.cargo = Math.min(game.cargo, remaining);
+    if (!game.feeding) {
+      const points = game.feedingTotal * 15;
+      game.score += points; game.delivered += game.feedingTotal; game.cargo = 0;
+      p.breach = .6; p.vy = -235; p.breath = WORLD.breath; p.feedX = undefined;
+      return [{ kind: 'delivery', points, count: game.feedingTotal, x: p.x, y: p.y }];
+    }
+    return [];
+  }
   game.time = Math.min(WORLD.duration, game.time + dt);
   game.speed = 150 + Math.min(60, Math.max(0, game.time - 20) * .25);
   game.distance += game.speed * dt;
@@ -121,7 +134,8 @@ export function step(game, dt, holding) {
     game.ended = true; game.endReason = 'air';
     return [...events, { kind: 'end' }];
   }
-  const target = holding ? (p.wet ? 240 : 255) : (p.wet ? -210 : -100);
+  const weight = game.cargo / WORLD.capacity;
+  const target = holding ? (p.wet ? 240 + weight * 20 : 255) : (p.wet ? -210 + weight * 45 : -100 + weight * 25);
   p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
   p.y = clamp(p.y + p.vy * dt, 265, 710);
   if (p.y === 265 || p.y === 710) p.vy = 0;
@@ -141,6 +155,16 @@ export function step(game, dt, holding) {
   const beak = beakPosition(p);
   for (const item of game.items) {
     item.x -= game.speed * dt;
+    if (item.kind === 'nest') {
+      item.celebration = Math.max(0, item.celebration - dt);
+      if (!item.warned && item.x < 650) { item.warned = true; events.push({ kind: 'nestWarning' }); }
+      if (!item.served && !p.wet && game.cargo > 0 && Math.abs(item.x - p.x) < 65) {
+        item.served = true; item.celebration = 3; game.feeding = 1.8; game.feedingTotal = game.cargo;
+        p.y = 285; p.vy = 0; p.spin = 0; p.turns = 0; p.feedX = item.x - 55;
+        return events;
+      }
+      continue;
+    }
     if (item.kind === 'shark') {
       const pursuit = 16 + Math.min(54, Math.max(0, game.time - 20) * .3);
       if (!p.wet || item.x < p.x - 65) { item.phase = 'cruise'; item.attackTime = 0; }
@@ -222,7 +246,7 @@ export function step(game, dt, holding) {
     if (item.kind === 'fish') {
       if (Math.hypot((item.x - beak.x) / 1.15, item.y - beak.y) < 32) {
         item.caught = true;
-        game.fish++; game.combo++; if (p.wet) game.diveFish++;
+        game.fish++; game.cargo = Math.min(WORLD.capacity, game.cargo + 1); game.combo++; if (p.wet) game.diveFish++;
         game.comboTime = 8.5; p.gulp = .42;
         game.bestCombo = Math.max(game.bestCombo, game.combo);
         const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5));
