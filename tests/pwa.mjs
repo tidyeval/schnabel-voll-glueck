@@ -7,7 +7,7 @@ const server = createServer(async (req, res) => {
   try {
     const path = new URL(req.url, 'http://localhost').pathname;
     let body = await readFile(new URL('../dist' + (path === '/' ? '/index.html' : path), import.meta.url));
-    if (path === '/sw.js') body = Buffer.from(body.toString() + '\n// test deployment ' + version);
+    if (path === '/sw.js') body = Buffer.from(body.toString() + '\n// test deployment ' + version + (version > 1 ? `\nself.addEventListener('install', event => event.waitUntil(new Promise(resolve => setTimeout(resolve, 2000))));` : ''));
     const ext = path.split('.').pop();
     res.setHeader('Content-Type', ({ js: 'text/javascript', css: 'text/css', webmanifest: 'application/manifest+json', png: 'image/png', svg: 'image/svg+xml' })[ext] || 'text/html');
     res.setHeader('Cache-Control', 'no-store'); res.end(body);
@@ -31,6 +31,8 @@ try {
   await page.reload(); await page.locator('#play').waitFor();
   version++;
   await page.locator('#update').click();
+  await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration()).installing));
+  assert.ok(!(await page.locator('#toast').textContent()).includes('Kein neues Update'), 'never claim no update while it is downloading');
   await page.getByRole('button', { name: 'Update verfügbar · neu laden' }).waitFor();
   await Promise.all([page.waitForEvent('load'), page.locator('#update').click()]);
   assert.equal(await page.locator('#record').textContent(), '123');

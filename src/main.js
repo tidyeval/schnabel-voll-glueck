@@ -146,7 +146,7 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-let installPrompt, registration, applyingUpdate = false;
+let installPrompt, registration, applyingUpdate = false, reloadReady = false;
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
 $('install').hidden = Capacitor.isNativePlatform() || standalone();
 window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('install').hidden = false; });
@@ -157,16 +157,44 @@ $('install').onclick = async () => {
   try { await prompt.prompt(); } catch { $('install-help').showModal(); }
 };
 $('install-help').querySelector('button').onclick = () => $('install-help').close();
+function updateStatus() {
+  const downloading = Boolean(registration?.installing);
+  $('update').disabled = downloading;
+  text('update', reloadReady || registration?.waiting ? 'Update verfügbar · neu laden' : downloading ? 'Update wird geladen …' : 'Updates prüfen');
+}
 $('update').onclick = async () => {
+  if (reloadReady) { location.reload(); return; }
   if (registration?.waiting) { applyingUpdate = true; registration.waiting.postMessage({ type: 'SKIP_WAITING' }); return; }
-  try { await registration?.update(); toast(registration?.waiting ? 'Update bereit. Jetzt aktualisieren.' : 'Kein neues Update gefunden.'); }
-  catch { toast('Updates benötigen eine Internetverbindung.'); }
+  if (!registration) { toast('Offline-Modus wird noch vorbereitet.'); return; }
+  $('update').disabled = true; text('update', 'Update wird geprüft …');
+  try {
+    await registration.update();
+    // update() finishes the check, not the installation of the downloaded files.
+    if (registration.installing) toast('Update wird geladen. Bitte die App geöffnet lassen.');
+    else if (registration.waiting) toast('Update bereit. Jetzt neu laden.');
+    else toast('Deine App ist auf dem aktuellen Stand.');
+  } catch { toast('Update-Prüfung fehlgeschlagen. Bitte die Internetverbindung prüfen.'); }
+  finally { updateStatus(); }
 };
 if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (applyingUpdate) location.reload(); });
-  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).then(reg => {
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (applyingUpdate) location.reload();
+    else if (hadController) { reloadReady = true; updateStatus(); }
+  });
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { updateViaCache: 'none' }).then(reg => {
     registration = reg; $('update').hidden = false;
-    const ready = () => { if (reg.waiting) text('update', 'Update verfügbar · neu laden'); };
-    ready(); reg.addEventListener('updatefound', () => reg.installing?.addEventListener('statechange', ready));
+    const watchDownload = () => {
+      const worker = reg.installing; updateStatus();
+      worker?.addEventListener('statechange', () => {
+        updateStatus();
+        if (worker.state === 'installed' && reg.waiting) toast('Update bereit – im Startmenü neu laden.');
+        if (worker.state === 'redundant') toast('Update konnte nicht geladen werden. Bitte erneut prüfen.');
+      });
+    };
+    watchDownload(); reg.addEventListener('updatefound', watchDownload);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) reg.update().catch(() => {});
+    });
   }).catch(() => toast('Offline-Modus gerade nicht verfügbar.'));
 }
