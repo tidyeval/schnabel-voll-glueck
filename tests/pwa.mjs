@@ -36,5 +36,18 @@ try {
   assert.equal(await page.locator('#record').textContent(), '123');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).totalFish), 42);
   await page.screenshot({ path: 'test-results/pwa-menu.png' });
+  await page.evaluate(async () => {
+    for (const name of await caches.keys()) if (name.startsWith('schnabel-voll-glueck:')) {
+      const cache = await caches.open(name);
+      await cache.put(location.origin + '/', new Response('<h1>Alte Pelican-Version</h1>', { headers: { 'Content-Type': 'text/html' } }));
+    }
+  });
+  await page.goto(url); await page.getByRole('heading', { name: 'Alte Pelican-Version' }).waitFor();
+  await page.goto(url + 'aktualisieren.html'); await page.locator('#refresh').click();
+  await page.locator('#play').waitFor();
+  assert.equal(await page.locator('h1').textContent(), 'Schnabelglück');
+  assert.equal(await page.locator('#record').textContent(), '123');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).totalFish), 42);
+  console.log('Stale cached page recovered; records and fish preserved');
   console.log('Install fallback, install action, scoped cache, real waiting-worker update and preserved records passed');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }

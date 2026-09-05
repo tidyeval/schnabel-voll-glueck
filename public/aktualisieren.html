@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ccece6"><title>Schnabelglück aktualisieren</title>
+<style>body{margin:0;min-height:100svh;display:grid;place-items:center;background:#ccece6;color:#204e4b;font:18px system-ui}main{max-width:420px;padding:30px}button{font:inherit;font-weight:bold;background:#ffdf87;color:#204e4b;border:0;border-radius:18px;padding:18px;cursor:pointer}p{line-height:1.5}</style>
+<main><h1>Schnabelglück</h1><p>Hier lädst du die aktuelle Spielversion. Deine gespeicherten Rekorde und Fische bleiben erhalten.</p><button id="refresh">Aktuelle Version laden</button><p id="status" role="status"></p></main>
+<script>
+const button = document.getElementById('refresh'), status = document.getElementById('status');
+button.onclick = async () => {
+  button.disabled = true; status.textContent = 'Alte Spieldateien werden aktualisiert …';
+  try {
+    const scope = new URL('./', location.href).href;
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.filter(reg => reg.scope === scope).map(reg => reg.unregister()));
+    }
+    if ('caches' in window) {
+      const prefix = 'schnabel-voll-glueck:' + scope + ':';
+      await Promise.all((await caches.keys()).filter(key => key.startsWith(prefix)).map(key => caches.delete(key)));
+    }
+    location.replace(scope + '?aktualisiert=' + Date.now());
+  } catch {
+    status.textContent = 'Aktualisierung fehlgeschlagen. Bitte mit Internetverbindung erneut versuchen.'; button.disabled = false;
+  }
+};
+</script></html>
