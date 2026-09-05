@@ -52,8 +52,10 @@ function encounter(game) {
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
   if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640 });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
+  game.items.push({ kind: 'bubble', x: 1120, y: 540 });
+  if (kind === 'calm') for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', flying: true, x: 650 + i * 85, y: 280, baseY: 280, golden: false });
   game.wave++;
-  game.nextEncounter += 980 - Math.min(100, game.time * .7);
+  game.nextEncounter += 980 - Math.min(100, Math.max(0, game.time - 20) * .45);
 }
 
 export function createGame(random = Math.random) {
@@ -72,7 +74,7 @@ export function step(game, dt, holding) {
   const events = [];
   const p = game.player;
   game.time = Math.min(WORLD.duration, game.time + dt);
-  game.speed = 150 + Math.min(60, game.time * .4);
+  game.speed = 150 + Math.min(60, Math.max(0, game.time - 20) * .25);
   game.distance += game.speed * dt;
   const previousBreath = p.breath;
   p.breath = clamp(p.breath + dt * (p.wet ? -1 : 4), 0, WORLD.breath);
@@ -100,7 +102,32 @@ export function step(game, dt, holding) {
   const beak = beakPosition(p);
   for (const item of game.items) {
     item.x -= game.speed * dt;
-    if (item.kind === 'shark') item.y = item.baseY + Math.sin(game.time * 1.5) * 16;
+    if (item.kind === 'shark') {
+      const pursuit = 16 + Math.min(54, Math.max(0, game.time - 20) * .3);
+      if (!p.wet || item.x < p.x - 65) { item.phase = 'cruise'; item.attackTime = 0; }
+      else if (item.x < 480) {
+        if (!item.phase || item.phase === 'cruise') item.phase = 'track';
+        if (item.phase === 'track') {
+          item.y += clamp(p.y - item.y, -pursuit * dt, pursuit * dt);
+          if (item.x < p.x + 240) { item.phase = 'warn'; item.attackTime = .85; events.push({ kind: 'warning', x: item.x, y: item.y - 65 }); }
+        } else if (item.phase === 'warn') {
+          item.attackTime -= dt;
+          if (item.attackTime <= 0) { item.phase = 'dash'; item.attackTime = .55; item.dashY = clamp((p.y - item.y) * 1.4, -110, 110); }
+        } else if (item.phase === 'dash') {
+          item.x -= (35 + pursuit) * dt; item.y += item.dashY * dt; item.attackTime -= dt;
+          if (item.attackTime <= 0) item.phase = 'spent';
+        }
+      }
+      item.y = clamp(item.y, WORLD.water + 70, 720);
+    }
+    if (item.flying) item.y = item.baseY + Math.sin(game.time * 3 + item.x * .01) * 30;
+    if (item.kind === 'bubble') {
+      if (Math.hypot(item.x - p.x, item.y - p.y) < 35) {
+        item.caught = true; p.breath = Math.min(WORLD.breath, p.breath + 2);
+        events.push({ kind: 'airBonus', x: item.x, y: item.y });
+      }
+      continue;
+    }
     if (item.kind === 'boat') {
       if (item.cast < 0 && item.x <= 480) {
         item.cast = 0;
@@ -116,7 +143,7 @@ export function step(game, dt, holding) {
     if (item.kind === 'fish') {
       if (Math.hypot((item.x - beak.x) / 1.15, item.y - beak.y) < 32) {
         item.caught = true;
-        game.fish++; game.combo++; game.diveFish++;
+        game.fish++; game.combo++; if (p.wet) game.diveFish++;
         game.comboTime = 8.5; p.gulp = .42;
         game.bestCombo = Math.max(game.bestCombo, game.combo);
         const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5));

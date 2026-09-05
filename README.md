@@ -51,9 +51,13 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 ## Spielumfang
 
+- Haie verfolgen Pip zunehmend schneller, warnen vor einem Sprint und behalten dabei dessen Richtung. Auftauchen beendet die Verfolgung.
+- Luftblasen geben bis zu zwei Sekunden Tauchluft zurück. Fliegende Fische belohnen Luftpausen in ruhigen Abschnitten.
+- Das Startmenü bietet Installation (oder eine Anleitung) und Update-Prüfung. Ein bereitstehendes Update wird erst durch Antippen aktiviert; Rekorde bleiben erhalten.
+
 - Animierte Küste mit Leuchtturm, Palmen, Lichtstrahlen, Fischen und Pip; lokal gezeichnete Canvas-Grafik ohne Asset-Downloads.
 - Runden bis 2:30 Minuten, Energie durch Fische, goldene Fische, Fangserien bis zum vierfachen Multiplikator mit 8,5 Sekunden Zeit zum Ausweichen.
-- Das Tempo steigt während der Runde gleichmäßig von 150 auf 210; Begegnungsabstände sinken von 980 auf 880.
+- Das Tempo steigt während der Runde gleichmäßig nach 20 Sekunden von 150 langsam bis maximal 210; Begegnungsabstände sinken behutsam bis mindestens 880.
 - Gestaltete Fischrouten wechseln zwischen Netzdurchquerungen, flachen Wegen über Haien und ruhigen Fangabschnitten. Goldfische bieten freiwillige Umwege.
 - Animierte Fischer mit Regenjacke und Schnurrbart auf Holzbooten mit Rettungsring, Eimer und Tauwerk. Sie kündigen den Wurf an, holen aus, werfen das Netz im Bogen und holen es wieder ein. Netzzeichnung und Trefferprüfung verwenden dieselbe Kontur. Kontakt mit Fischer, Boot, Netz oder Hai beendet die Runde sofort.
 - Acht Sekunden Tauchluft, Warnung bei drei Sekunden und Game Over bei leerem Vorrat. Rechtzeitig loslassen! Zwei Sekunden über Wasser füllen die Luft vollständig auf.
@@ -70,6 +74,7 @@ npx playwright install chromium webkit
 npm run build
 npm run preview  # in einem separaten Terminal laufen lassen
 npm run test:browser
+node tests/pwa.mjs # Installation und Update mit Erhalt der Rekorde
 ```
 
 Die Modelltests prüfen Bewegung, Fänge, Punkte, Mission, sofortiges Game Over, Netzphasen und -konturen, Luftmangel und zunehmendes Tempo, komplette sichere Fischrouten, Rundenschluss und Entity-Lebensdauer. Die Browserprüfung spielt in Chromium und WebKit, prüft Pause, Einstellungen, Neustart, Tauchluft und Speicherung sowie in Chromium den Offline-Neustart. Screenshots entstehen unter `test-results/`. `PELICAN_URL` kann die Testadresse überschreiben.

@@ -109,7 +109,7 @@ test('encounters alternate routes and rest, with a safe route below the net and 
   assert.ok(g.items.find(i => i.golden).y > route[4].y + 80, 'gold is an optional detour');
   g.items = []; g.distance = g.nextEncounter;
   step(g, .01, false);
-  assert.ok(g.items.every(i => i.kind === 'fish'), 'rest encounter contains no hazard');
+  assert.ok(g.items.every(i => ['fish', 'bubble'].includes(i.kind)), 'rest encounter contains no hazard');
   g.items = []; g.distance = g.nextEncounter;
   step(g, .01, false);
   const shark = g.items.find(i => i.kind === 'shark');
@@ -133,4 +133,32 @@ test('the main fish routes can be followed through a full round without hits or 
     assert.equal(outOfAir, false, 'rest windows provide enough time to breathe');
     assert.ok(g.fish > 150 && g.time > 149, 'a playable route lasts the whole round');
   }
+});
+
+test('sharks track faster later, telegraph a fixed dash, and stop pursuing above water', () => {
+  const movement = [];
+  for (const time of [0, 120]) {
+    const g = createGame(); g.time = time; g.player.y = 450; g.player.wet = true;
+    const shark = { kind: 'shark', x: 470, y: 640 }; g.items = [shark];
+    for (let i = 0; i < 10; i++) step(g, .05, true);
+    movement.push(640 - shark.y);
+    shark.x = 350; step(g, .01, true); assert.equal(shark.phase, 'warn');
+    for (let i = 0; i < 18; i++) step(g, .05, true);
+    assert.equal(shark.phase, 'dash'); const direction = shark.dashY;
+    g.player.y = 420; step(g, .01, false); assert.equal(shark.dashY, direction);
+    g.player.y = 265; g.player.wet = false; step(g, .01, false); assert.equal(shark.phase, 'cruise');
+  }
+  assert.ok(movement[1] > movement[0] * 2);
+});
+
+test('bubbles refill capped air once, flying fish award fish without advancing a dive mission', () => {
+  const g = createGame(); g.player.breath = 4;
+  g.items = [{ kind: 'bubble', x: g.player.x, y: g.player.y }];
+  assert.equal(step(g, .01, false).filter(e => e.kind === 'airBonus').length, 1);
+  assert.ok(g.player.breath > 6); assert.equal(g.items.length, 0);
+  g.player.breath = 7.9; g.items = [{ kind: 'bubble', x: g.player.x, y: g.player.y }]; step(g, .01, false);
+  assert.equal(g.player.breath, WORLD.breath);
+  const beak = beakPosition(g.player);
+  g.items = [{ kind: 'fish', flying: true, x: beak.x, y: beak.y, baseY: beak.y - Math.sin(g.time * 3 + beak.x * .01) * 30 }];
+  step(g, .01, false); assert.equal(g.fish, 1); assert.equal(g.diveFish, 0);
 });

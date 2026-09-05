@@ -79,7 +79,8 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   c.restore();
 }
 function shark(c, item, t) {
-  c.save(); c.translate(item.x, item.y); c.rotate(Math.sin(t * 1.5) * .04);
+  c.save(); c.translate(item.x, item.y); c.rotate(Math.sin(t * (item.phase === 'warn' ? 16 : 1.5)) * .04);
+  if (item.phase === 'warn') { c.fillStyle = '#ffe6a1'; c.font = 'bold 28px sans-serif'; c.fillText('!', -12, -62); }
   path(c, '#668d9b', p => { p.moveTo(40, 0); p.lineTo(79, -29); p.lineTo(68, 0); p.lineTo(82, 26); p.closePath(); });
   path(c, '#6d94a0', p => { p.moveTo(-7, -18); p.quadraticCurveTo(6, -50, 21, -51); p.lineTo(26, -14); p.closePath(); });
   ellipse(c, 0, 0, 55, 26, gradient(c, -26, 25, '#84aab0', '#648d9a')); ellipse(c, -11, 13, 39, 11, '#bccfc7');
@@ -203,6 +204,13 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, 217, 418 + Math.sin(t * 1.6) * (reducedMotion ? 0 : 5), 1.72, t, -.06, outfit);
   } else {
     for (const item of game.items) {
+      if (item.kind === 'bubble') {
+        ellipse(c, item.x, item.y, 17, 17, '#b8f6ee66');
+        c.strokeStyle = '#eafff6'; c.lineWidth = 2; c.beginPath(); c.arc(item.x, item.y, 17, 0, TAU); c.stroke();
+        ellipse(c, item.x - 5, item.y - 6, 4, 5, '#ffffffcc');
+        c.fillStyle = '#eafff6'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center'; c.fillText('+2s', item.x, item.y + 32);
+      }
+      if (item.flying) { path(c, '#def5df', p => { p.moveTo(item.x, item.y); p.lineTo(item.x + 12, item.y - 22); p.lineTo(item.x + 20, item.y - 2); }); }
       if (item.kind === 'fish') fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, t);
       if (item.kind === 'shark') shark(c, item, t);
       if (item.kind === 'boat') boat(c, item, water, t);

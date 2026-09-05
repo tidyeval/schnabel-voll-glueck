@@ -132,6 +132,7 @@ function frame(now) {
       if (event.kind === 'end') { finish(); break; }
       if (event.x !== undefined) effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
+      if (event.kind === 'airBonus') toast('Luftblase! +2 Sekunden Tauchluft');
       if (event.kind === 'mission') toast('✦ Fünf auf einen Tauchgang! +100 Punkte');
       if (event.kind === 'airWarning') toast('Luft wird knapp! Loslassen zum Auftauchen ↑');
     }
@@ -144,6 +145,27 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+let installPrompt, registration, applyingUpdate = false;
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+$('install').hidden = Capacitor.isNativePlatform() || standalone();
+window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('install').hidden = false; });
+window.addEventListener('appinstalled', () => { installPrompt = null; $('install').hidden = true; });
+$('install').onclick = async () => {
+  if (!installPrompt) { $('install-help').showModal(); return; }
+  const prompt = installPrompt; installPrompt = null;
+  try { await prompt.prompt(); } catch { $('install-help').showModal(); }
+};
+$('install-help').querySelector('button').onclick = () => $('install-help').close();
+$('update').onclick = async () => {
+  if (registration?.waiting) { applyingUpdate = true; registration.waiting.postMessage({ type: 'SKIP_WAITING' }); return; }
+  try { await registration?.update(); toast(registration?.waiting ? 'Update bereit. Jetzt aktualisieren.' : 'Kein neues Update gefunden.'); }
+  catch { toast('Updates benötigen eine Internetverbindung.'); }
+};
 if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => toast('Offline-Modus gerade nicht verfügbar.'));
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (applyingUpdate) location.reload(); });
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).then(reg => {
+    registration = reg; $('update').hidden = false;
+    const ready = () => { if (reg.waiting) text('update', 'Update verfügbar · neu laden'); };
+    ready(); reg.addEventListener('updatefound', () => reg.installing?.addEventListener('statechange', ready));
+  }).catch(() => toast('Offline-Modus gerade nicht verfügbar.'));
 }

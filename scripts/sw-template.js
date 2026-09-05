@@ -1,3 +1,4 @@
+self.addEventListener('message', event => { if (event.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 const PREFIX = 'schnabel-voll-glueck:' + self.registration.scope + ':';
 const CACHE = PREFIX + '__VERSION__';
 const FILES = __ASSETS__;
@@ -8,8 +9,8 @@ self.addEventListener('activate', event => event.waitUntil(Promise.all([
 ])));
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).catch(error => {
-    if (event.request.mode === 'navigate') return caches.match(new URL('index.html', self.registration.scope).href);
+  event.respondWith(caches.open(CACHE).then(cache => cache.match(event.request).then(cached => cached || fetch(event.request).catch(error => {
+    if (event.request.mode === 'navigate') return cache.match(new URL('index.html', self.registration.scope).href);
     throw error;
-  })));
+  }))));
 });
