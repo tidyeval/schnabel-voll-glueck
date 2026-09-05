@@ -1,0 +1,147 @@
+export const WORLD = { width: 480, height: 850, water: 360, duration: 150, breath: 8 };
+export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+export const playerTilt = player => clamp(player.vy / 340, -.5, .78);
+export function beakPosition(player) {
+  const angle = playerTilt(player);
+  return { x: player.x + .76 * (66 * Math.cos(angle) + 27 * Math.sin(angle)), y: player.y + .76 * (66 * Math.sin(angle) - 27 * Math.cos(angle)) };
+}
+
+// These points are used by both the illustration and collision detection.
+export function netShape(boat) {
+  const age = boat.cast;
+  if (age < .85 || age >= 3.25) return null;
+  let x, y, width, depth, phase;
+  if (age < 1.45) {
+    const progress = (age - .85) / .6;
+    phase = 'flight'; x = boat.x + 28 - 98 * progress;
+    y = WORLD.water - 75 + 83 * progress - 95 * Math.sin(Math.PI * progress);
+    width = 12 + 40 * progress; depth = 8 + 12 * Math.sin(Math.PI * progress);
+    return { phase, x, y, width, depth, points: Array.from({ length: 12 }, (_, i) => ({ x: x + Math.cos(i / 12 * Math.PI * 2) * width, y: y + Math.sin(i / 12 * Math.PI * 2) * depth })) };
+  }
+  const sink = clamp((age - 1.45) / .65, 0, 1);
+  const haul = clamp((age - 2.55) / .7, 0, 1);
+  phase = age < 2.1 ? 'sink' : age < 2.55 ? 'soak' : 'haul';
+  x = boat.x - 70 + haul * 82; y = WORLD.water + 8 - haul * 48;
+  width = 52 * (1 - haul * .8); depth = (8 + 164 * sink) * (1 - haul);
+  return { phase, x, y, width, depth, points: [[-.82,0],[.82,0],[1,.28],[.85,.8],[.4,1],[-.4,1],[-.85,.8],[-1,.28]].map(([dx, dy]) => ({ x: x + dx * width, y: y + dy * depth })) };
+}
+
+export function hitsNet(player, net) {
+  if (!net) return false;
+  const x = player.x, y = player.y - 8, radius = 18;
+  let inside = false;
+  for (let i = 0, j = net.points.length - 1; i < net.points.length; j = i++) {
+    const a = net.points[j], b = net.points[i];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const u = clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
+    if (Math.hypot(x - a.x - u * dx, y - a.y - u * dy) <= radius) return true;
+    if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+function encounter(game) {
+  const kind = game.wave % 2 ? 'calm' : game.wave % 4 === 0 ? 'boat' : 'shark';
+  const depths = kind === 'boat'
+    ? [432,475,530,595,620,620,615,560,490,435,395]
+    : kind === 'shark'
+      ? [440,425,414,410,410,415,420,440,465,440,395]
+      : [430,460,500,535,550,540,510,475,440,415,395];
+  const offset = kind === 'calm' ? game.random() * 35 : 0;
+  depths.forEach((y, i) => game.items.push({ kind: 'fish', x: 540 + i * 64, y: y + offset, golden: false, route: game.wave }));
+  if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
+  if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640 });
+  game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
+  game.wave++;
+  game.nextEncounter += 980;
+}
+
+export function createGame(random = Math.random) {
+  return {
+    random, time: 0, distance: 0, speed: 150, energy: 100, score: 0, fish: 0,
+    combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
+    player: { x: 118, y: 265, vy: 0, wet: false, invincible: 0, gulp: 0, breach: 0, breath: WORLD.breath, surfacing: false },
+    items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
+    nextEncounter: 520, wave: 0, ended: false,
+  };
+}
+
+export function step(game, dt, holding) {
+  if (game.ended) return [];
+  dt = clamp(dt, 0, .05);
+  const events = [];
+  const p = game.player;
+  game.time = Math.min(WORLD.duration, game.time + dt);
+  game.speed = 150 + Math.min(25, game.time * .2);
+  game.distance += game.speed * dt;
+  const previousBreath = p.breath;
+  p.breath = clamp(p.breath + dt * (p.wet ? -1 : 4), 0, WORLD.breath);
+  if (p.wet && previousBreath > 3 && p.breath <= 3) events.push({ kind: 'airWarning' });
+  if (p.breath === 0) p.surfacing = true;
+  if (!p.wet && p.breath >= 4) p.surfacing = false;
+  const target = holding && !p.surfacing ? (p.wet ? 240 : 255) : (p.wet ? -210 : -100);
+  p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
+  p.y = clamp(p.y + p.vy * dt, 265, 710);
+  if (p.y === 265 || p.y === 710) p.vy = 0;
+  p.invincible = Math.max(0, p.invincible - dt);
+  p.gulp = Math.max(0, p.gulp - dt); p.breach = Math.max(0, p.breach - dt);
+  const wet = p.y > WORLD.water + 12;
+  if (wet !== p.wet) {
+    events.push({ kind: wet ? 'splash' : 'breach', x: p.x, y: WORLD.water });
+    if (wet) game.diveFish = 0;
+    else { p.breach = .6; p.vy = -235; }
+    p.wet = wet;
+  }
+  if (game.time > 8) game.energy = Math.max(0, game.energy - dt * .85);
+  game.comboTime = Math.max(0, game.comboTime - dt);
+  if (!game.comboTime) game.combo = 0;
+  if (game.distance >= game.nextEncounter) encounter(game);
+  const beak = beakPosition(p);
+  for (const item of game.items) {
+    item.x -= game.speed * dt;
+    if (item.kind === 'shark') item.y = item.baseY + Math.sin(game.time * 1.5) * 16;
+    if (item.kind === 'boat') {
+      if (item.cast < 0 && item.x <= 480) {
+        item.cast = 0;
+        events.push({ kind: 'warning', x: item.x, y: WORLD.water - 125 });
+      } else if (item.cast >= 0) {
+        const before = item.cast;
+        item.cast += dt;
+        if (before < 1.45 && item.cast >= 1.45) events.push({ kind: 'netSplash', x: item.x - 70, y: WORLD.water });
+        // Once the fully sunken net has passed Pip, the fisherman reels it in.
+        if (item.cast >= 2.1 && item.cast < 2.55 && item.x - 18 < p.x - 20) item.cast = 2.55;
+      }
+    }
+    if (item.kind === 'fish') {
+      if (Math.hypot((item.x - beak.x) / 1.15, item.y - beak.y) < 32) {
+        item.caught = true;
+        game.fish++; game.combo++; game.diveFish++;
+        game.comboTime = 8.5; p.gulp = .42;
+        game.bestCombo = Math.max(game.bestCombo, game.combo);
+        const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5));
+        game.score += points;
+        game.energy = Math.min(100, game.energy + (item.golden ? 12 : 4));
+        events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden });
+        if (game.diveFish >= 5 && !game.mission) {
+          game.mission = true; game.score += 100;
+          events.push({ kind: 'mission', x: p.x, y: p.y });
+        }
+      }
+    } else {
+      const hit = item.kind === 'shark'
+        ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
+        : (Math.abs(item.x - p.x) < 57 && p.y > WORLD.water - 65 && p.y < WORLD.water + 38) || hitsNet(p, netShape(item));
+      if (hit && !p.invincible) {
+        game.energy = Math.max(0, game.energy - 23);
+        game.combo = 0; game.comboTime = 0; p.invincible = 2.2;
+        if (item.kind === 'boat') item.hit = true;
+        events.push({ kind: 'hurt', x: p.x, y: p.y });
+      }
+    }
+  }
+  game.items = game.items.filter(item => !item.caught && item.x > -180);
+  if (game.energy <= 0 || game.time >= WORLD.duration) {
+    game.ended = true; events.push({ kind: 'end' });
+  }
+  return events;
+}

@@ -1,0 +1,7 @@
+{
+  "appId": "de.pelican.game",
+  "appName": "Pelican",
+  "webDir": "dist",
+  "backgroundColor": "#ccece6",
+  "ios": { "contentInset": "never" }
+}

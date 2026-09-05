@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ccece6" />
+  <meta name="description" content="Ein kleiner Pelikan. Ein großes Abenteuer. Tauche nach Fischen und entdecke deine neue Lieblingspause." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="icon" type="image/svg+xml" href="%BASE_URL%icon.svg" />
+  <link rel="apple-touch-icon" href="%BASE_URL%icon-192.png" />
+  <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+  <title>Schnabel voll Glück</title>
+</head>
+<body>
+  <div class="desktop-note" aria-hidden="true"><span class="tiny-bird">p.</span><p>Ein bisschen Meer.<br>Ein bisschen mehr Glück.</p><span class="edition">DEINE KLEINE AUSZEIT · 01</span></div>
+  <main id="app" aria-label="Pelican Spiel">
+    <canvas id="world" width="480" height="850" aria-label="Küstenwelt. Halten oder Leertaste zum Tauchen, loslassen zum Fliegen."></canvas>
+    <div class="grain" aria-hidden="true"></div>
+    <header class="topbar">
+      <button id="home" class="wordmark" aria-label="Zur Startseite">p<span>elican</span><i>✦</i></button>
+      <div class="top-actions"><button id="pause" class="icon-button hidden" aria-label="Spiel pausieren">Ⅱ</button><button id="settings" class="icon-button" aria-label="Einstellungen öffnen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#f7faf0"/><circle cx="15" cy="17" r="3" fill="#f7faf0"/></svg></button></div>
+    </header>
+    <section id="start" class="screen start-screen">
+      <div class="intro"><div class="eyebrow"><span></span> DAS MEER RUFT <span></span></div><h1>Schnabel<br>voll <em>Glück.</em></h1><p>Kleiner Vogel. Großes Abenteuer.</p></div>
+      <div class="hero-label"><span>Hey, ich bin Pip!</span><svg viewBox="0 0 60 45"><path d="M4 4Q45 0 41 35m-9-9 9 10 8-10"/></svg></div>
+      <div class="start-bottom"><div class="record"><span>✧ DEIN REKORD</span><strong id="record">0</strong><span>PUNKTE</span></div><button id="play" class="primary">Losfliegen <span>↗</span></button><button id="wardrobe" class="quiet-button">✿ &nbsp; Pips Garderobe <span id="wallet">0 Fische</span></button><div class="control-hint"><span class="touch-icon">☝</span><p><strong>Halten zum Tauchen.</strong><br>Loslassen zum Fliegen.</p><span class="hint-wave">〰</span></div></div>
+      <div class="bottom-note">KEIN STRESS. NUR MEER.</div>
+    </section>
+    <section id="hud" class="hidden" aria-label="Spielstand">
+      <div class="score-row"><div><span class="eyebrow">DEIN FANG</span><strong id="score">0</strong></div><span id="combo" class="combo hidden">2× KOMBO</span><div class="timer"><span>◷</span> <span id="time">2:30</span></div></div>
+      <div class="energy-row"><span>ENERGIE</span><div class="energy-track" role="progressbar" aria-label="Energie" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="energy"></div></div><span id="energy-value">100</span></div>
+      <div id="tutorial" class="tutorial">Halte den Bildschirm, um zu tauchen <span>↓</span></div>
+      <div id="air" class="air hidden" role="progressbar" aria-label="Verbleibende Tauchluft in Sekunden" aria-valuemin="0" aria-valuemax="8" aria-valuenow="8"><div><span id="air-label">TAUCHLUFT</span><strong id="air-value">8.0 s</strong></div><div class="air-track"><div id="air-fill"></div></div></div>
+      <div class="mission"><span id="mission-icon">✧</span><span id="mission-text">Fange 5 Fische in einem Tauchgang</span><strong id="mission-count">0/5</strong></div>
+    </section>
+    <div id="toast" class="toast hidden" role="status"></div>
+    <dialog id="pause-dialog"><span class="dialog-kicker">KLEINE VERSCHNAUFPAUSE</span><h2>Meer läuft<br>dir nicht weg.</h2><p>Pip wartet auf dich.</p><button id="resume" class="primary">Weiterfliegen <span>↗</span></button><button id="quit" class="quiet-button">Runde beenden</button></dialog>
+    <dialog id="settings-dialog"><button class="close icon-button" aria-label="Schließen">×</button><span class="dialog-kicker">GANZ DEIN TEMPO</span><h2>Wie klingt<br>dein Meer?</h2><label class="setting">Musik<input id="music" type="checkbox" role="switch" /></label><label class="setting">Meeresrauschen & Sounds<input id="sound" type="checkbox" role="switch" /></label><label class="setting">Vibration<input id="haptics" type="checkbox" role="switch" /></label><p class="small">Am Computer: Leertaste oder Maus halten.<br>Mit Escape pausierst du die Runde.</p><button class="primary close-settings">Alles klar <span>✓</span></button></dialog>
+    <dialog id="wardrobe-dialog"><button class="close icon-button" aria-label="Schließen">×</button><span class="dialog-kicker">KLEINER VOGEL, GROSSER STIL</span><h2>Typisch Pip.</h2><p id="wardrobe-wallet"></p><div class="outfits"><button data-outfit="classic"><span>☁</span><strong>Original Pip</strong><small>Immer dabei</small></button><button data-outfit="flower"><span>✿</span><strong>Blumenkind</strong><small>Ab 25 Fischen</small></button><button data-outfit="sailor"><span>⚓</span><strong>Seebär</strong><small>Ab 80 Fischen</small></button></div><p class="small">Deine gesammelten Fische schalten Looks frei.<br>Jeder Look fliegt gleich gut.</p></dialog>
+    <dialog id="result-dialog"><span id="result-kicker" class="dialog-kicker">DAS WAR EINE SCHÖNE RUNDE</span><h2 id="result-title">Schnabel voll.<br>Herz auch.</h2><div id="result-score" class="result-score">0</div><span class="dialog-kicker">PUNKTE</span><div class="result-stats"><div><strong id="result-fish">0</strong><span>Fische</span></div><div><strong id="result-combo">0</strong><span>Beste Fangserie</span></div><div><strong id="result-time">0:00</strong><span>Meereszeit</span></div></div><p id="result-mission"></p><button id="again" class="primary">Eine Runde geht noch <span>↗</span></button><button id="back-home" class="quiet-button">Zurück an den Strand</button></dialog>
+  </main>
+  <div class="desktop-footer"><span>MIT LIEBE ZUM MEER.</span><span>HALTEN ↓ TAUCHEN &nbsp; · &nbsp; LOSLASSEN ↑ FLIEGEN</span></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
