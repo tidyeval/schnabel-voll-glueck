@@ -204,6 +204,29 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, 217, 418 + Math.sin(t * 1.6) * (reducedMotion ? 0 : 5), 1.72, t, -.06, outfit);
   } else {
     for (const item of game.items) {
+      if (item.kind === 'gull') {
+        const wing = Math.sin(t * 10) * 18;
+        path(c, null, p => { p.moveTo(item.x - 36, item.y - wing); p.quadraticCurveTo(item.x - 16, item.y - 18, item.x, item.y); p.quadraticCurveTo(item.x + 16, item.y - 18, item.x + 36, item.y - wing); }, '#fff9df', 8);
+        ellipse(c, item.x, item.y, 17, 10, '#f5f4df'); ellipse(c, item.x - 13, item.y - 7, 8, 8, '#fffbe9');
+        path(c, '#edb65c', p => { p.moveTo(item.x - 19, item.y - 9); p.lineTo(item.x - 32, item.y - 4); p.lineTo(item.x - 19, item.y - 1); });
+        ellipse(c, item.x - 16, item.y - 9, 2, 2, '#315852');
+      }
+      if (item.kind === 'jelly') {
+        const depth = 20 + item.phase * 65;
+        for (let i = -2; i <= 2; i++) path(c, null, p => { p.moveTo(item.x + i * 9, item.y); p.bezierCurveTo(item.x + i * 9 - 12, item.y + depth / 2, item.x + i * 9 + 12, item.y + depth / 2, item.x + i * 9, item.y + depth); }, '#e6addbcc', 3);
+        ellipse(c, item.x, item.y - 10, 26, 20, '#e7b4df'); ellipse(c, item.x - 8, item.y - 15, 6, 4, '#fff3ed88');
+        for (const dx of [-8, 8]) ellipse(c, item.x + dx, item.y - 6, 2, 3, '#705f85');
+      }
+      if (item.kind === 'driftwood') {
+        ellipse(c, item.x, item.y + 8, 60, 7, '#e9f5df66');
+        path(c, '#a77551', p => { p.roundRect(item.x - 48, item.y - 10, 96, 23, 10); }, '#79553f', 2);
+        path(c, null, p => { p.moveTo(item.x - 34, item.y); p.quadraticCurveTo(item.x, item.y + 5, item.x + 32, item.y - 1); }, '#d4a77d', 2);
+        ellipse(c, item.x + 41, item.y + 1, 5, 8, '#dfb887');
+      }
+      if (item.kind === 'whirlpool') {
+        for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(item.x, item.y, 30 + i * 25, 8 + i * 11, t * .7 + i * .4, 0, Math.PI * 1.6); c.strokeStyle = '#c7f3e799'; c.lineWidth = 3; c.stroke(); }
+        c.fillStyle = '#d7f7e6'; c.font = 'bold 22px sans-serif'; c.textAlign = 'center'; c.fillText('↓', item.x, item.y + 8);
+      }
       if (item.kind === 'bubble') {
         ellipse(c, item.x, item.y, 17, 17, '#b8f6ee66');
         c.strokeStyle = '#eafff6'; c.lineWidth = 2; c.beginPath(); c.arc(item.x, item.y, 17, 0, TAU); c.stroke();

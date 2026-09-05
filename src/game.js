@@ -61,7 +61,9 @@ export function hitsBoat(player, boat) {
 }
 
 function encounter(game) {
-  const kind = game.wave % 2 ? 'calm' : game.wave % 4 === 0 ? 'boat' : 'shark';
+  const hazards = ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool'];
+  const unlocked = Math.min(hazards.length, 2 + Math.floor(game.time / 25));
+  const kind = game.wave % 2 ? 'calm' : hazards[Math.floor(game.wave / 2) % unlocked];
   const depths = kind === 'boat'
     ? [432,475,530,595,620,620,615,560,490,435,395]
     : kind === 'shark'
@@ -72,6 +74,7 @@ function encounter(game) {
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false });
   if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640 });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
+  if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
   game.items.push({ kind: 'bubble', x: 1120, y: 540 });
   if (kind === 'calm') for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', flying: true, x: 650 + i * 85, y: 280, baseY: 280, golden: false });
   game.wave++;
@@ -141,6 +144,15 @@ export function step(game, dt, holding) {
       }
       item.y = clamp(item.y, WORLD.water + 70, 720);
     }
+    if (item.kind === 'gull') {
+      if (!item.warned && item.x < 480) { item.warned = true; events.push({ kind: 'warning', x: item.x, y: item.y - 40 }); }
+      item.x -= 20 * dt; item.y = 285 + Math.sin(game.time * 2) * 18;
+    }
+    if (item.kind === 'jelly') item.phase = (Math.sin(game.time * 2) + 1) / 2;
+    if (item.kind === 'whirlpool') {
+      if (p.wet && Math.hypot(item.x - p.x, item.y - p.y) < 115) p.y = Math.min(710, p.y + 65 * dt);
+      continue;
+    }
     if (item.flying) item.y = item.baseY + Math.sin(game.time * 3 + item.x * .01) * 30;
     if (item.kind === 'bubble') {
       if (Math.hypot(item.x - p.x, item.y - p.y) < 35) {
@@ -180,10 +192,13 @@ export function step(game, dt, holding) {
       const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
+        : item.kind === 'gull' ? Math.abs(item.x - p.x) < 36 && Math.abs(item.y - p.y) < 30
+        : item.kind === 'jelly' ? Math.abs(item.x - p.x) < 35 && p.y > item.y - 35 && p.y < item.y + 20 + item.phase * 65
+        : item.kind === 'driftwood' ? Math.abs(item.x - p.x) < 65 && Math.abs(p.y - WORLD.water) < 30
         : hitsBoat(p, item) || netHit;
       if (hit) {
         game.ended = true;
-        game.endReason = item.kind === 'shark' ? 'shark' : netHit ? 'net' : 'fisher';
+        game.endReason = item.kind === 'boat' ? (netHit ? 'net' : 'fisher') : item.kind;
         events.push({ kind: 'hurt', x: p.x, y: p.y }, { kind: 'end' });
         return events;
       }

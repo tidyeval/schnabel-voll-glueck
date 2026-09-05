@@ -48,7 +48,7 @@ function finish() {
   prefs.record = Math.max(prefs.record, game.score); prefs.totalFish += game.fish;
   mode = 'ended'; holding = false; game.ended = true; persist();
   text('result-kicker', record ? 'GAME OVER · NEUER REKORD!' : 'GAME OVER');
-  text('result-title', { air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: 'Runde geschafft!' }[game.endReason] || 'Bis zur nächsten Runde!');
+  text('result-title', { gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: 'Runde geschafft!' }[game.endReason] || 'Bis zur nächsten Runde!');
   text('result-score', game.score); text('result-fish', game.fish); text('result-combo', game.bestCombo); text('result-time', clock(game.time));
   text('result-mission', game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.');
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');

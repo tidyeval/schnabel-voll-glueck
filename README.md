@@ -51,6 +51,8 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 ## Spielumfang
 
+- Nach und nach kommen Möwen, pulsierende Quallen, Treibholz und Wasserwirbel dazu. Jede zweite Begegnung bleibt ruhig. Möwen, Quallen und Treibholz sind bei Kontakt tödlich; Wirbel ziehen nach unten, lassen sich aber durch Loslassen verlassen.
+
 - Nach dem Auftauchen innerhalb von 1,2 Sekunden zweimal kurz tippen für einen Überschlag (+50), dreimal für einen doppelten (+120). Zwischen den Tipps höchstens 0,32 Sekunden. Punkte erst nach vollständiger Drehung, einmal pro Auftauchen; Wasserkontakt bricht den Trick ab. Halten taucht weiterhin ab. Boote, Fischer und Netze bleiben während des Tricks tödlich.
 
 - Haie verfolgen Pip zunehmend schneller, warnen vor einem Sprint und behalten dabei dessen Richtung. Auftauchen beendet die Verfolgung.
@@ -66,7 +68,7 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 - Schnabelposition und Fangbereich bewegen sich gemeinsam. Pip öffnet beim Fangen den Schnabel, der Kehlsack federt nach; in der Luft schlägt er mit beiden Flügeln, unter Wasser legt er sie an. Auftauchen gibt einen kurzen Aufwärtsimpuls mit Spritzern, anschließend gleitet er ruhiger.
 - Fünf Fische in einem Tauchgang geben einmal pro Runde 100 Bonuspunkte.
 - Lokale Rekorde und Fischsammlung; Blume ab 25 und Matrosenmütze ab 80 gesammelten Fischen. Keine Käufe und kein Konto.
-- Hintergrundmusik: „shake-that-ra-main-version-41288-02-07.mp3“, lokal eingebettet. Sechs Sekunden Fade-out vor dem Ende, automatischer Neustart mit 1,5 Sekunden Fade-in. Pause hält auch die Musik an.
+- Hintergrundmusik: „getaway-driver-21-on-the-block-main-version-45640-01-44.mp3“, lokal eingebettet. Sechs Sekunden Fade-out vor dem Ende, automatischer Neustart mit 1,5 Sekunden Fade-in. Pause hält auch die Musik an.
 - Getrennte Schalter für Musik, Sounds und Haptik. Pause bei Fokusverlust; reduzierte Bewegung wird berücksichtigt.
 
 ## Prüfen

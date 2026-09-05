@@ -197,3 +197,34 @@ test('water and surface collisions cancel incomplete tricks without bonus', () =
   assert.ok(hitsBoat({ x: 118, y: 370 }, { x: 198 }), 'bow contact counts before centers meet');
   assert.ok(!hitsBoat({ x: 118, y: 440 }, { x: 118 }), 'clear water below hull remains safe');
 });
+
+test('new hazards unlock gradually; quiet waves remain and every hazard appears', () => {
+  const g = createGame(); g.time = 105; const seen = new Set();
+  for (let i = 0; i < 12; i++) {
+    g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
+    const hazards = g.items.filter(item => !['fish', 'bubble'].includes(item.kind));
+    if (i % 2) assert.equal(hazards.length, 0);
+    hazards.forEach(item => seen.add(item.kind));
+  }
+  assert.deepEqual([...seen], ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool']);
+  const early = createGame(); early.wave = 4; early.distance = early.nextEncounter; step(early, .01, false);
+  assert.ok(!early.items.some(item => ['gull', 'jelly', 'driftwood', 'whirlpool'].includes(item.kind)));
+});
+
+test('gulls and driftwood collide, jelly tentacles pulse, whirlpools pull without instant death', () => {
+  for (const [kind, y] of [['gull', 285], ['driftwood', 360], ['jelly', 640]]) {
+    const g = createGame(); g.player.y = y; g.player.wet = y > 372;
+    g.items = [{ kind, x: g.player.x, y }]; step(g, .01, false);
+    assert.equal(g.endReason, kind);
+  }
+  for (const [time, fatal] of [[Math.PI / 4, true], [Math.PI * 3 / 4, false]]) {
+    const g = createGame(); g.time = time; g.player.y = 700; g.player.wet = true;
+    g.items = [{ kind: 'jelly', x: g.player.x, y: 640 }]; step(g, .001, false);
+    assert.equal(g.ended, fatal, 'contracted tentacles leave room below');
+  }
+  const g = createGame(); g.player.y = 620; g.player.wet = true;
+  g.items = [{ kind: 'whirlpool', x: g.player.x, y: 640 }];
+  const before = g.player.y; step(g, .01, false); assert.ok(g.player.y > before); assert.equal(g.ended, false);
+  for (let i = 0; i < 120; i++) step(g, 1 / 60, false);
+  assert.equal(g.player.wet, false, 'releasing escapes the pull');
+});
