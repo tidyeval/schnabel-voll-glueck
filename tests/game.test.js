@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, step, WORLD, netShape, hitsNet, beakPosition } from '../src/game.js';
 
-test('Pip dives, catches a school, earns the mission once, survives a hit and finishes a round', () => {
+test('Pip dives, catches a school, earns the mission once, ends immediately on a hit', () => {
   const g = createGame(() => .5);
   g.items = [];
   for (let i = 0; i < 60; i++) step(g, 1 / 60, true);
@@ -19,12 +19,11 @@ test('Pip dives, catches a school, earns the mission once, survives a hit and fi
   events = step(g, 1 / 60, true);
   assert.equal(g.score, 260); assert.ok(!events.some(e => e.kind === 'mission'));
   g.items = [{ kind: 'shark', x: g.player.x, y: g.player.y, baseY: g.player.y }];
-  const before = g.energy;
-  step(g, 1 / 60, true); assert.ok(Math.abs(g.energy - (before - 23)) < .1); assert.equal(g.combo, 0);
-  step(g, 1 / 60, true); assert.ok(Math.abs(g.energy - (before - 23)) < .1, 'invulnerability prevents repeated damage');
-  g.items = []; g.player.invincible = 0; g.energy = .001; g.time = 20;
-  assert.ok(step(g, 1 / 60, false).some(e => e.kind === 'end'));
+  assert.ok(step(g, 1 / 60, true).some(e => e.kind === 'end'));
+  assert.equal(g.endReason, 'shark');
+  const score = g.score;
   assert.deepEqual(step(g, 1, true), [], 'ended runs cannot award more fish');
+  assert.equal(g.score, score);
   const timed = createGame(); timed.time = WORLD.duration - .01;
   assert.ok(step(timed, .02, false).some(e => e.kind === 'end'));
 });
@@ -36,8 +35,10 @@ test('nets leave clear escape routes, boundaries hold and long frames do not tel
   }
   const g = createGame(); g.player.y = 450; g.items = [{ kind: 'boat', x: g.player.x + 70, y: WORLD.water, cast: 2.2 }];
   assert.ok(step(g, .01, true).some(e => e.kind === 'hurt'));
-  const before = g.player.y; step(g, 100, true); assert.ok(g.player.y - before < 15);
-  for (let i = 0; i < 1000; i++) { g.energy = 100; step(g, .05, true); }
+  const bounds = createGame(); bounds.items = []; bounds.nextEncounter = Infinity;
+  const before = bounds.player.y; step(bounds, 100, true); assert.ok(bounds.player.y - before < 15);
+  for (let i = 0; i < 1000; i++) { bounds.player.breath = WORLD.breath; step(bounds, .05, true); }
+  assert.equal(bounds.player.y, 710);
   assert.ok(g.player.y <= 710, 'Pip remains above the mission panel');
   assert.ok(g.items.length < 35, 'offscreen entities are discarded');
 });
@@ -56,7 +57,7 @@ test('fishermen announce a fixed cast, splash once and retrieve their visible ne
   const shape = netShape(boat);
   g.player.y = 740;
   assert.deepEqual(netShape(boat), shape, 'the throw never homes in on Pip');
-  for (let i = 0; i < 160; i++) splashes += step(g, .01, false).filter(e => e.kind === 'netSplash').length;
+  for (let i = 0; i < 160; i++) splashes += step(g, .01, true).filter(e => e.kind === 'netSplash').length;
   assert.equal(splashes, 1);
   assert.equal(netShape(boat).phase, 'haul');
   boat.cast = 3.25;
@@ -68,20 +69,33 @@ test('fishermen announce a fixed cast, splash once and retrieve their visible ne
   }
 });
 
-test('eight seconds of air warn before exhaustion and force a held dive back to the surface', () => {
+test('air warns, replenishes above water, and exhaustion ends the run immediately', () => {
   const g = createGame(); g.items = []; g.nextEncounter = Infinity;
-  let warned = 0, exhausted = false, returned = false;
-  for (let i = 0; i < 720; i++) {
-    const events = step(g, 1 / 60, true);
-    warned += events.filter(e => e.kind === 'airWarning').length;
-    if (g.player.surfacing) exhausted = true;
-    if (exhausted && !g.player.wet) { returned = true; break; }
+  let warned = 0;
+  for (let i = 0; i < 600 && !g.ended; i++) warned += step(g, 1 / 60, true).filter(e => e.kind === 'airWarning').length;
+  assert.equal(warned, 1); assert.equal(g.ended, true); assert.equal(g.endReason, 'air');
+  assert.equal(g.player.breath, 0); assert.equal(g.player.wet, true);
+  assert.deepEqual(step(g, .05, false), []);
+  const fresh = createGame(); fresh.player.breath = 1;
+  for (let i = 0; i < 120; i++) step(fresh, 1 / 60, false);
+  assert.equal(fresh.player.breath, WORLD.breath);
+});
+
+test('fisher, hull and net contact end immediately, while the difficulty grows gradually', () => {
+  for (const [y, offset, cast, reason] of [[280, 7, -1, 'fisher'], [360, 0, -1, 'fisher'], [450, 70, 2.2, 'net']]) {
+    const g = createGame(); g.player.y = y;
+    g.items = [{ kind: 'boat', x: g.player.x + offset, cast }];
+    assert.equal(step(g, .01, false).filter(e => e.kind === 'end').length, 1);
+    assert.equal(g.endReason, reason);
   }
-  assert.equal(warned, 1); assert.ok(exhausted); assert.ok(returned, 'holding cannot keep Pip submerged forever');
-  assert.ok(g.player.breath < 1);
-  for (let i = 0; i < 120; i++) step(g, 1 / 60, false);
-  assert.ok(Math.abs(g.player.breath - WORLD.breath) < 1e-6); assert.equal(g.player.surfacing, false);
-  assert.ok(g.player.breach >= 0);
+  const speeds = [], gaps = [];
+  for (const time of [0, 60, 120]) {
+    const g = createGame(); g.time = time; g.distance = g.nextEncounter;
+    const before = g.nextEncounter; step(g, .01, false);
+    speeds.push(g.speed); gaps.push(g.nextEncounter - before);
+  }
+  assert.ok(speeds[0] < speeds[1] && speeds[1] < speeds[2]);
+  assert.ok(gaps[0] > gaps[1] && gaps[1] > gaps[2]);
 });
 
 test('encounters alternate routes and rest, with a safe route below the net and above sharks', () => {
@@ -113,7 +127,7 @@ test('the main fish routes can be followed through a full round without hits or 
       const target = next && next.x < p.x + 150 && p.breath > 2 ? next.y : 265;
       const events = step(g, 1 / 60, target > p.y + p.vy * .11);
       hits += events.filter(event => event.kind === 'hurt').length;
-      outOfAir ||= p.surfacing;
+      outOfAir ||= g.endReason === 'air';
     }
     assert.equal(hits, 0, `safe route, seed ${seed}`);
     assert.equal(outOfAir, false, 'rest windows provide enough time to breathe');

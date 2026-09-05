@@ -37,7 +37,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.clock.runFor(500);
     await page.locator('#app').dispatchEvent('pointercancel', { pointerId: 1, pointerType: 'touch', bubbles: true });
     await page.mouse.up();
-    await page.clock.runFor(20000);
+    await page.clock.runFor(1000);
     await page.screenshot({ path: `test-results/${name}-playing.png` });
     await page.locator('#settings').click();
     const settingsTime = await page.locator('#time').textContent();
@@ -52,15 +52,12 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     assert.equal(await page.locator('#score').textContent(), '0');
     await page.keyboard.down('Space');
     await page.clock.runFor(9100);
-    assert.equal(await page.locator('#air-label').textContent(), 'LUFT HOLEN ↑');
-    await page.clock.runFor(2500);
-    assert.ok(parseFloat(await page.locator('#air-value').textContent()) > 0, 'Pip surfaces even while holding');
-    await page.keyboard.up('Space');
-    await page.clock.runFor(2100);
-    assert.ok(await page.locator('#air').isHidden(), 'air fully replenishes above water');
-    // A complete unattended run must end, and cannot bank its fish twice.
-    await page.clock.runFor(151000);
     assert.ok(await page.locator('#result-dialog').isVisible());
+    assert.equal(await page.locator('#result-title').textContent(), 'Die Luft ist aus!');
+    await page.keyboard.up('Space');
+    const endedScore = await page.locator('#score').textContent();
+    await page.clock.runFor(1000);
+    assert.equal(await page.locator('#score').textContent(), endedScore);
     await page.locator('#back-home').click();
     await page.locator('#wardrobe').click();
     assert.ok(await page.locator('[data-outfit="sailor"]').isDisabled());

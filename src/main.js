@@ -47,8 +47,8 @@ function finish() {
   const record = game.score > prefs.record;
   prefs.record = Math.max(prefs.record, game.score); prefs.totalFish += game.fish;
   mode = 'ended'; holding = false; game.ended = true; persist();
-  text('result-kicker', record ? 'DEIN NEUER REKORD!' : 'DAS WAR EINE SCHÖNE RUNDE');
-  $('result-title').innerHTML = game.energy <= 0 ? 'Zeit für eine<br>kleine Pause.' : 'Schnabel voll.<br>Herz auch.';
+  text('result-kicker', record ? 'GAME OVER · NEUER REKORD!' : 'GAME OVER');
+  text('result-title', { air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: 'Runde geschafft!' }[game.endReason] || 'Bis zur nächsten Runde!');
   text('result-score', game.score); text('result-fish', game.fish); text('result-combo', game.bestCombo); text('result-time', clock(game.time));
   text('result-mission', game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.');
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
@@ -59,8 +59,8 @@ function updateHud() {
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
   const p = game.player;
   $('air').classList.toggle('hidden', !p.wet && p.breath >= WORLD.breath);
-  $('air').classList.toggle('low-air', p.breath <= 3 || p.surfacing);
-  text('air-label', p.surfacing ? 'LUFT HOLEN ↑' : 'TAUCHLUFT');
+  $('air').classList.toggle('low-air', p.breath <= 3);
+  text('air-label', p.breath <= 3 ? 'AUFTAUCHEN ↑' : 'TAUCHLUFT');
   text('air-value', `${p.breath.toFixed(1)} s`);
   $('air-fill').style.width = `${p.breath / WORLD.breath * 100}%`;
   $('air').setAttribute('aria-valuenow', p.breath.toFixed(1));

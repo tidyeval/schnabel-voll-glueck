@@ -53,14 +53,14 @@ function encounter(game) {
   if (kind === 'shark') game.items.push({ kind, x: 840, y: 640, baseY: 640 });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
   game.wave++;
-  game.nextEncounter += 980;
+  game.nextEncounter += 980 - Math.min(100, game.time * .7);
 }
 
 export function createGame(random = Math.random) {
   return {
     random, time: 0, distance: 0, speed: 150, energy: 100, score: 0, fish: 0,
     combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
-    player: { x: 118, y: 265, vy: 0, wet: false, invincible: 0, gulp: 0, breach: 0, breath: WORLD.breath, surfacing: false },
+    player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
     nextEncounter: 520, wave: 0, ended: false,
   };
@@ -72,18 +72,19 @@ export function step(game, dt, holding) {
   const events = [];
   const p = game.player;
   game.time = Math.min(WORLD.duration, game.time + dt);
-  game.speed = 150 + Math.min(25, game.time * .2);
+  game.speed = 150 + Math.min(60, game.time * .4);
   game.distance += game.speed * dt;
   const previousBreath = p.breath;
   p.breath = clamp(p.breath + dt * (p.wet ? -1 : 4), 0, WORLD.breath);
   if (p.wet && previousBreath > 3 && p.breath <= 3) events.push({ kind: 'airWarning' });
-  if (p.breath === 0) p.surfacing = true;
-  if (!p.wet && p.breath >= 4) p.surfacing = false;
-  const target = holding && !p.surfacing ? (p.wet ? 240 : 255) : (p.wet ? -210 : -100);
+  if (p.breath === 0) {
+    game.ended = true; game.endReason = 'air';
+    return [...events, { kind: 'end' }];
+  }
+  const target = holding ? (p.wet ? 240 : 255) : (p.wet ? -210 : -100);
   p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
   p.y = clamp(p.y + p.vy * dt, 265, 710);
   if (p.y === 265 || p.y === 710) p.vy = 0;
-  p.invincible = Math.max(0, p.invincible - dt);
   p.gulp = Math.max(0, p.gulp - dt); p.breach = Math.max(0, p.breach - dt);
   const wet = p.y > WORLD.water + 12;
   if (wet !== p.wet) {
@@ -128,20 +129,21 @@ export function step(game, dt, holding) {
         }
       }
     } else {
+      const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
-        : (Math.abs(item.x - p.x) < 57 && p.y > WORLD.water - 65 && p.y < WORLD.water + 38) || hitsNet(p, netShape(item));
-      if (hit && !p.invincible) {
-        game.energy = Math.max(0, game.energy - 23);
-        game.combo = 0; game.comboTime = 0; p.invincible = 2.2;
-        if (item.kind === 'boat') item.hit = true;
-        events.push({ kind: 'hurt', x: p.x, y: p.y });
+        : (Math.abs(item.x - p.x) < 57 && p.y > WORLD.water - 65 && p.y < WORLD.water + 38) || (Math.abs(item.x - 7 - p.x) < 35 && p.y > WORLD.water - 105 && p.y < WORLD.water - 35) || netHit;
+      if (hit) {
+        game.ended = true;
+        game.endReason = item.kind === 'shark' ? 'shark' : netHit ? 'net' : 'fisher';
+        events.push({ kind: 'hurt', x: p.x, y: p.y }, { kind: 'end' });
+        return events;
       }
     }
   }
   game.items = game.items.filter(item => !item.caught && item.x > -180);
   if (game.energy <= 0 || game.time >= WORLD.duration) {
-    game.ended = true; events.push({ kind: 'end' });
+    game.ended = true; game.endReason = game.energy <= 0 ? 'energy' : 'complete'; events.push({ kind: 'end' });
   }
   return events;
 }

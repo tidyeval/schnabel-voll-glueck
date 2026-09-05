@@ -53,10 +53,11 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 - Animierte Küste mit Leuchtturm, Palmen, Lichtstrahlen, Fischen und Pip; lokal gezeichnete Canvas-Grafik ohne Asset-Downloads.
 - Runden bis 2:30 Minuten, Energie durch Fische, goldene Fische, Fangserien bis zum vierfachen Multiplikator mit 8,5 Sekunden Zeit zum Ausweichen.
+- Das Tempo steigt während der Runde gleichmäßig von 150 auf 210; Begegnungsabstände sinken von 980 auf 880.
 - Gestaltete Fischrouten wechseln zwischen Netzdurchquerungen, flachen Wegen über Haien und ruhigen Fangabschnitten. Goldfische bieten freiwillige Umwege.
-- Animierte Fischer mit Regenjacke und Schnurrbart auf Holzbooten mit Rettungsring, Eimer und Tauwerk. Sie kündigen den Wurf an, holen aus, werfen das Netz im Bogen und holen es wieder ein. Netzzeichnung und Trefferprüfung verwenden dieselbe Kontur. Treffer kosten 23 Energie und gewähren 2,2 Sekunden Schutz.
-- Acht Sekunden Tauchluft, Warnung bei drei Sekunden, automatisches Auftauchen bei leerem Vorrat. Zwei Sekunden über Wasser füllen die Luft vollständig auf. Nach erzwungenem Auftauchen gönnt sich Pip mindestens eine Sekunde Luft, bevor Halten ihn wieder tauchen lässt.
-- Schnabelposition und Fangbereich bewegen sich gemeinsam. Pip öffnet beim Fangen den Schnabel, der Kehlsack federt nach; unter Wasser legt er die Flügel an. Auftauchen gibt einen kurzen Aufwärtsimpuls mit Spritzern, anschließend gleitet er ruhiger.
+- Animierte Fischer mit Regenjacke und Schnurrbart auf Holzbooten mit Rettungsring, Eimer und Tauwerk. Sie kündigen den Wurf an, holen aus, werfen das Netz im Bogen und holen es wieder ein. Netzzeichnung und Trefferprüfung verwenden dieselbe Kontur. Kontakt mit Fischer, Boot, Netz oder Hai beendet die Runde sofort.
+- Acht Sekunden Tauchluft, Warnung bei drei Sekunden und Game Over bei leerem Vorrat. Rechtzeitig loslassen! Zwei Sekunden über Wasser füllen die Luft vollständig auf.
+- Schnabelposition und Fangbereich bewegen sich gemeinsam. Pip öffnet beim Fangen den Schnabel, der Kehlsack federt nach; in der Luft schlägt er mit beiden Flügeln, unter Wasser legt er sie an. Auftauchen gibt einen kurzen Aufwärtsimpuls mit Spritzern, anschließend gleitet er ruhiger.
 - Fünf Fische in einem Tauchgang geben einmal pro Runde 100 Bonuspunkte.
 - Lokale Rekorde und Fischsammlung; Blume ab 25 und Matrosenmütze ab 80 gesammelten Fischen. Keine Käufe und kein Konto.
 - Getrennte Schalter für Musik, Sounds und Haptik. Pause bei Fokusverlust; reduzierte Bewegung wird berücksichtigt.
@@ -71,15 +72,12 @@ npm run preview  # in einem separaten Terminal laufen lassen
 npm run test:browser
 ```
 
-Die Modelltests prüfen Bewegung, Fänge, Punkte, Mission, Treffer-Schutz, Netzphasen und -konturen, Luft und erzwungenes Auftauchen, komplette sichere Fischrouten, Rundenschluss und Entity-Lebensdauer. Die Browserprüfung spielt in Chromium und WebKit, prüft Pause, Einstellungen, Neustart, Tauchluft und Speicherung sowie in Chromium den Offline-Neustart. Screenshots entstehen unter `test-results/`. `PELICAN_URL` kann die Testadresse überschreiben.
+Die Modelltests prüfen Bewegung, Fänge, Punkte, Mission, sofortiges Game Over, Netzphasen und -konturen, Luftmangel und zunehmendes Tempo, komplette sichere Fischrouten, Rundenschluss und Entity-Lebensdauer. Die Browserprüfung spielt in Chromium und WebKit, prüft Pause, Einstellungen, Neustart, Tauchluft und Speicherung sowie in Chromium den Offline-Neustart. Screenshots entstehen unter `test-results/`. `PELICAN_URL` kann die Testadresse überschreiben.
 
 `src/game.js` enthält die Spiellogik, `src/art.js` die Illustration, `src/main.js` Eingabe und Oberfläche und `src/audio.js` Klang und Haptik. Die App-Icons sind aus `public/icon.svg` mit `node scripts/icons.mjs` reproduzierbar.
 
-## Verifizierter Stand dieser Version
+## Validierung
 
-- `npm test`: sechs Modelltests bestanden, einschließlich Netzphasen, passender Trefferkontur, begrenzter Tauchluft und kompletter, trefferfreier Routen bei drei Varianten.
-- Produktionsbuild und Capacitor-Synchronisierung: bestanden.
-- `npm run test:browser`: Chromium und WebKit bestanden; Offline-Neustart in Chromium bestanden.
-- Android-Debug-Build der neuen Version: bestanden; eingebettete Web-Dateien mit dem aktuellen Produktionsbuild abgeglichen. Die native Start- und Spieloberfläche wurde zuvor mit der ersten Version im Android-Emulator geprüft; die neuen Abläufe wurden in Chromium und WebKit geprüft.
-- iOS-Build: durch die lokale Xcode-Installation blockiert. Sowohl der Scheme-Build als auch der direkte Target-Build melden `iOS 26.4 Platform Not Installed`. Die installierten Simulator-Runtimes 18.4/26.0/26.2 genügen dieser Xcode-Version nicht. Unter Xcode → Settings → Components die passende iOS-26.4-Komponente installieren, danach erneut bauen. Ein fertiger iOS-Build wird hier ausdrücklich noch nicht behauptet.
-- 60 FPS auf physischen Android-/iOS-Geräten sind noch nicht nachgewiesen. Der Android-Testemulator verwendet langsames Software-Rendering; sein Bildratenverhalten ist kein belastbarer Gerätetest.
+`npm test` prüft die Spielregeln und sichere Routen bei zunehmendem Tempo. `npm run test:browser` prüft die mobile Oberfläche in Chromium und WebKit. `tests/hosting.mjs` prüft die veröffentlichte Pages-Version.
+
+Native Store-Veröffentlichung und Leistung auf physischen Geräten sind noch offen. Der letzte Android-Debug-Build war erfolgreich; der lokale iOS-Build benötigt die fehlende Xcode-Plattform iOS 26.4. Nach Web-Änderungen die nativen Projekte mit `npm run native:sync` aktualisieren.

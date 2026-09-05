@@ -51,8 +51,8 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   // Soft layers give Pip volume without image downloads or sprite sheets.
   path(c, '#d9e8d9', p => { p.moveTo(-43, 9); p.lineTo(-63, -6); p.quadraticCurveTo(-62, 15, -39, 22); });
   const bite = gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : 0;
-  const flap = Math.sin(t * (wet ? 7 : 3)) * (wet ? .15 : .5) + breach;
-  if (!wet) path(c, '#e6efdf', p => { p.moveTo(-24, -6); p.bezierCurveTo(-56, -17, -67, -51 - flap * 13, -44, -43 - flap * 14); p.quadraticCurveTo(-15, -24, 4, 0); });
+  const flap = Math.sin(t * (wet ? 7 : 11)) * (wet ? .15 : 1) + breach;
+  if (!wet) path(c, '#e6efdf', p => { p.moveTo(-24, -6); p.bezierCurveTo(-56, -17, -67, -32 - flap * 45, -44, -25 - flap * 43); p.quadraticCurveTo(-15, -24, 4, 0); });
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#dc9c64'; c.lineWidth = 5; c.lineCap = 'round';
   for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(-17 + i * 17, 27); c.lineTo(-24 + i * 19, 36 + flap * 2); c.stroke();
@@ -70,6 +70,7 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   else { ellipse(c, 25, -46, 4.1, 5.1, '#284b4c'); ellipse(c, 26.3, -48, 1.3, 1.5, '#fff'); }
   ellipse(c, 21, -35, 5.4, 3.2, '#edb6a0');
   c.save(); if (wet) { c.translate(-12, 5); c.scale(.8, .6); }
+  else { c.translate(-30, 0); c.rotate(-.35 - flap * 1.05); c.scale(1, 1.65); c.translate(30, 0); }
   path(c, gradient(c, 0, 35, '#f2f5e5', '#d9e5d1'), p => { p.moveTo(-35, -3); p.bezierCurveTo(-16, -7, 0, 7, -5, 22); p.quadraticCurveTo(-14, 32, -23, 26); p.quadraticCurveTo(-37, 25, -43, 12); p.quadraticCurveTo(-48, 3, -35, -3); }, '#d2dfc8', .7);
   for (let i = 0; i < 3; i++) path(c, null, p => { p.moveTo(-33 + i * 8, 12); p.quadraticCurveTo(-29 + i * 8, 19, -25 + i * 8, 20); }, '#c6d8c3', .9);
   c.restore();
@@ -210,7 +211,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     if (p.wet) {
       for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(t * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
     }
-    c.save(); if (p.invincible > 0) c.globalAlpha = reducedMotion ? .65 : .45 + Math.sin(t * 22) * .25;
+    c.save();
     pelican(c, p.x, p.y, .76, t, playerTilt(p), outfit, p.wet, p.gulp > .1, p.gulp, p.breach); c.restore();
   }
   for (let i = 0; i < 4; i++) {
@@ -223,7 +224,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
     } else if (['splash', 'breach', 'netSplash'].includes(e.kind)) {
       for (let i = 0; i < 9; i++) { const v = i - 4; const age = 1 - e.life; ellipse(c, e.x + v * age * (e.kind === 'netSplash' ? 31 : 19), e.y - Math.sin(age * Math.PI) * ((e.kind === 'breach' ? 45 : 27) - Math.abs(v) * 3), 2 * e.life, 4 * e.life, '#e8f8de'); }
-    } else if (e.kind === 'hurt') { c.fillStyle = '#fff0cc'; c.font = "bold 17px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText('Autsch! −23', e.x, e.y - 45 - (1 - e.life) * 30); }
+    } else if (e.kind === 'hurt') { c.fillStyle = '#fff0cc'; c.font = "bold 17px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText('Autsch!', e.x, e.y - 45 - (1 - e.life) * 30); }
     c.restore();
   }
 }
