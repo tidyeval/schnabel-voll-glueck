@@ -1,4 +1,4 @@
-# Schnabel voll Glück
+# Schnabelglück
 
 [Jetzt spielen](https://tidyeval.github.io/schnabel-voll-glueck/)
 

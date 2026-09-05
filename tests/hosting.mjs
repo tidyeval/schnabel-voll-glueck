@@ -11,7 +11,7 @@ for (const engine of [chromium, webkit]) {
     page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
     await page.clock.install();
     await page.goto(url);
-    assert.equal(await page.title(), 'Schnabel voll Glück');
+    assert.equal(await page.title(), 'Schnabelglück');
     const manifestURL = await page.locator('link[rel=manifest]').evaluate(e => e.href);
     const manifest = await (await context.request.get(manifestURL)).json();
     assert.equal(new URL(manifest.start_url, manifestURL).href, url);

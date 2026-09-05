@@ -3,3 +3,5 @@
 .tutorial{top:auto;bottom:14%}
 
 [hidden]{display:none!important}.bottom-note{display:flex;justify-content:center;gap:12px}.bottom-note .quiet-button{font-size:12px;padding:6px;min-height:44px;color:#fff6d7}#install-help p{line-height:1.5}
+
+.top-actions{margin-left:auto}.intro h1{font-size:clamp(28px,8vw,44px);white-space:nowrap;letter-spacing:-2px}

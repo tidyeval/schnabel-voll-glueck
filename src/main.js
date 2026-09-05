@@ -72,7 +72,6 @@ function updateHud() {
 }
 canvas.tabIndex = 0;
 $('play').onclick = start; $('again').onclick = start; $('back-home').onclick = home;
-$('home').onclick = () => mode === 'playing' ? pause() : mode === 'menu' ? null : home();
 $('pause').onclick = () => pause(); $('resume').onclick = resume;
 $('quit').onclick = finish;
 $('settings').onclick = () => { pause(false); $('settings-dialog').showModal(); };

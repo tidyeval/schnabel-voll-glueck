@@ -1,6 +1,6 @@
 {
   "appId": "de.pelican.game",
-  "appName": "Pelican",
+  "appName": "Schnabelglück",
   "webDir": "dist",
   "backgroundColor": "#ccece6",
   "ios": { "contentInset": "never" }

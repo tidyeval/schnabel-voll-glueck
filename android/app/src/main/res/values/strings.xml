@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Pelican</string>
-    <string name="title_activity_main">Pelican</string>
+    <string name="app_name">Schnabelglück</string>
+    <string name="title_activity_main">Schnabelglück</string>
     <string name="package_name">de.pelican.game</string>
     <string name="custom_url_scheme">de.pelican.game</string>
 </resources>

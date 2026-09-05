@@ -1,4 +1,4 @@
-name: Publish Schnabel voll Glück
+name: Publish Schnabelglück
 on:
   push:
     branches: [main]
