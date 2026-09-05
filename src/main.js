@@ -48,7 +48,7 @@ function finish() {
   prefs.record = Math.max(prefs.record, game.score); prefs.totalFish += game.fish;
   mode = 'ended'; holding = false; game.ended = true; persist();
   text('result-kicker', record ? 'GAME OVER · NEUER REKORD!' : 'GAME OVER');
-  text('result-title', { diver: 'Taucher voraus!', harpoon: 'Von der Harpune erwischt!', surfer: 'Surfer voraus!', gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: 'Runde geschafft!' }[game.endReason] || 'Bis zur nächsten Runde!');
+  text('result-title', { island: 'Die Insel erwischt!', reef: 'Am Felsen hängen geblieben!', diver: 'Taucher voraus!', harpoon: 'Von der Harpune erwischt!', surfer: 'Surfer voraus!', gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: 'Runde geschafft!' }[game.endReason] || 'Bis zur nächsten Runde!');
   text('result-score', game.score); text('result-fish', game.fish); text('result-combo', game.bestCombo); text('result-time', clock(game.time));
   text('result-mission', game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.');
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
@@ -133,6 +133,8 @@ function frame(now) {
       if (event.kind === 'end') { finish(); break; }
       if (event.x !== undefined) effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
+      if (event.kind === 'islandWarning') toast('Insel voraus! Jetzt auftauchen und darüberfliegen ↑');
+      if (event.kind === 'reefWarning') toast('Felsen voraus! Folge den Fischen durch die Mitte.');
       if (event.kind === 'nestWarning') toast('Nest voraus! Zum Füttern auftauchen ↑');
       if (event.kind === 'delivery') { holding = false; prefs.record = Math.max(prefs.record, game.score); persist(); toast(`Küken satt! ${event.count} Fische · +${event.points} Punkte`); }
       if (event.kind === 'outsmart') toast('Ausgetrickst! +25 Punkte');

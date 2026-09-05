@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsTerrain } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, ends immediately on a hit', () => {
   const g = createGame(() => .5);
@@ -200,13 +200,13 @@ test('water and surface collisions cancel incomplete tricks without bonus', () =
 
 test('new hazards unlock gradually; quiet waves remain and every hazard appears', () => {
   const g = createGame(); g.time = 105; const seen = new Set();
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 80; i++) {
     g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
     const hazards = g.items.filter(item => !['fish', 'bubble', 'nest'].includes(item.kind));
     if (i % 2) assert.equal(hazards.length, 0);
     hazards.forEach(item => seen.add(item.kind));
   }
-  assert.deepEqual([...seen].sort(), ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool', 'diver', 'surfer'].sort());
+  assert.deepEqual([...seen].sort(), ['boat', 'shark', 'gull', 'jelly', 'driftwood', 'whirlpool', 'diver', 'surfer', 'island', 'reef'].sort());
   const early = createGame(); early.wave = 4; early.distance = early.nextEncounter; step(early, .01, false);
   assert.ok(!early.items.some(item => ['gull', 'jelly', 'driftwood', 'whirlpool'].includes(item.kind)));
 });
@@ -257,7 +257,7 @@ test('surfers leave a low-air ascent clear; later layers retain a middle corrido
   assert.equal(surfer.escaping, true); assert.equal(g.ended, false); assert.equal(g.player.wet, false);
   const hit = createGame(); hit.player.y = 350; hit.items = [{ kind: 'surfer', x: 118, y: WORLD.water }]; step(hit, .01, false);
   assert.equal(hit.endReason, 'surfer');
-  const late = createGame(); late.time = 105; late.wave = 4; late.distance = late.nextEncounter; late.items = [];
+  const late = createGame(); late.time = 105; late.wave = 12; late.distance = late.nextEncounter; late.items = [];
   step(late, .01, false);
   assert.ok(late.items.filter(i => !['fish', 'bubble'].includes(i.kind)).length === 2);
   assert.ok(late.items.some(i => i.kind === 'bubble'));
@@ -287,4 +287,18 @@ test('full cargo slows ascent, caps at capacity and feeding unloads once before 
   const skip = createGame(); skip.player.y = 550; skip.player.wet = true; skip.cargo = 10;
   skip.items = [{ kind: 'nest', x: 118, y: WORLD.water, served: false, celebration: 0 }]; step(skip, .01, true);
   assert.equal(skip.feeding, 0); assert.equal(skip.cargo, 10); assert.equal(skip.ended, false);
+});
+
+
+test('islands force flight, reefs leave a clear passage and full cargo can ascend after warning', () => {
+  const island = { kind: 'island', x: 118 }, reef = { kind: 'reef', x: 118 };
+  assert.ok(!hitsTerrain({ x: 118, y: 265 }, island));
+  for (const y of [350, 500, 710]) assert.ok(hitsTerrain({ x: 118, y }, island));
+  assert.ok(!hitsTerrain({ x: 118, y: 530 }, reef));
+  for (const y of [420, 630]) assert.ok(hitsTerrain({ x: 118, y }, reef));
+  const g = createGame(); g.time = 80; g.cargo = WORLD.capacity; g.player.y = 710; g.player.wet = true;
+  g.items = [{ kind: 'island', x: 759 }]; g.nextEncounter = Infinity;
+  assert.ok(step(g, .01, false).some(e => e.kind === 'islandWarning'));
+  for (let i = 0; i < 240 && !g.ended; i++) step(g, 1 / 60, false);
+  assert.equal(g.ended, false); assert.equal(g.player.wet, false);
 });

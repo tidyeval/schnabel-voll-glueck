@@ -1,4 +1,4 @@
-import { WORLD, clamp, netShape, playerTilt } from './game.js';
+import { WORLD, clamp, netShape, playerTilt, terrainBlocks } from './game.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -210,6 +210,19 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, 217, 418 + Math.sin(t * 1.6) * (reducedMotion ? 0 : 5), 1.72, t, -.06, outfit);
   } else {
     for (const item of game.items) {
+      if (['island', 'reef'].includes(item.kind)) {
+        for (const b of terrainBlocks(item)) {
+          path(c, gradient(c, b.y, b.y + b.height, '#99b6a1', '#4f827d'), p => p.rect(b.x, b.y, b.width, b.height));
+          path(c, '#d6c59a', p => p.rect(b.x, b.y, b.width, 7));
+          for (let i = 0; i < 5 && 38 + i * 43 < b.height; i++) path(c, null, p => { p.moveTo(b.x + 8, b.y + 26 + i * 43); p.lineTo(b.x + b.width * .4, b.y + 38 + i * 43); p.lineTo(b.x + b.width - 8, b.y + 28 + i * 43); }, '#366d6a44', 2);
+        }
+        if (item.kind === 'island') {
+          for (let i = 0; i < 5; i++) ellipse(c, item.x - 45 + i * 22, 330, 17, 7, '#8ab98c');
+          ellipse(c, item.x + 22, 323, 8, 4, '#f0ccb0'); ellipse(c, item.x + 23, 321, 2, 2, '#f7e7c8');
+        } else {
+          for (let i = 0; i < 5; i++) path(c, null, p => { p.moveTo(item.x - 60 + i * 27, 610); p.quadraticCurveTo(item.x - 70 + i * 27, 638, item.x - 55 + i * 27, 657); }, '#d9a69a', 5);
+        }
+      }
       if (item.kind === 'nest') {
         path(c, '#92aa97', p => { p.moveTo(item.x - 62, water + 7); p.lineTo(item.x - 33, water - 34); p.lineTo(item.x + 32, water - 36); p.lineTo(item.x + 65, water + 7); p.closePath(); });
         ellipse(c, item.x, water - 26, 53, 13, '#a27a51');
