@@ -101,3 +101,9 @@ Die Modelltests prüfen Bewegung, Fänge, Punkte, Mission, sofortiges Game Over,
 `npm test` prüft die Spielregeln und sichere Routen bei zunehmendem Tempo. `npm run test:browser` prüft die mobile Oberfläche in Chromium und WebKit. `tests/hosting.mjs` prüft die veröffentlichte Pages-Version.
 
 Native Store-Veröffentlichung und Leistung auf physischen Geräten sind noch offen. Der letzte Android-Debug-Build war erfolgreich; der lokale iOS-Build benötigt die fehlende Xcode-Plattform iOS 26.4. Nach Web-Änderungen die nativen Projekte mit `npm run native:sync` aktualisieren.
+
+## Visueller Feinschliff
+
+Figuren, Outfits und Küstenwelt teilen eine warme, weich gezeichnete Gestaltung. Der Startbutton heißt „Los gehts!“. Die Spielhilfe steht in den Einstellungen. Knappe Luft wird durch Pips Ausdruck, kleine Atemblasen und die Luftanzeige signalisiert; reduzierte Bewegung deaktiviert dekorative Animationen und Partikel.
+
+[Abnahme, Bildvergleiche und reproduzierbare Animations-/Performanceprüfung zu Ticket #1](docs/polish.md).

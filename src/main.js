@@ -62,6 +62,9 @@ function updateHud() {
   const p = game.player;
   $('air').classList.toggle('hidden', !p.wet && p.breath >= WORLD.breath);
   $('air').classList.toggle('low-air', p.breath <= 3);
+  const urgency = Math.max(0, 1 - p.breath / 3);
+  const pulse = reducedMotion ? 2 : 2 + (1 + Math.sin(animation * (5 + urgency * 5))) * 2;
+  $('air').style.boxShadow = p.wet && p.breath <= 3 ? `0 0 0 ${pulse}px #ffd59a66` : '';
   text('air-label', p.breath <= 3 ? 'AUFTAUCHEN ↑' : 'TAUCHLUFT');
   text('air-value', `${p.breath.toFixed(1)} s`);
   $('air-fill').style.width = `${p.breath / WORLD.breath * 100}%`;
@@ -141,7 +144,6 @@ function frame(now) {
       if (event.kind === 'trick') toast(`${event.turns === 2 ? 'Doppelter Überschlag' : 'Überschlag'}! +${event.points} Punkte`);
       if (event.kind === 'airBonus') toast('Luftblase! +2 Sekunden Tauchluft');
       if (event.kind === 'mission') toast('✦ Fünf auf einen Tauchgang! +100 Punkte');
-      if (event.kind === 'airWarning') toast('Luft wird knapp! Loslassen zum Auftauchen ↑');
     }
     updateHud();
   }

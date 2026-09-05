@@ -26,18 +26,21 @@ export function netShape(boat) {
   return { phase, x, y, width, depth, points: [[-.82,0],[.82,0],[1,.28],[.85,.8],[.4,1],[-.4,1],[-.85,.8],[-1,.28]].map(([dx, dy]) => ({ x: x + dx * width, y: y + dy * depth })) };
 }
 
-export function hitsNet(player, net) {
-  if (!net) return false;
-  const x = player.x, y = player.y - 8, radius = 18;
+function hitsPolygon(x, y, points) {
+  const radius = 18;
   let inside = false;
-  for (let i = 0, j = net.points.length - 1; i < net.points.length; j = i++) {
-    const a = net.points[j], b = net.points[i];
+  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+    const a = points[j], b = points[i];
     const dx = b.x - a.x, dy = b.y - a.y;
     const u = clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
     if (Math.hypot(x - a.x - u * dx, y - a.y - u * dy) <= radius) return true;
     if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
   }
   return inside;
+}
+
+export function hitsNet(player, net) {
+  return net ? hitsPolygon(player.x, player.y - 8, net.points) : false;
 }
 
 // One trick attempt per breach; a third quick press upgrades the running spin.
@@ -62,10 +65,17 @@ export function hitsBoat(player, boat) {
 
 export function terrainBlocks(item) {
   return (item.kind === 'island' ? [[-70, 330, 140, 520]] : [[-60, 382, 120, 68], [-85, 610, 170, 240]])
-    .map(([x, y, width, height]) => ({ x: item.x + x, y, width, height }));
+    .map(([x, y, width, height]) => {
+      x += item.x;
+      const points = [[14,0],[width * .3,0],[width * .55,0],[width * .76,3],[width - 14,2],[width - 5,7],[width,14],
+        [width - 4,height * .27],[width,height * .5],[width - 7,height * .73],[width,height - 14],[width - 5,height - 5],[width - 14,height],
+        [width * .68,height - 3],[width * .42,height],[14,height],[5,height - 5],[0,height - 14],[6,height * .76],[1,height * .52],
+        [8,height * .3],[0,14],[2,8],[6,2]].map(([dx, dy]) => ({ x: x + dx, y: y + dy }));
+      return { x, y, width, height, points };
+    });
 }
 export function hitsTerrain(player, item) {
-  return terrainBlocks(item).some(b => Math.hypot(player.x - clamp(player.x, b.x, b.x + b.width), player.y - clamp(player.y, b.y, b.y + b.height)) < 18);
+  return terrainBlocks(item).some(b => hitsPolygon(player.x, player.y, b.points));
 }
 
 function encounter(game) {

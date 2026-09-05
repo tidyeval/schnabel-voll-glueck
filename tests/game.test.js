@@ -322,3 +322,12 @@ test('counter-swimming groups grow, share two depths and turtles collide without
   g.player.y = turtle.y; g.player.wet = true; turtle.x = g.player.x;
   step(g, .001, false); assert.equal(g.endReason, 'turtle');
 });
+
+test('organic terrain collision follows the visible corner and retains the passage', () => {
+  const island={kind:'island',x:100};
+  assert.equal(hitsTerrain({x:20,y:320},island),false,'outside the shaped top-left corner');
+  assert.equal(hitsTerrain({x:22,y:322},island),true,'Pip touches the shaped corner');
+  assert.equal(hitsTerrain({x:100,y:311},island),false);
+  assert.equal(hitsTerrain({x:100,y:313},island),true);
+  assert.equal(hitsTerrain({x:100,y:530},{kind:'reef',x:100}),false);
+});

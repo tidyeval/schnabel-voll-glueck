@@ -1,0 +1,22 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Schnabelglück · Animationsprüfung</title>
+<style>body{margin:0;background:#fff5df;color:#285652;font:16px system-ui}header{padding:12px;display:flex;gap:12px;flex-wrap:wrap}canvas{display:block;max-width:100%;height:auto;margin:auto;width:390px}select,button{font:inherit}label{display:flex;gap:6px;align-items:center}</style>
+<header><select id="scene" aria-label="Szene"><option>Pip</option><option>Tiere</option><option>Menschen</option><option>Umgebung</option><option>Füttern</option><option>Knappe Luft</option></select><select id="outfit" aria-label="Outfit"><option value="classic">Klassisch</option><option value="flower">Blume</option><option value="sailor">Matrose</option></select><label><input type="checkbox" id="reduced">Reduzierte Bewegung</label><button id="pause">Pause</button></header><canvas width="480" height="850"></canvas>
+<script type="module">
+const prefix=new URLSearchParams(location.search).get('stage')==='before'?'../test-results/polish/before':'../src';
+const {drawWorld}=await import(`${prefix}/art.js`);const {createGame}=await import(`${prefix}/game.js`);
+const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),g=createGame(()=>.5);let t=0,last,paused=false;
+document.querySelector('#pause').onclick=()=>{paused=!paused;document.querySelector('#pause').textContent=paused?'Weiter':'Pause'};
+function frame(now){const dt=Math.min(.05,(now-(last??now))/1000);last=now;if(!paused)t+=dt;
+const p=g.player,scene=document.querySelector('#scene').value,cycle=t%12;p.y=265;p.wet=false;p.vy=0;p.spin=0;p.feedX=undefined;p.gulp=0;p.breach=0;p.breath=8;g.feeding=0;g.cargo=0;g.items=[];
+if(scene==='Pip'){
+ p.y=265+Math.sin(Math.max(0,Math.min(1,(cycle-2)/5))*Math.PI)*320;p.wet=p.y>372;p.vy=cycle<4.5?160:-160;
+ g.cargo=cycle>4?20:0;p.gulp=cycle>4&&cycle<4.5?.3:0;p.breach=cycle>7&&cycle<7.6?.5:0;
+ if(cycle>8&&cycle<9.3)p.spin=(cycle-8)/1.3*Math.PI*4;
+ g.items=[{kind:'fish',x:250,y:470},{kind:'fish',x:300,y:500,golden:true}];
+}else if(scene==='Knappe Luft'){p.y=500;p.wet=true;p.breath=3-(t%3);}
+else if(scene==='Tiere') g.items=[{kind:'shark',x:290,y:660,phase:t%4<1?'warn':t%4<2?'dash':'cruise'},{kind:'turtle',x:290,y:440,baseY:440},{kind:'gull',x:300,y:280},{kind:'jelly',x:390,y:550,phase:(Math.sin(t*2)+1)/2},{kind:'fish',x:160,y:420},{kind:'fish',x:220,y:400,golden:true},{kind:'fish',x:380,y:230,flying:true}];
+else if(scene==='Menschen')g.items=[{kind:'boat',x:180,y:360,cast:t%4},{kind:'surfer',x:370,y:360,escaping:t%8>6},{kind:'diver',x:320,y:620,phase:t%4<1.1?'aim':t%4<1.7?'locked':'reload',aimX:118,aimY:530},{kind:'harpoon',x:300-(t%4)*80,y:610-(t%4)*20,vx:-80,vy:-20}];
+else if(scene==='Umgebung')g.items=[{kind:'island',x:110},{kind:'reef',x:370},{kind:'whirlpool',x:340,y:530},{kind:'driftwood',x:250,y:360},{kind:'bubble',x:270,y:490}];
+else {g.feeding=1;g.cargo=20-Math.floor(t*4)%21;p.y=285;p.feedX=175;g.items=[{kind:'nest',x:250,y:360,served:true,celebration:2}]}
+drawWorld(c,g,'playing',t,document.querySelector('#outfit').value,[],document.querySelector('#reduced').checked);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script></html>
