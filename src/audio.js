@@ -1,4 +1,4 @@
-import musicURL from './assets/bumpin.mp3?url';
+import musicURL from './assets/soundtrack.mp3?url';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 

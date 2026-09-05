@@ -66,7 +66,7 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 - Schnabelposition und Fangbereich bewegen sich gemeinsam. Pip öffnet beim Fangen den Schnabel, der Kehlsack federt nach; in der Luft schlägt er mit beiden Flügeln, unter Wasser legt er sie an. Auftauchen gibt einen kurzen Aufwärtsimpuls mit Spritzern, anschließend gleitet er ruhiger.
 - Fünf Fische in einem Tauchgang geben einmal pro Runde 100 Bonuspunkte.
 - Lokale Rekorde und Fischsammlung; Blume ab 25 und Matrosenmütze ab 80 gesammelten Fischen. Keine Käufe und kein Konto.
-- Hintergrundmusik: „Aves – Bumpin“, lokal eingebettet. Sechs Sekunden Fade-out vor dem Ende, automatischer Neustart mit 1,5 Sekunden Fade-in. Pause hält auch die Musik an.
+- Hintergrundmusik: „shake-that-ra-main-version-41288-02-07.mp3“, lokal eingebettet. Sechs Sekunden Fade-out vor dem Ende, automatischer Neustart mit 1,5 Sekunden Fade-in. Pause hält auch die Musik an.
 - Getrennte Schalter für Musik, Sounds und Haptik. Pause bei Fokusverlust; reduzierte Bewegung wird berücksichtigt.
 
 ## Prüfen
