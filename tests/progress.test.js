@@ -21,5 +21,5 @@ test('attempts bank fish once, advance only on completion and preserve the legac
     const fresh=createGame(Math.random,stage);assert.equal(fresh.score,0);assert.equal(fresh.cargo,0);assert.equal(fresh.energy,100);assert.equal(fresh.player.breath,8);assert.equal(fresh.combo,0);assert.equal(fresh.mission,false);
   }
   const failed=createGame(Math.random,1);failed.ended=true;failed.endReason='air';failed.fish=3;recordAttempt(prefs,failed);
-  assert.equal(prefs.completed,3);assert.equal(prefs.totalFish,75);assert.equal(prefs.record,987);assert.deepEqual(prefs.bests,[100,100,100]);
+  assert.equal(prefs.completed,3);assert.equal(prefs.totalFish,75);assert.equal(prefs.record,987);assert.deepEqual(prefs.difficultyBests.medium,[100,100,100]);
 });

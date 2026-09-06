@@ -102,31 +102,31 @@ test('authored stages introduce individual dangers before combinations and finis
   const seen = new Set();
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
-    for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
+    for (let wave = 0; wave < STAGES[stage].encounters.medium.length; wave++) {
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
       const dangers = g.items.filter(i => !['fish', 'bubble', 'turtle'].includes(i.kind));
       dangers.forEach(i => seen.add(i.kind));
-      if (STAGES[stage].encounters[wave] === 'calm') assert.equal(dangers.length, 0);
+      if (STAGES[stage].encounters.medium[wave] === 'calm') assert.equal(dangers.length, 0);
       if (stage === 0) assert.ok(dangers.length <= 1, 'bay encounters are individual');
-      else assert.equal(dangers.length, ['calm', 'turtle'].includes(STAGES[stage].encounters[wave]) ? 0 : STAGES[stage].encounters[wave].split('-').length);
+      else assert.equal(dangers.length, ['calm', 'turtle'].includes(STAGES[stage].encounters.medium[wave]) ? 0 : STAGES[stage].encounters.medium[wave].split('-').length);
     }
     g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
     assert.ok(g.items.some(i => i.kind === 'nest' && i.final));
     assert.equal(g.nextEncounter, Infinity);
   }
-  assert.deepEqual([...seen].sort(), ['boat', 'diver', 'driftwood', 'gull', 'island', 'jelly', 'puffer', 'reef', 'shark', 'surfer', 'whirlpool'].sort());
+  assert.deepEqual([...seen].sort(), ['boat', 'buoy', 'coral', 'diver', 'driftwood', 'gull', 'island', 'jelly', 'puffer', 'reef', 'shark', 'surfer', 'whirlpool'].sort());
 });
 
 test('complete main fish routes are playable in every stage with empty and full cargo', () => {
-  for (const dt of [1 / 30, 1 / 60, .016]) for (let stage = 0; stage < 3; stage++) for (const cargo of [0, 20]) for (const seed of [0, .5, .99]) {
-    const g = createGame(() => seed, stage); g.cargo = cargo;
+  for (const difficulty of ['easy', 'medium', 'hard']) for (const dt of [1 / 30, 1 / 60, .016]) for (let stage = 0; stage < 3; stage++) for (const cargo of [0, 20]) for (const seed of [0, .5, .99]) {
+    const g = createGame(() => seed, stage, difficulty); g.cargo = cargo;
     const control = routeController(); let last = false;
-    while (g.time < 90 && !g.ended) {
+    while (g.time < 110 && !g.ended) {
       const holding = control(g); if (holding && !last) press(g); last = holding;
       step(g, dt, holding);
     }
-    assert.equal(g.endReason, 'complete', `stage ${stage}, cargo ${cargo}, seed ${seed}`);
-    assert.ok(g.time >= 45 && g.time <= 75);
+    assert.equal(g.endReason, 'complete', `difficulty ${difficulty}, stage ${stage}, cargo ${cargo}, seed ${seed}, dt ${dt}`);
+    assert.ok(g.time >= 60 && g.time <= 100);
     assert.ok(g.fish > 90); assert.equal(g.cargo, 0); assert.ok(g.delivered > 0);
     assert.ok(g.items.every(i => ['nest', 'fish', 'bubble'].includes(i.kind)), 'safe arrival has no lingering hazards');
   }
@@ -305,9 +305,9 @@ test('organic terrain collision follows the visible corner and retains the passa
 });
 
 test('successive fishermen keep four distinct stable looks', () => {
-  const g=createGame(Math.random, 1);
+  const g=createGame(Math.random, 0);
   for(let i=0;i<5;i++) {
-    g.wave=0;g.items=[];g.distance=g.nextEncounter;
+    g.wave=STAGES[0].encounters.medium.indexOf('boat');g.items=[];g.distance=g.nextEncounter;
     step(g,.01,false);
     const boat=g.items.find(item=>item.kind==='boat');
     assert.equal(boat.look,i%4);
@@ -374,13 +374,13 @@ test('empty final nest can be reached, waits for ascent, and settles without adv
 });
 
 test('coasting cannot finish any stage; no-food endurance is bounded even without hazards', () => {
-  for (let stage = 0; stage < STAGES.length; stage++) {
-    const g = createGame(() => .5, stage);
-    while (!g.ended && g.time < 80) step(g, 1 / 60, false);
-    assert.equal(g.endReason, 'energy'); assert.ok(g.time < 40); assert.equal(g.delivered, 0);
-    const empty = createGame(() => .5, stage); empty.items = []; empty.nextEncounter = Infinity;
+  for (const difficulty of ['easy', 'medium', 'hard']) for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(() => .5, stage, difficulty);
+    while (!g.ended && g.time < 110) step(g, 1 / 60, false);
+    assert.ok(['energy', 'buoy'].includes(g.endReason)); assert.equal(g.delivered, 0);
+    const empty = createGame(() => .5, stage, difficulty); empty.items = []; empty.nextEncounter = Infinity;
     while (!empty.ended) step(empty, 1 / 60, false);
-    assert.ok(empty.time > 35 && empty.time < 35.4); assert.equal(empty.fish, 0);
+    assert.ok(Math.abs(empty.time - (2 + 100 / empty.rules.drain)) < 1 / 60); assert.equal(empty.fish, 0);
   }
 });
 
@@ -411,12 +411,24 @@ test('contacts cost energy once, protect briefly, and never take cargo or air', 
   assert.equal(g.endReason, 'energy'); assert.equal(g.energy, 0);
 });
 
-test('bay already contains the main cast; later stages increase combinations and reserve puffer', () => {
-  assert.deepEqual(STAGES[0].encounters.filter(k => k !== 'calm').sort(), ['turtle','boat','shark','gull','jelly','island','surfer','driftwood','diver'].sort());
-  assert.ok(!STAGES[0].encounters.some(k => k.includes('puffer')));
-  const combinations = STAGES.map(s => s.encounters.filter(k => k.includes('-')).length);
+test('difficulty pacing introduces actors before combining them and regularly releases pressure', () => {
+  for (const difficulty of ['easy', 'medium', 'hard']) {
+    const learned = new Set();
+    for (const stage of STAGES) {
+      let streak = 0;
+      for (const entry of stage.encounters[difficulty]) {
+        const actors = entry.split('-');
+        if (actors.length > 1) for (const actor of actors) assert.ok(learned.has(actor), `${difficulty}: learn ${actor} before a combination`);
+        else learned.add(entry);
+        streak = ['calm', 'turtle'].includes(entry) ? 0 : streak + 1;
+        assert.ok(streak <= { easy: 1, medium: 2, hard: 3 }[difficulty], `${difficulty}: recovery follows a bounded stretch of danger`);
+        if (difficulty === 'easy') assert.equal(actors.length, 1);
+      }
+    }
+    assert.ok(!STAGES[0].encounters[difficulty].some(k => k.includes('puffer')));
+  }
+  const combinations = STAGES.map(s => s.encounters.medium.filter(k => k.includes('-')).length);
   assert.ok(combinations[0] < combinations[1] && combinations[1] < combinations[2]);
-  assert.ok(STAGES[0].spacing > STAGES[1].spacing && STAGES[1].spacing > STAGES[2].spacing);
 });
 
 test('exhaustion at the nest cannot trigger a completion, feeding itself freezes energy', () => {

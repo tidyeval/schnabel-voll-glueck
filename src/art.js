@@ -358,6 +358,26 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, 217, 378 + Math.sin(motion * 1.6) * 5, 1.55, motion, -.06, outfit);
   } else {
     for (const item of game.items) {
+      if (item.kind === 'buoy') {
+        const b = terrainBlocks(item)[0];
+        const outline = p => { b.points.forEach((v, i) => i ? p.lineTo(v.x, v.y) : p.moveTo(v.x, v.y)); p.closePath(); };
+        path(c, gradient(c, b.y, b.y + b.height, '#edb17a', '#bc6555'), outline, '#785950', 2);
+        c.save(); c.beginPath(); outline(c); c.clip();
+        for (const y of [278, 340, 402]) path(c, '#fff0cf', p => p.rect(b.x, y, b.width, 24));
+        c.restore();
+        ellipse(c, item.x, 260, 7, 7, '#fff2b9');
+        ellipse(c, item.x, water + 5, 42, 7, '#e9f5df66');
+      }
+      if (item.kind === 'coral') {
+        const b = terrainBlocks(item)[0];
+        path(c, gradient(c, b.y, 850, '#e7a28e', '#98738b'), p => { b.points.forEach((v, i) => i ? p.lineTo(v.x, v.y) : p.moveTo(v.x, v.y)); p.closePath(); }, '#855f79', 2);
+        // Branches stay inside the shared collision silhouette.
+        for (let i = 0; i < 5; i++) {
+          const x = item.x - 55 + i * 27, top = 629 + (i % 2) * 20;
+          path(c, null, p => { p.moveTo(x, 830); p.quadraticCurveTo(x - 8, 740, x, top); p.moveTo(x - 2, top + 65); p.quadraticCurveTo(x - 19, top + 50, x - 14, top + 29); p.moveTo(x - 3, top + 105); p.quadraticCurveTo(x + 17, top + 88, x + 13, top + 66); }, i % 2 ? '#f4c0a3' : '#c98199', 9);
+          ellipse(c, x, top, 5, 5, '#ffe0b8');
+        }
+      }
       if (['island', 'reef'].includes(item.kind)) {
         for (const b of terrainBlocks(item)) {
           const outline = p => { b.points.forEach((point, i) => i ? p.lineTo(point.x, point.y) : p.moveTo(point.x, point.y)); p.closePath(); };

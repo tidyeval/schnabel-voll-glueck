@@ -1,5 +1,7 @@
 # Aktives Sammeln und anspruchsvollere Etappen
 
+Historischer Stand vor den drei Schwierigkeitsgraden. Das aktuelle Balancing steht in der [Spielbeschreibung](../README.md#spielumfang).
+
 Umsetzung des Feedbacks nach Ticket #2: Schon die Bucht soll abwechslungsreich sein. Fische liefern Punkte und die Energie für die Strecke; das Nest ist das Etappenziel. Die Rückkehr-Aufforderung bei vollem Schnabel entfällt. Die bestehenden Speicherstände und die gewählte Musik bleiben erhalten.
 
 Die aktuellen Zahlen und Gegnerfolgen stehen in der [Spielbeschreibung](../README.md). Das Balancing lässt etwa 35 Sekunden ohne Nahrung zu, während die Etappen etwa 60–67 Sekunden dauern. Bewegliche Gefahren kosten Energie statt sofort zu töten. Inseln, Riffe und Luftmangel behalten ihre direkte Konsequenz. Kurzer Trefferschutz und höchstens ein Schaden pro Akteur verhindern mehrfaches Abziehen bei einer Berührung.

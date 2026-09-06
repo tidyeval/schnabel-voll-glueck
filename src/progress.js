@@ -1,4 +1,4 @@
-import { STAGES } from './game.js';
+import { STAGES, DIFFICULTIES, difficultyId } from './game.js';
 export const unlocks = { classic: 0, flower: 25, sailor: 80 };
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 export function readProgress(raw) {
@@ -6,6 +6,8 @@ export function readProgress(raw) {
   try { saved = JSON.parse(raw); } catch { /* Old or unavailable storage starts fresh. */ }
   saved = saved && typeof saved === 'object' ? saved : {};
   const prefs = { record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', music: true, sound: true, haptics: true,
+    difficulty: difficultyId(saved.difficulty),
+    difficultyBests: Object.fromEntries(Object.keys(DIFFICULTIES).map(id => [id, STAGES.map((_, i) => count(saved.difficultyBests?.[id]?.[i]))])),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => count(saved.bests?.[i])) };
   for (const key of ['music', 'sound', 'haptics']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
   if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;
@@ -15,7 +17,8 @@ export function recordAttempt(prefs, game) {
   if (game.accounted || !game.ended) return false;
   game.accounted = true;
   prefs.totalFish += game.fish;
-  prefs.bests[game.stage] = Math.max(prefs.bests[game.stage], game.score);
+  const bests = prefs.difficultyBests[game.difficulty];
+  bests[game.stage] = Math.max(bests[game.stage], game.score);
   if (game.endReason === 'complete') prefs.completed = Math.max(prefs.completed, game.stage + 1);
   return true;
 }
