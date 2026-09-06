@@ -82,13 +82,13 @@ export function hitsTerrain(player, item) {
 
 // One journey: more speed and less space as active play time accumulates.
 export function paceAt(seconds) {
-  const progress = clamp(seconds / 240, 0, 1);
-  return { speed: 180 + 60 * progress, spacing: 1080 - 100 * progress };
+  const progress = clamp(seconds / 120, 0, 1);
+  return { speed: 180 + 60 * progress, spacing: 960 - 60 * progress };
 }
 export const STAGES = [
-  { name: 'Geschützte Bucht', encounters: ['turtle', 'boat', 'jelly', 'gull', 'island', 'shark', 'buoy', 'turtle', 'boat-jelly', 'shark-gull', 'buoy', 'gull'] },
-  { name: 'Fischerhafen', encounters: ['coral', 'driftwood', 'surfer', 'diver', 'reef', 'turtle', 'boat-jelly', 'shark-gull', 'buoy-coral', 'surfer', 'driftwood-jelly', 'gull'] },
-  { name: 'Korallenriff', encounters: ['puffer', 'whirlpool', 'reef-puffer', 'shark-gull', 'buoy-coral', 'turtle', 'boat-jelly', 'driftwood-jelly', 'reef-puffer', 'shark-gull', 'buoy-coral', 'gull'] },
+  { name: 'Geschützte Bucht', encounters: ['turtle', 'shark', 'gull', 'boat', 'jelly', 'island', 'buoy', 'shark-gull', 'boat-jelly', 'shark-turtle', 'buoy-shark', 'shark-gull'] },
+  { name: 'Fischerhafen', encounters: ['coral', 'driftwood', 'surfer', 'diver', 'reef', 'shark-shark-turtle', 'boat-jelly', 'shark-shark-gull', 'buoy-coral-shark', 'surfer-shark', 'driftwood-jelly-gull', 'shark-gull-turtle'] },
+  { name: 'Korallenriff', encounters: ['puffer', 'whirlpool', 'reef-puffer-gull', 'shark-shark-gull', 'buoy-coral-shark', 'shark-turtle-turtle', 'boat-jelly-gull', 'shark-jelly-gull', 'reef-puffer-shark', 'shark-shark-gull', 'buoy-coral-shark', 'shark-gull-turtle'] },
 ];
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, protection: 1.2 };
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
@@ -117,7 +117,7 @@ function encounter(game) {
     game.nextEncounter = Infinity;
     return;
   }
-  const [kind, companion] = entry.split('-');
+  const [kind, ...companions] = entry.split('-');
   const variant = Math.floor(game.random() * 3);
   const arc = (base, height) => Array.from({ length: 11 }, (_, i) => base + Math.sin(i / 10 * Math.PI) * height);
   const depths = kind === 'boat' ? [432,475,530,595,620,620,615,560,490,435,405]
@@ -137,7 +137,12 @@ function encounter(game) {
   if (kind === 'shark') game.items.push({ kind, x: 880, y: 660, baseY: 660, lane: 'deep' });
   if (kind === 'turtle') game.items.push({ kind, x: 890, y: 480, baseY: 480 });
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
-  if (companion) game.items.push({ kind: companion, x: companion === 'coral' ? 890 : 1080, y: companion === 'gull' ? 285 : 665, phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
+  companions.forEach((companion, index) => {
+    const y = companion === 'gull' ? 285 : companion === 'turtle' ? 580 : 665;
+    game.items.push({ kind: companion, x: companion === 'coral' ? 890 : 960 + index * 120,
+      y, baseY: y, lane: companion === 'shark' ? 'deep' : undefined,
+      phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
+  });
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
   if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
@@ -225,7 +230,7 @@ export function step(game, dt, holding) {
   const beak = beakPosition(p);
   for (const item of game.items) {
     item.x -= game.speed * dt;
-    if (['island', 'reef', 'buoy', 'coral'].includes(item.kind) && !item.warned && item.x < 760) {
+    if (['island', 'reef', 'buoy', 'coral'].includes(item.kind) && !item.warned && item.x < Math.max(760, p.x + 90 + game.speed * 3)) {
       item.warned = true; events.push({ kind: item.kind === 'island' ? 'islandWarning' : 'reefWarning' });
     }
     if (item.kind === 'nest') {

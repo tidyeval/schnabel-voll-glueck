@@ -107,7 +107,7 @@ test('authored stages introduce individual dangers before combinations and finis
       const dangers = g.items.filter(i => !['fish', 'bubble', 'turtle'].includes(i.kind));
       dangers.forEach(i => seen.add(i.kind));
       if (STAGES[stage].encounters[wave] === 'calm') assert.equal(dangers.length, 0);
-      assert.equal(dangers.length, ['calm', 'turtle'].includes(STAGES[stage].encounters[wave]) ? 0 : STAGES[stage].encounters[wave].split('-').length);
+      assert.equal(dangers.length, STAGES[stage].encounters[wave].split('-').filter(kind => !['calm', 'turtle'].includes(kind)).length);
     }
     g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
     assert.ok(g.items.some(i => i.kind === 'nest' && i.final));
@@ -273,8 +273,8 @@ test('islands force flight, reefs leave a clear passage and full cargo can ascen
   for (const y of [350, 500, 710]) assert.ok(hitsTerrain({ x: 118, y }, island));
   assert.ok(!hitsTerrain({ x: 118, y: 530 }, reef));
   for (const y of [420, 630]) assert.ok(hitsTerrain({ x: 118, y }, reef));
-  const g = createGame(); g.time = 80; g.cargo = WORLD.capacity; g.player.y = 710; g.player.wet = true;
-  g.items = [{ kind: 'island', x: 759 }]; g.nextEncounter = Infinity;
+  const g = createGame(); g.time = 120; g.cargo = WORLD.capacity; g.player.y = 710; g.player.wet = true;
+  g.items = [{ kind: 'island', x: g.player.x + 90 + 240 * 3 - 1 }]; g.nextEncounter = Infinity;
   assert.ok(step(g, .01, false).some(e => e.kind === 'islandWarning'));
   for (let i = 0; i < 240 && !g.ended; i++) step(g, 1 / 60, false);
   assert.equal(g.ended, false); assert.equal(g.player.wet, false);
@@ -338,6 +338,7 @@ test('puffer gives a full second of anticipation and is dangerous only when puff
   const puffer = { kind: 'puffer', x: 470, y: 665, phase: 'idle', timer: 0 }; g.items = [puffer];
   let announced, puffed; const phases = new Set();
   for (let i = 0; i < 240; i++) {
+    puffer.x = 470; // Keep the actor on screen to observe its complete animation cycle.
     step(g, 1 / 60, false); phases.add(puffer.phase);
     if (puffer.phase === 'startle') announced ??= g.time;
     if (puffer.phase === 'puffed') puffed ??= g.time;

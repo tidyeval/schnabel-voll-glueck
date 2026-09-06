@@ -7,8 +7,8 @@ test('one continuous pace rises smoothly, carries across nests and excludes paus
   let previous = paceAt(0);
   for (let t = 1; t <= 300; t++) {
     const next = paceAt(t);
-    assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .251);
-    assert.ok(next.spacing <= previous.spacing && next.spacing >= 980);
+    assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .501);
+    assert.ok(next.spacing <= previous.spacing && next.spacing >= 900);
     previous = next;
   }
   const first = createGame(); first.time = 60;
@@ -43,4 +43,20 @@ test('removing difficulty preserves possessions, unlocks and the best previous s
   assert.equal(prefs.totalFish, 42); assert.equal(prefs.completed, 2); assert.equal(prefs.outfit, 'flower'); assert.equal(prefs.music, false);
   assert.equal('difficulty' in prefs, false); assert.equal('difficultyBests' in prefs, false);
   assert.deepEqual(readProgress(JSON.stringify(prefs)), prefs);
+});
+
+
+test('the journey reaches full pace after two minutes and adds sharks in every stage', () => {
+  assert.deepEqual(paceAt(60), { speed: 210, spacing: 930 });
+  assert.deepEqual(paceAt(120), { speed: 240, spacing: 900 });
+  assert.deepEqual(paceAt(300), paceAt(120));
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(() => .5, stage);
+    let sharks = 0;
+    for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
+      g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
+      sharks += g.items.filter(item => item.kind === 'shark').length;
+    }
+    assert.ok(sharks === [5, 7, 10][stage], `stage ${stage}: ${sharks} sharks`);
+  }
 });
