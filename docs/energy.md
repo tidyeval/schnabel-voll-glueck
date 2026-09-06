@@ -1,6 +1,6 @@
 # Aktives Sammeln und anspruchsvollere Etappen
 
-Historischer Stand vor den drei Schwierigkeitsgraden. Das aktuelle Balancing steht in der [Spielbeschreibung](../README.md#spielumfang).
+Historischer Stand vor den späteren Änderungen an Tempo und Begegnungen. Das aktuelle Balancing steht in der [Spielbeschreibung](../README.md#spielumfang).
 
 Umsetzung des Feedbacks nach Ticket #2: Schon die Bucht soll abwechslungsreich sein. Fische liefern Punkte und die Energie für die Strecke; das Nest ist das Etappenziel. Die Rückkehr-Aufforderung bei vollem Schnabel entfällt. Die bestehenden Speicherstände und die gewählte Musik bleiben erhalten.
 

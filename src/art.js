@@ -211,18 +211,7 @@ function puffer(c, item, t) {
   else path(c, null, p => { p.moveTo(-10, 5); p.quadraticCurveTo(-5, 10, 0, 5); }, '#956e51', 1.5);
   c.restore();
 }
-function fishWing(c, item, t, back) {
-  c.save(); c.translate(item.x + (back ? 3 : -2), item.y + (back ? -3 : 2));
-  c.rotate((back ? -.25 : .2) + Math.sin(t * 7 + item.x * .008) * (back ? .35 : -.5));
-  c.scale(back ? .85 : 1, back ? 1 : -1);
-  path(c, back ? '#d5e9df' : '#fff4da', p => {
-    p.moveTo(0,0); p.bezierCurveTo(3,-14,20,-34,30,-29);
-    p.quadraticCurveTo(34,-26,23,-18); p.quadraticCurveTo(34,-20,28,-13);
-    p.quadraticCurveTo(24,-8,17,-7); p.quadraticCurveTo(24,-7,19,-2); p.quadraticCurveTo(9,5,0,0);
-  }, '#7fa79b', 1.1);
-  for(let i=0;i<3;i++) path(c,null,p=>{p.moveTo(4+i*3,-2-i*3);p.quadraticCurveTo(14,-10-i*3,23,-13-i*5)},'#b9cfbd',.9);
-  c.restore();
-}
+
 function boat(c, item, water, t) {
   const [coat, shade, hull, hullShade] = [
     ['#efd08a','#dca956','#d48b64','#aa674e'],
@@ -503,9 +492,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         ellipse(c, item.x - 5, item.y - 6, 4, 5, '#ffffffcc');
 
       }
-      if (item.flying) fishWing(c, item, motion, true);
       if (item.kind === 'fish') fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion);
-      if (item.flying) fishWing(c, item, motion, false);
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);

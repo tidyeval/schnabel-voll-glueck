@@ -19,7 +19,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     const g = createGame(() => .5); g.player.y = 530; g.player.wet = true; g.cargo = 20;
     const scenes = {
       reef: [{kind:'reef',x:150},{kind:'puffer',x:350,y:665,phase:'puffed',timer:1},{kind:'jelly',x:450,y:660,phase:.6}],
-      animals: [{kind:'shark',x:290,y:640,phase:'warn'}, {kind:'turtle',x:280,y:450,baseY:450}, {kind:'gull',x:290,y:280}, {kind:'jelly',x:390,y:550,phase:.7}, {kind:'fish',x:170,y:420}, {kind:'fish',x:220,y:400,golden:true}, {kind:'fish',x:350,y:230,flying:true}],
+      animals: [{kind:'shark',x:290,y:640,phase:'warn'}, {kind:'turtle',x:280,y:450,baseY:450}, {kind:'gull',x:290,y:280}, {kind:'jelly',x:390,y:550,phase:.7}, {kind:'fish',x:170,y:420}, {kind:'fish',x:220,y:400,golden:true}, {kind:'fish',x:350,y:580}],
       people: [{kind:'boat',x:180,y:360,cast:1.2}, {kind:'surfer',x:370,y:360}, {kind:'diver',x:320,y:620,phase:'locked',aimX:118,aimY:530}, {kind:'harpoon',x:230,y:580,vx:-100,vy:-30}, {kind:'driftwood',x:60,y:360}],
       terrain: [{kind:'island',x:130},{kind:'reef',x:355},{kind:'whirlpool',x:350,y:540},{kind:'bubble',x:290,y:530}],
       nest: [{kind:'nest',x:250,y:360,served:true,celebration:2}],

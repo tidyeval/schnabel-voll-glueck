@@ -80,31 +80,17 @@ export function hitsTerrain(player, item) {
   return terrainBlocks(item).some(b => hitsPolygon(player.x, player.y, b.points));
 }
 
-// Stages introduce skills; difficulty controls how often they are combined.
-export const DIFFICULTIES = {
-  easy: { name: 'Einfach', description: 'Einzelne Gefahren, viel Luft und häufige Pausen.', breath: 10, drain: 2.2, damage: .6, protection: 1.6, speed: -10, spacing: 100 },
-  medium: { name: 'Mittel', description: 'Abwechslung, erste Kombinationen und Zeit zum Durchatmen.', breath: 8, drain: 3, damage: 1, protection: 1.2, speed: 0, spacing: 0 },
-  hard: { name: 'Schwer', description: 'Mehr Kombinationen, knappe Reserven und präzises Timing.', breath: 7, drain: 3.5, damage: 1.2, protection: 1.2, speed: 10, spacing: -25 },
-};
-export const difficultyId = value => typeof value === 'string' && Object.hasOwn(DIFFICULTIES, value) ? value : 'medium';
+// One journey: more speed and less space as active play time accumulates.
+export function paceAt(seconds) {
+  const progress = clamp(seconds / 240, 0, 1);
+  return { speed: 180 + 60 * progress, spacing: 1080 - 100 * progress };
+}
 export const STAGES = [
-  { name: 'Geschützte Bucht', spacing: 1100, encounters: {
-    easy: ['turtle', 'boat', 'calm', 'jelly', 'calm', 'island', 'calm', 'shark', 'calm', 'buoy'],
-    medium: ['turtle', 'boat', 'calm', 'jelly', 'island', 'calm', 'gull', 'shark', 'calm', 'buoy'],
-    hard: ['buoy', 'boat', 'jelly', 'calm', 'island', 'gull', 'shark', 'calm', 'boat-jelly', 'shark-gull'],
-  } },
-  { name: 'Fischerhafen', spacing: 1075, encounters: {
-    easy: ['coral', 'calm', 'driftwood', 'calm', 'surfer', 'calm', 'diver', 'calm', 'reef', 'calm'],
-    medium: ['coral', 'driftwood', 'calm', 'surfer', 'diver', 'calm', 'reef', 'boat-jelly', 'calm', 'shark-gull'],
-    hard: ['coral', 'surfer', 'diver', 'calm', 'reef', 'driftwood', 'shark-gull', 'calm', 'driftwood-jelly', 'boat-jelly'],
-  } },
-  { name: 'Korallenriff', spacing: 1050, encounters: {
-    easy: ['puffer', 'calm', 'whirlpool', 'calm', 'reef', 'calm', 'jelly', 'calm', 'shark', 'calm'],
-    medium: ['puffer', 'whirlpool', 'calm', 'reef-puffer', 'boat-jelly', 'calm', 'shark-gull', 'driftwood-jelly', 'calm', 'buoy-coral'],
-    hard: ['puffer', 'whirlpool', 'reef-puffer', 'calm', 'boat-jelly', 'shark-gull', 'driftwood-jelly', 'calm', 'buoy-coral', 'boat-jelly'],
-  } },
+  { name: 'Geschützte Bucht', encounters: ['turtle', 'boat', 'jelly', 'gull', 'island', 'shark', 'buoy', 'turtle', 'boat-jelly', 'shark-gull', 'buoy', 'gull'] },
+  { name: 'Fischerhafen', encounters: ['coral', 'driftwood', 'surfer', 'diver', 'reef', 'turtle', 'boat-jelly', 'shark-gull', 'buoy-coral', 'surfer', 'driftwood-jelly', 'gull'] },
+  { name: 'Korallenriff', encounters: ['puffer', 'whirlpool', 'reef-puffer', 'shark-gull', 'buoy-coral', 'turtle', 'boat-jelly', 'driftwood-jelly', 'reef-puffer', 'shark-gull', 'buoy-coral', 'gull'] },
 ];
-export const ENERGY = { fish: 4, golden: 12, grace: 2 };
+export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, protection: 1.2 };
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
 // Includes continued descent during reaction time and the turn from diving to rising.
@@ -124,57 +110,55 @@ export function hitsPuffer(player, item) {
   return item.phase === 'puffed' && Math.hypot(player.x - item.x, player.y - item.y) < pufferRadius(item) + 18;
 }
 function encounter(game) {
-  const entry = STAGES[game.stage].encounters[game.difficulty][game.wave];
+  const entry = STAGES[game.stage].encounters[game.wave];
   if (!entry) {
     game.items.push({ kind: 'nest', final: true, x: 1050, y: WORLD.water, served: false, celebration: 0 });
-    [440, 415, 370, 320, 285].forEach((y, i) => game.items.push({ kind: 'fish', x: 550 + i * 80, y, route: game.wave }));
+    [440, 425, 410].forEach((y, i) => game.items.push({ kind: 'fish', x: 550 + i * 80, y, route: game.wave }));
     game.nextEncounter = Infinity;
     return;
   }
   const [kind, companion] = entry.split('-');
-  const swimmers = kind === 'shark' ? 1 : 0;
-  const splitLanes = ['turtle', 'coral'].includes(kind);
-  const depths = splitLanes ? [430,440,440,440,440,440,440,435,420,405,395]
-    : kind === 'calm' ? [420,430,420,395,360,320,285,280,280,280,280]
-    : kind === 'island' ? [420,360,290,250,250,250,250,265,320,410,430]
-    : ['reef', 'buoy'].includes(kind) ? [440,470,490,510,520,530,530,510,470,435,395]
-    : kind === 'boat'
-    ? [432,475,530,595,620,620,615,560,490,435,395]
-    : swimmers
-      ? [440,425,414,410,410,415,420,440,465,440,395]
-      : [430,460,500,535,550,540,510,475,440,415,395];
-  const offset = kind === 'calm' ? game.random() * 8 : 0;
-  depths.forEach((y, i) => game.items.push({ kind: 'fish', x: 540 + i * 64, y: y + offset, golden: false, route: game.wave }));
-  if (splitLanes) {
-    for (let i = 3; i <= 6; i++) game.items.push({ kind: 'fish', x: 540 + i * 64, y: 560, golden: false, lane: 'deep', route: game.wave });
+  const variant = Math.floor(game.random() * 3);
+  const arc = (base, height) => Array.from({ length: 11 }, (_, i) => base + Math.sin(i / 10 * Math.PI) * height);
+  const depths = kind === 'boat' ? [432,475,530,595,620,620,615,560,490,435,405]
+    : ['reef', 'buoy'].includes(kind) ? [440,470,490,510,520,530,530,510,470,435,405]
+    : kind === 'shark' || kind === 'island' ? arc(410, 30)
+    : kind === 'turtle' ? arc([410,475,565][variant], 40)
+    : kind === 'coral' ? arc(410, 35)
+    : arc(440, 65);
+  const addFish = (x, y, lane = 'main') => game.items.push({ kind: 'fish', x, y, golden: false, lane, route: game.wave });
+  depths.forEach((y, i) => addFish(540 + i * 64, y));
+  // Parallel schools share a curved shape, but occupy separate water depths.
+  if (['turtle', 'coral'].includes(kind) || kind === 'gull') {
+    const base = kind === 'turtle' && variant === 2 ? 435 : kind === 'coral' ? 515 : 580;
+    arc(base, 35).slice(2, 9).forEach((y, i) => addFish(668 + i * 64, y, 'alternate'));
   }
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false, look: game.boats++ % 4 });
-  if (swimmers) game.items.push({ kind: 'shark', x: 880, y: 660, baseY: 660, lane: 'deep' });
+  if (kind === 'shark') game.items.push({ kind, x: 880, y: 660, baseY: 660, lane: 'deep' });
   if (kind === 'turtle') game.items.push({ kind, x: 890, y: 480, baseY: 480 });
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
-  if (companion) game.items.push({ kind: companion, x: companion === 'coral' ? 890 : 1130, y: companion === 'gull' ? 285 : 665, phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
+  if (companion) game.items.push({ kind: companion, x: companion === 'coral' ? 890 : 1080, y: companion === 'gull' ? 285 : 665, phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
-  if (kind !== 'calm') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'island' ? 245 : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
+  if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
   if (kind === 'diver') game.items.push({ kind, x: 890, y: 620, phase: 'idle', timer: 0 });
   if (kind === 'surfer') game.items.push({ kind, x: 890, y: WORLD.water, escaping: false });
   game.items.push({ kind: 'bubble', x: 1120, y: 540 });
-  // A rising trail after the last actor leads into an unobstructed air break.
-  // Gold fish stay optional; recovery never asks for another deep dive.
-  [430, 380, 330, 285, 280].forEach((y, i) => game.items.push({ kind: 'fish', x: 1220 + i * 70, y, golden: false, route: game.wave }));
-  [1570, 1640].forEach(x => game.items.push({ kind: 'fish', flying: true, x, y: 280, baseY: 280, golden: false }));
+  // End the school below the surface, then leave room to breathe and do a trick.
+  [440, 415, 400].forEach((y, i) => addFish(1220 + i * 60, y));
+  const terrain = game.items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind));
+  game.items = game.items.filter(item => item.kind !== 'fish' || !terrain.some(block => hitsTerrain(item, block)));
   game.wave++;
-  game.nextEncounter += STAGES[game.stage].spacing + game.rules.spacing + (kind === 'island' ? 180 : 0);
+  game.nextEncounter += paceAt(game.elapsed + game.time).spacing + (kind === 'island' ? 180 : 0);
 }
 
-export function createGame(random = Math.random, stage = 0, difficulty = 'medium') {
-  difficulty = difficultyId(difficulty);
-  const rules = DIFFICULTIES[difficulty];
+export function createGame(random = Math.random, stage = 0, elapsed) {
+  stage = Number.isInteger(stage) ? clamp(stage, 0, STAGES.length - 1) : 0;
+  elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : stage * 65;
   return {
-    difficulty, rules,
-    stage: Number.isInteger(stage) ? clamp(stage, 0, STAGES.length - 1) : 0, random, time: 0, distance: 0, speed: 150 + rules.speed, energy: 100, score: 0, fish: 0,
+    elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
-    player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: rules.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
+    player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
     nextEncounter: 100, wave: 0, boats: 0, ended: false,
   };
@@ -192,7 +176,7 @@ export function step(game, dt, holding) {
     if (!game.feeding) {
       const points = game.feedingTotal * 15;
       game.score += points; game.delivered += game.feedingTotal; game.cargo = 0;
-      p.breach = .6; p.vy = -235; p.breath = game.rules.breath; p.feedX = undefined;
+      p.breach = .6; p.vy = -235; p.breath = WORLD.breath; p.feedX = undefined;
       if (game.items.some(item => item.kind === 'nest' && item.final && item.served)) game.settling = 1.2;
       return [{ kind: 'delivery', points, count: game.feedingTotal, x: p.x, y: p.y }];
     }
@@ -205,16 +189,16 @@ export function step(game, dt, holding) {
   }
   game.time += dt;
   const waitingNest = game.items.find(item => item.kind === 'nest' && item.final && item.x <= p.x + 55);
-  game.speed = waitingNest ? 0 : 150 + game.rules.speed + game.stage * 5 + Math.min(8, Math.max(0, game.time - 20) * .15);
+  game.speed = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed;
   game.distance += game.speed * dt;
   p.hurt = Math.max(0, (p.hurt || 0) - dt);
   // Check before encounters/nest arrival: coasting cannot bypass exhaustion.
-  game.energy = Math.max(0, game.energy - Math.min(dt, Math.max(0, game.time - ENERGY.grace)) * game.rules.drain);
+  game.energy = Math.max(0, game.energy - Math.min(dt, Math.max(0, game.time - ENERGY.grace)) * ENERGY.drain);
   if (game.energy <= 0) {
     game.ended = true; game.endReason = 'energy'; return [{ kind: 'end' }];
   }
   const previousAir = airState(p, game.cargo);
-  p.breath = clamp(p.breath + dt * (p.wet ? -1 : game.rules.breath / 2), 0, game.rules.breath);
+  p.breath = clamp(p.breath + dt * (p.wet ? -1 : WORLD.breath / 2), 0, WORLD.breath);
   if (!previousAir.level && airState(p, game.cargo).level) events.push({ kind: 'airWarning' });
   if (p.breath === 0) {
     game.ended = true; game.endReason = 'air';
@@ -335,10 +319,9 @@ export function step(game, dt, holding) {
       if (p.wet && Math.hypot(item.x - p.x, item.y - p.y) < 115) p.y = Math.min(710, p.y + 65 * dt);
       continue;
     }
-    if (item.flying) item.y = item.baseY + Math.sin(game.time * 3 + item.x * .01) * 30;
     if (item.kind === 'bubble') {
       if (Math.hypot(item.x - p.x, item.y - p.y) < 35) {
-        item.caught = true; p.breath = Math.min(game.rules.breath, p.breath + 2);
+        item.caught = true; p.breath = Math.min(WORLD.breath, p.breath + 2);
         events.push({ kind: 'airBonus', x: item.x, y: item.y });
       }
       continue;
@@ -387,8 +370,8 @@ export function step(game, dt, holding) {
         : hitsBoat(p, item) || netHit;
       if (hit && (!contactDamage[item.kind] || (!item.hit && !p.hurt))) {
         if (contactDamage[item.kind]) {
-          item.hit = true; p.hurt = game.rules.protection; p.bump = .6;
-          game.energy = Math.max(0, game.energy - Math.round(contactDamage[item.kind] * game.rules.damage));
+          item.hit = true; p.hurt = ENERGY.protection; p.bump = .6;
+          game.energy = Math.max(0, game.energy - contactDamage[item.kind]);
           game.combo = 0; game.comboTime = 0; p.turns = 0; p.spin = 0;
           events.push({ kind: 'hurt', x: p.x, y: p.y });
           if (game.energy > 0) continue;

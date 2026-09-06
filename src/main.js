@@ -1,7 +1,7 @@
 import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { createGame, step, press, WORLD, STAGES, DIFFICULTIES, airState } from './game.js';
+import { createGame, step, press, WORLD, STAGES, airState } from './game.js';
 import { drawWorld } from './art.js';
 import { createAudio } from './audio.js';
 import { readProgress, recordAttempt, unlocks } from './progress.js';
@@ -31,20 +31,14 @@ function refreshMenu() {
     option.disabled = i > prefs.completed; return option;
   }));
   $('stages').value = selectedStage;
-  const difficulty = DIFFICULTIES[prefs.difficulty];
-  document.querySelectorAll('[name=difficulty]').forEach(input => { input.checked = input.value === prefs.difficulty; });
-  text('difficulty-description', difficulty.description);
-  text('stage-best', `${difficulty.name} · Rekord: ${prefs.difficultyBests[prefs.difficulty][selectedStage]} Punkte`);
+  text('stage-best', `Rekord: ${prefs.bests[selectedStage]} Punkte`);
   text('play-label', prefs.completed ? 'Weiter gehts!' : 'Los gehts!');
 }
-document.querySelectorAll('[name=difficulty]').forEach(input => {
-  input.onchange = () => { prefs.difficulty = input.value; persist(); refreshMenu(); };
-});
 $('stages').onchange = () => { selectedStage = Number($('stages').value); refreshMenu(); };
 
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
-function start() {
-  closeDialogs(); game = createGame(Math.random, selectedStage, prefs.difficulty); effects = []; mode = 'playing'; holding = false;
+function start(elapsed) {
+  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); effects = []; mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
   $('toast').classList.add('hidden'); audio.start(); updateHud(); canvas.focus();
 }
@@ -61,7 +55,7 @@ function pause(showDialog = true) {
 function resume() { closeDialogs(); holding = false; mode = 'playing'; last = performance.now(); audio.start(); canvas.focus(); }
 function finish() {
   if (mode === 'ended') return;
-  const record = game.score > prefs.difficultyBests[game.difficulty][game.stage];
+  const record = game.score > prefs.bests[game.stage];
   game.ended = true; recordAttempt(prefs, game);
   const complete = game.endReason === 'complete';
   const final = complete && game.stage === STAGES.length - 1;
@@ -70,7 +64,6 @@ function finish() {
   mode = 'ended'; holding = false; game.ended = true; persist();
   text('result-kicker', complete ? (final ? 'ALLE NESTER ERREICHT' : 'NEST ERREICHT') : record ? 'NEUER ETAPPENREKORD' : STAGES[game.stage].name);
   text('result-title', { puffer: 'Ein aufgeblasener Kugelfisch!', island: 'Die Insel erwischt!', reef: 'Am Felsen hängen geblieben!', buoy: 'Eine Boje erwischt!', coral: 'An den Korallen hängen geblieben!', diver: 'Taucher voraus!', harpoon: 'Von der Harpune erwischt!', surfer: 'Surfer voraus!', gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: final ? 'Alle Küken satt. Herz auch.' : 'Willkommen im Nest!' }[game.endReason] || 'Bis zur nächsten Runde!');
-  text('result-difficulty', DIFFICULTIES[game.difficulty].name);
   text('result-score', game.score); text('result-fish', game.fish); text('result-combo', game.bestCombo); text('result-time', clock(game.time));
   text('result-mission', complete ? (final ? 'Pip hat alle drei Nester erreicht. Besuche deine Lieblingsbucht wieder!' : `Weiter zum ${STAGES[game.stage + 1].name === 'Fischerhafen' ? 'Fischerhafen' : 'Korallenriff'}. Dein Fortschritt ist gespeichert.`) : game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.');
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
@@ -82,15 +75,15 @@ function updateHud() {
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
   const p = game.player;
-  $('air').classList.toggle('hidden', !p.wet && p.breath >= game.rules.breath);
+  $('air').classList.toggle('hidden', !p.wet && p.breath >= WORLD.breath);
   const { level, urgency } = airState(p, game.cargo);
   $('air').classList.toggle('low-air', level > 0);
   const pulse = reducedMotion ? 2 : 2 + (1 + Math.sin(animation * (5 + urgency * 5))) * 2;
   $('air').style.boxShadow = level ? `0 0 0 ${pulse}px #ffd59a66` : '';
   text('air-label', level ? 'AUFTAUCHEN' : 'TAUCHLUFT');
   text('air-value', `${p.breath.toFixed(1)} s`);
-  $('air-fill').style.width = `${p.breath / game.rules.breath * 100}%`;
-  $('air').setAttribute('aria-valuemax', game.rules.breath);
+  $('air-fill').style.width = `${p.breath / WORLD.breath * 100}%`;
+  $('air').setAttribute('aria-valuemax', WORLD.breath);
   $('air').setAttribute('aria-valuenow', p.breath.toFixed(1));
   $('combo').classList.toggle('hidden', game.combo < 5); text('combo', `${Math.min(4, 1 + Math.floor(game.combo / 5))}× KOMBO`);
   text('mission-count', game.mission ? '+100' : `${Math.min(5, game.diveFish)}/5`); text('mission-icon', game.mission ? '✓' : '✧');
@@ -98,8 +91,8 @@ function updateHud() {
 
 }
 canvas.tabIndex = 0;
-$('play').onclick = start; $('again').onclick = () => { selectedStage = game.stage; start(); };
-$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(); }; $('back-home').onclick = home;
+$('play').onclick = () => start(); $('again').onclick = () => { selectedStage = game.stage; start(); };
+$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(game.elapsed + game.time); }; $('back-home').onclick = home;
 $('pause').onclick = () => pause(); $('resume').onclick = resume;
 $('quit').onclick = finish;
 $('settings').onclick = () => { pause(false); $('settings-dialog').showModal(); };
