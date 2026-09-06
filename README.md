@@ -66,7 +66,7 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 - Nach dem Auftauchen innerhalb von 1,2 Sekunden zweimal kurz tippen für einen Überschlag (+50), dreimal für einen doppelten (+120). Zwischen den Tipps höchstens 0,32 Sekunden. Punkte erst nach vollständiger Drehung, einmal pro Auftauchen; Wasserkontakt bricht den Trick ab. Halten taucht weiterhin ab.
 - Fangserien bis zum vierfachen Multiplikator mit 8,5 Sekunden Zeit zum Ausweichen. Fünf Fische in einem Tauchgang geben einmal je Versuch 100 Bonuspunkte. Luftblasen geben bis zu zwei Sekunden Tauchluft, fliegende Fische belohnen Luftpausen.
 - Lokale Fischsammlung: Blume ab 25 und Matrosenmütze ab 80 gesammelten Fischen. Keine Käufe und kein Konto.
-- Hintergrundmusik: **shake-that-ra-main-version-41288-02-07.mp3**, lokal eingebettet, rund 127,69 Sekunden. Sechs Sekunden Fade-out am Ende, 1,5 Sekunden Fade-in beim Neustart. Etappenwechsel startet den Track nicht erneut; Pause hält die Musik an. Getrennte Schalter für Musik, Sounds und Haptik.
+- Hintergrundmusik: **getaway-driver-21-on-the-block-main-version-45640-01-44.mp3**, lokal eingebettet. Sechs Sekunden Fade-out am Ende, 1,5 Sekunden Fade-in beim Neustart. Etappenwechsel startet den Track nicht erneut; Pause hält die Musik an. Getrennte Schalter für Musik, Sounds und Haptik.
 - Offline-Spiel und gespeicherter Fortschritt funktionieren nach der Installation weiter. Das Startmenü bietet Installation und Update-Prüfung; bereitstehende Updates werden erst durch Antippen aktiviert. Die nativen Apps enthalten Spiel und Musik lokal. Pause bei Fokusverlust bleibt erhalten.
 
 [Aktuelles Balancing und Nachweise: Energie und aktive Nahrungssuche](docs/energy.md). [Historische Abnahme zu Ticket #2](docs/adventure.md).
