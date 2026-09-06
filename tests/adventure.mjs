@@ -2,7 +2,8 @@ import { chromium, webkit } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
-import { createGame, step } from '../src/game.js';
+import { routeController } from './route-controller.js';
+import { createGame, step, press } from '../src/game.js';
 const out='test-results/adventure'; await mkdir(out,{recursive:true});
 async function serveBuild() {
   const server=createServer(async(req,res)=>{
@@ -18,14 +19,12 @@ async function serveBuild() {
   return {url:`http://127.0.0.1:${server.address().port}/`,close:()=>new Promise(resolve=>server.close(resolve))};
 }
 function route(stage) {
-  const g=createGame(()=>.5,stage), inputs=[]; let last=false, elapsed=0;
+  const g=createGame(()=>.5,stage), inputs=[]; let last=false, elapsed=0; const control=routeController();
   while(!g.ended && elapsed<90) {
-    const p=g.player;
-    const next=g.items.filter(i=>i.kind==='fish'&&!i.golden&&i.x>p.x-12).sort((a,b)=>a.x-b.x)[0];
-    const target=next&&next.x<p.x+150&&p.breath>3?next.y:265;
-    const holding=target>p.y+p.vy*.11;
+    const holding=control(g);
+    if(holding&&!last)press(g);
     if(holding!==last){inputs.push({at:elapsed*1000,holding});last=holding;}
-    step(g,1/60,holding);elapsed+=1/60;
+    step(g,.016,holding);elapsed+=.016;
   }
   assert.equal(g.endReason,'complete'); return inputs;
 }

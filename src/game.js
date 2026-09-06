@@ -78,11 +78,14 @@ export function hitsTerrain(player, item) {
   return terrainBlocks(item).some(b => hitsPolygon(player.x, player.y, b.points));
 }
 
+// Most actors appear in the bay already; later stages tighten spacing and layer lanes.
 export const STAGES = [
-  { name: 'Geschützte Bucht', encounters: ['calm', 'turtle', 'calm', 'shark', 'calm', 'island', 'calm', 'gull', 'calm'] },
-  { name: 'Fischerhafen', encounters: ['boat', 'calm', 'driftwood', 'calm', 'surfer', 'calm', 'diver', 'calm', 'boat'] },
-  { name: 'Korallenriff', encounters: ['jelly', 'calm', 'puffer', 'calm', 'reef', 'calm', 'whirlpool', 'calm', 'reef-puffer'] },
+  { name: 'Geschützte Bucht', spacing: 900, encounters: ['turtle', 'boat', 'shark', 'gull', 'jelly', 'island', 'surfer', 'driftwood', 'diver', 'calm'] },
+  { name: 'Fischerhafen', spacing: 875, encounters: ['boat', 'shark-gull', 'surfer', 'jelly', 'island', 'diver', 'boat-jelly', 'driftwood', 'reef', 'turtle'] },
+  { name: 'Korallenriff', spacing: 850, encounters: ['puffer', 'boat-jelly', 'shark-gull', 'island', 'reef', 'surfer', 'diver', 'whirlpool', 'reef-puffer', 'driftwood-jelly'] },
 ];
+export const ENERGY = { drain: 3, fish: 4, golden: 12, grace: 2, protection: 1.2 };
+const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
 // Includes continued descent during reaction time and the turn from diving to rising.
 export function airState(player, cargo = 0) {
@@ -108,7 +111,7 @@ function encounter(game) {
     game.nextEncounter = Infinity;
     return;
   }
-  const kind = entry === 'reef-puffer' ? 'reef' : entry;
+  const [kind, companion] = entry.split('-');
   const swimmers = kind === 'shark' ? 1 : 0;
   const depths = kind === 'island' ? [420,360,290,250,250,250,250,265,320,410,430]
     : kind === 'reef' ? [440,470,490,510,520,530,530,510,470,435,395]
@@ -122,7 +125,8 @@ function encounter(game) {
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false, look: game.boats++ % 4 });
   if (swimmers) game.items.push({ kind: 'shark', x: 880, y: 660, baseY: 660, lane: 'deep' });
   if (kind === 'turtle') game.items.push({ kind, x: 890, y: 480, baseY: 480 });
-  if (kind === 'puffer' || entry === 'reef-puffer') game.items.push({ kind: 'puffer', x: entry === 'reef-puffer' ? 1130 : 890, y: 665, phase: 'idle', timer: 0 });
+  if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
+  if (companion) game.items.push({ kind: companion, x: 1130, y: companion === 'gull' ? 285 : 665, phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
   if (['island', 'reef'].includes(kind)) game.items.push({ kind, x: 890 });
   game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: kind === 'island' ? 245 : kind === 'reef' ? 530 : kind === 'boat' ? 715 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
@@ -135,7 +139,7 @@ function encounter(game) {
   }
   if (kind === 'calm') for (let i = 0; i < 3; i++) game.items.push({ kind: 'fish', flying: true, x: 650 + i * 85, y: 280, baseY: 280, golden: false });
   game.wave++;
-  game.nextEncounter += kind === 'island' ? 1160 : 980;
+  game.nextEncounter += STAGES[game.stage].spacing + (kind === 'island' ? 180 : 0);
 }
 
 export function createGame(random = Math.random, stage = 0) {
@@ -144,7 +148,7 @@ export function createGame(random = Math.random, stage = 0) {
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
-    nextEncounter: 520, wave: 0, boats: 0, ended: false,
+    nextEncounter: 100, wave: 0, boats: 0, ended: false,
   };
 }
 
@@ -175,6 +179,12 @@ export function step(game, dt, holding) {
   const waitingNest = game.items.find(item => item.kind === 'nest' && item.final && item.x <= p.x + 55);
   game.speed = waitingNest ? 0 : 150 + game.stage * 5 + Math.min(8, Math.max(0, game.time - 20) * .15);
   game.distance += game.speed * dt;
+  p.hurt = Math.max(0, (p.hurt || 0) - dt);
+  // Check before encounters/nest arrival: coasting cannot bypass exhaustion.
+  game.energy = Math.max(0, game.energy - Math.min(dt, Math.max(0, game.time - ENERGY.grace)) * ENERGY.drain);
+  if (game.energy <= 0) {
+    game.ended = true; game.endReason = 'energy'; return [{ kind: 'end' }];
+  }
   const previousAir = airState(p, game.cargo);
   p.breath = clamp(p.breath + dt * (p.wet ? -1 : 4), 0, WORLD.breath);
   if (!previousAir.level && airState(p, game.cargo).level) events.push({ kind: 'airWarning' });
@@ -197,7 +207,6 @@ export function step(game, dt, holding) {
     p.wet = wet;
   }
   if (p.turns && !p.wet) p.spin = Math.min(p.turns * Math.PI * 2, p.spin + dt * Math.PI * 2 / .65);
-  if (game.time > 8) game.energy = Math.max(0, game.energy - dt * .85);
   game.comboTime = Math.max(0, game.comboTime - dt);
   if (!game.comboTime) game.combo = 0;
   if (game.distance >= game.nextEncounter) encounter(game);
@@ -278,7 +287,7 @@ export function step(game, dt, holding) {
       if (item.life <= 0 || item.y < WORLD.water + 18 || item.y > 760) { item.caught = true; continue; }
       const wood = game.items.find(other => other.kind === 'driftwood' && Math.abs(other.x - item.x) < 55 && Math.abs(other.y - item.y) < 25);
       if (wood) { item.caught = true; events.push({ kind: 'netSplash', x: item.x, y: item.y }); continue; }
-      if (item.x < p.x - 35 && !item.rewarded) { item.rewarded = true; game.score += 25; events.push({ kind: 'outsmart', points: 25, x: p.x, y: p.y }); }
+      if (item.x < p.x - 35 && !item.rewarded && !item.hit) { item.rewarded = true; game.score += 25; events.push({ kind: 'outsmart', points: 25, x: p.x, y: p.y }); }
     }
     if (item.kind === 'surfer') {
       item.reaction = Math.max(0, (item.reaction || 0) - dt);
@@ -328,7 +337,7 @@ export function step(game, dt, holding) {
         game.bestCombo = Math.max(game.bestCombo, game.combo);
         const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5));
         game.score += points;
-        game.energy = Math.min(100, game.energy + (item.golden ? 12 : 4));
+        game.energy = Math.min(100, game.energy + (item.golden ? ENERGY.golden : ENERGY.fish));
         events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden });
         if (game.diveFish >= 5 && !game.mission) {
           game.mission = true; game.score += 100;
@@ -348,10 +357,17 @@ export function step(game, dt, holding) {
         : item.kind === 'jelly' ? Math.abs(item.x - p.x) < 35 && p.y > item.y - 35 && p.y < item.y + 20 + item.phase * 65
         : item.kind === 'driftwood' ? Math.abs(item.x - p.x) < 65 && Math.abs(p.y - WORLD.water) < 30
         : hitsBoat(p, item) || netHit;
-      if (hit) {
+      if (hit && (!contactDamage[item.kind] || (!item.hit && !p.hurt))) {
+        if (contactDamage[item.kind]) {
+          item.hit = true; p.hurt = ENERGY.protection; p.bump = .6;
+          game.energy = Math.max(0, game.energy - contactDamage[item.kind]);
+          game.combo = 0; game.comboTime = 0; p.turns = 0; p.spin = 0;
+          events.push({ kind: 'hurt', x: p.x, y: p.y });
+          if (game.energy > 0) continue;
+        }
         game.ended = true;
-        game.endReason = item.kind === 'boat' ? (netHit ? 'net' : 'fisher') : item.kind;
-        events.push({ kind: 'hurt', x: p.x, y: p.y }, { kind: 'end' });
+        game.endReason = contactDamage[item.kind] ? 'energy' : item.kind;
+        events.push(...(contactDamage[item.kind] ? [] : [{ kind: 'hurt', x: p.x, y: p.y }]), { kind: 'end' });
         return events;
       }
     }
@@ -362,8 +378,5 @@ export function step(game, dt, holding) {
     p.turns = 0; p.spin = 0;
   }
   game.items = game.items.filter(item => !item.caught && item.x > -180);
-  if (game.energy <= 0) {
-    game.ended = true; game.endReason = 'energy'; events.push({ kind: 'end' });
-  }
   return events;
 }

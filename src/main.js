@@ -69,7 +69,7 @@ function finish() {
 }
 function updateHud() {
   text('cargo-value', `${game.cargo}/${WORLD.capacity}`);
-  text('cargo-label', game.feeding ? 'KÜKEN FÜTTERN ♥' : game.cargo >= WORLD.capacity ? 'SCHNABEL VOLL · ZUM NEST ↑' : 'BEUTE IM SCHNABEL');
+  text('cargo-label', game.feeding ? 'KÜKEN FÜTTERN ♥' : 'VORRAT FÜR DIE KÜKEN');
   text('score', game.score); text('time', clock(Math.floor(game.time)));
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);

@@ -78,7 +78,9 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   const lowAir = state.level > 0, urgency = state.urgency;
   const relief = expression.relief || 0, bump = reducedMotion ? 0 : expression.bump || 0;
   const shake = reducedMotion ? 0 : Math.sin(relief * 25) * .07 * Math.min(1, relief);
-  const headAngle = lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake;
+  const tired = happy || relief > 0 ? 0 : clamp((35 - (expression.energy ?? 100)) / 35, 0, 1);
+  const hurt = (expression.hurt || 0) > 0;
+  const headAngle = lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2;
   const headPose = () => { c.translate(66, -27); c.rotate(headAngle); c.translate(-66, 27); };
   if (bump) c.transform(1, 0, Math.sin(bump * 22) * .07, 1, 0, 0);
   const wobble = reducedMotion ? 0 : Math.sin(t * 6) * fullness * 3 + Math.sin(gulp * 22) * gulp * 8;
@@ -86,7 +88,7 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   // Shared, stable phase: brisk downstroke and slower, folded recovery.
   const cycle = (t * 1.3) % 1, down = cycle < .42;
   const progress = down ? cycle / .42 : (cycle - .42) / .58;
-  const lift = Math.cos(progress * Math.PI) * (down ? 1 : -1);
+  const lift = Math.cos(progress * Math.PI) * (down ? 1 : -1) * (1 - tired * .3) - tired * .25;
   const fold = down ? 0 : Math.sin(progress * Math.PI);
   const flap = wet ? Math.sin(t * (7 + urgency * 8)) * (.15 + urgency * .35) : lift;
   const outline = '#786f5d';
@@ -118,6 +120,10 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
     ellipse(c, 25, -46, 4.8 + urgency, 5.8 + urgency, '#294b49'); ellipse(c, 25.5, -49.5, 1.5, 1.7, '#fffdf1');
     path(c, null, p => { p.moveTo(18, -54 - urgency * 2); p.lineTo(32, -51 + urgency); }, '#8f765f', 1.8);
     if (!reducedMotion) for (let i = 0; i < Math.ceil(urgency * 3); i++) { const rise = (t * (18 + urgency * 9) + i * 10) % 25; ellipse(c, 91 + i * 5, -27 - rise, 1.5 + i * .5, 1.5 + i * .5, '#e4f8e3aa'); }
+  } else if (hurt) path(c, null, p => { p.moveTo(20, -49); p.lineTo(27, -45); p.lineTo(20, -42); }, '#31524f', 2.8);
+  else if (tired > 0) {
+    ellipse(c, 25, -45, 4.4, 5.4 - tired * 3.5, '#294b49');
+    path(c, null, p => { p.moveTo(18, -48 + tired * 2); p.quadraticCurveTo(25, -51 + tired * 4, 32, -48 + tired * 2); }, '#8f765f', 2);
   } else if (happy || relief > 0) path(c, null, p => { p.moveTo(20, -43); p.quadraticCurveTo(26, -50, 32, -43); }, '#31524f', 2.8);
   else { const gaze = expression.fish ? clamp((expression.fish.y - y) * .03, -2, 2) : 0; ellipse(c, 25 + (expression.fish ? 1 : 0), -46 + gaze, 4.4, 5.4, '#294b49'); ellipse(c, 26.4, -48.2 + gaze, 1.3, 1.5, '#fffdf1'); }
   if (!lowAir) path(c, null, p => { p.moveTo(18, -53); p.quadraticCurveTo(25, -57, 32, -52); }, '#aa9271', 1.1);
@@ -490,7 +496,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(motion * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
     }
     c.save();
-    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { relief: p.relief, bump: p.bump, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
+    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
   }
   for (let i = 0; i < 4; i++) {
     path(c, null, p => { for (let x = -10; x <= 490; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + motion * 1.6 + i * .3) * 3; if (x === -10) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#fff1c8cc', '#dceccf88', '#c3ead455', '#b7e4cc22'][i], i === 0 ? 2 : 1);

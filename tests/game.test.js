@@ -1,8 +1,9 @@
 import test from 'node:test';
+import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
 import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsTerrain, STAGES, airState, hitsPuffer, pufferRadius } from '../src/game.js';
 
-test('Pip dives, catches a school, earns the mission once, ends immediately on a hit', () => {
+test('Pip dives, catches a school, earns the mission once, survives a hit and ends on exhaustion', () => {
   const g = createGame(() => .5);
   g.items = [];
   for (let i = 0; i < 60; i++) step(g, 1 / 60, true);
@@ -19,8 +20,10 @@ test('Pip dives, catches a school, earns the mission once, ends immediately on a
   events = step(g, 1 / 60, true);
   assert.equal(g.score, 260); assert.ok(!events.some(e => e.kind === 'mission'));
   g.items = [{ kind: 'shark', x: g.player.x, y: g.player.y, baseY: g.player.y }];
-  assert.ok(step(g, 1 / 60, true).some(e => e.kind === 'end'));
-  assert.equal(g.endReason, 'shark');
+  const beforeHit = g.energy;
+  assert.ok(step(g, 1 / 60, true).some(e => e.kind === 'hurt'));
+  assert.equal(g.ended, false); assert.ok(g.energy < beforeHit - 34);
+  g.energy = .01; step(g, 1 / 60, false); assert.equal(g.endReason, 'energy');
   const score = g.score;
   assert.deepEqual(step(g, 1, true), [], 'ended runs cannot award more fish');
   assert.equal(g.score, score);
@@ -81,12 +84,12 @@ test('air warns, replenishes above water, and exhaustion ends the run immediatel
   assert.equal(fresh.player.breath, WORLD.breath);
 });
 
-test('fisher, hull and net contact end immediately, while the difficulty grows gradually', () => {
-  for (const [y, offset, cast, reason] of [[280, 7, -1, 'fisher'], [360, 0, -1, 'fisher'], [450, 70, 2.2, 'net']]) {
+test('fisher, hull and net contact cost energy, while the difficulty grows gradually', () => {
+  for (const [y, offset, cast] of [[280, 7, -1], [360, 0, -1], [450, 70, 2.2]]) {
     const g = createGame(); g.player.y = y;
     g.items = [{ kind: 'boat', x: g.player.x + offset, cast }];
-    assert.equal(step(g, .01, false).filter(e => e.kind === 'end').length, 1);
-    assert.equal(g.endReason, reason);
+    assert.equal(step(g, .01, false).filter(e => e.kind === 'hurt').length, 1);
+    assert.equal(g.ended, false); assert.equal(g.energy, 70);
   }
   const speeds = [];
   for (let stage = 0; stage < 3; stage++) {
@@ -99,13 +102,13 @@ test('authored stages introduce individual dangers before combinations and finis
   const seen = new Set();
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
-    for (let wave = 0; wave < 9; wave++) {
+    for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
       const dangers = g.items.filter(i => !['fish', 'bubble', 'turtle'].includes(i.kind));
       dangers.forEach(i => seen.add(i.kind));
       if (STAGES[stage].encounters[wave] === 'calm') assert.equal(dangers.length, 0);
-      if (stage === 2 && wave === 8) assert.deepEqual(dangers.map(i => i.kind), ['puffer', 'reef']);
-      else assert.ok(dangers.length <= 1, 'first exposures are individual');
+      if (stage === 0) assert.ok(dangers.length <= 1, 'bay encounters are individual');
+      else assert.equal(dangers.length, ['calm', 'turtle'].includes(STAGES[stage].encounters[wave]) ? 0 : STAGES[stage].encounters[wave].split('-').length);
     }
     g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
     assert.ok(g.items.some(i => i.kind === 'nest' && i.final));
@@ -115,18 +118,17 @@ test('authored stages introduce individual dangers before combinations and finis
 });
 
 test('complete main fish routes are playable in every stage with empty and full cargo', () => {
-  for (let stage = 0; stage < 3; stage++) for (const cargo of [0, 20]) for (const seed of [0, .5, .99]) {
+  for (const dt of [1 / 30, 1 / 60, .016]) for (let stage = 0; stage < 3; stage++) for (const cargo of [0, 20]) for (const seed of [0, .5, .99]) {
     const g = createGame(() => seed, stage); g.cargo = cargo;
-    for (let i = 0; i < 90 * 60 && !g.ended; i++) {
-      const p = g.player;
-      const next = g.items.filter(item => item.kind === 'fish' && !item.golden && item.x > p.x - 12).sort((a, b) => a.x - b.x)[0];
-      const target = next && next.x < p.x + 150 && p.breath > 3 ? next.y : 265;
-      step(g, 1 / 60, target > p.y + p.vy * .11);
+    const control = routeController(); let last = false;
+    while (g.time < 90 && !g.ended) {
+      const holding = control(g); if (holding && !last) press(g); last = holding;
+      step(g, dt, holding);
     }
     assert.equal(g.endReason, 'complete', `stage ${stage}, cargo ${cargo}, seed ${seed}`);
     assert.ok(g.time >= 45 && g.time <= 75);
     assert.ok(g.fish > 90); assert.equal(g.cargo, 0); assert.ok(g.delivered > 0);
-    assert.ok(g.items.every(i => i.kind === 'nest'), 'safe arrival has no lingering hazards');
+    assert.ok(g.items.every(i => ['nest', 'fish', 'bubble'].includes(i.kind)), 'safe arrival has no lingering hazards');
   }
 });
 
@@ -187,7 +189,7 @@ test('water and surface collisions cancel incomplete tricks without bonus', () =
     step(g, .01, true);
     assert.equal(g.score, 0);
     if (failure === 'water') assert.equal(g.player.turns, 0);
-    else assert.equal(g.ended, true);
+    else { assert.equal(g.ended, false); assert.ok(g.energy < 100); assert.equal(g.player.turns, 0); }
   }
   assert.ok(hitsBoat({ x: 118, y: 370 }, { x: 198 }), 'bow contact counts before centers meet');
   assert.ok(!hitsBoat({ x: 118, y: 440 }, { x: 118 }), 'clear water below hull remains safe');
@@ -197,12 +199,12 @@ test('gulls and driftwood collide, jelly tentacles pulse, whirlpools pull withou
   for (const [kind, y] of [['gull', 285], ['driftwood', 360], ['jelly', 640]]) {
     const g = createGame(); g.player.y = y; g.player.wet = y > 372;
     g.items = [{ kind, x: g.player.x, y }]; step(g, .01, false);
-    assert.equal(g.endReason, kind);
+    assert.equal(g.ended, false); assert.ok(g.energy < 100);
   }
   for (const [time, fatal] of [[Math.PI / 4, true], [Math.PI * 3 / 4, false]]) {
     const g = createGame(); g.time = time; g.player.y = 700; g.player.wet = true;
     g.items = [{ kind: 'jelly', x: g.player.x, y: 640 }]; step(g, .001, false);
-    assert.equal(g.ended, fatal, 'contracted tentacles leave room below');
+    assert.equal(g.energy < 90, fatal, 'contracted tentacles leave room below');
   }
   const g = createGame(); g.player.y = 620; g.player.wet = true;
   g.items = [{ kind: 'whirlpool', x: g.player.x, y: 640 }];
@@ -229,7 +231,7 @@ test('diver locks aim before firing, reloads, and missed harpoons award only onc
   step(safe, .01, false); assert.equal(safe.score, 25);
   const hit = createGame(); hit.player.y = 500; hit.player.wet = true;
   hit.items = [{ kind: 'harpoon', x: 120, y: 500, vx: -200, vy: 0, life: 2 }]; step(hit, .01, false);
-  assert.equal(hit.endReason, 'harpoon');
+  assert.equal(hit.ended, false); assert.equal(hit.energy, 75);
 });
 
 test('surfers leave a low-air ascent clear; later layers retain a middle corridor and rewards', () => {
@@ -238,7 +240,7 @@ test('surfers leave a low-air ascent clear; later layers retain a middle corrido
   for (let i = 0; i < 90 && !g.ended; i++) step(g, 1 / 60, false);
   assert.equal(surfer.escaping, true); assert.equal(g.ended, false); assert.equal(g.player.wet, false);
   const hit = createGame(); hit.player.y = 350; hit.items = [{ kind: 'surfer', x: 118, y: WORLD.water }]; step(hit, .01, false);
-  assert.equal(hit.endReason, 'surfer');
+  assert.equal(hit.ended, false); assert.equal(hit.energy, 80);
 
 });
 
@@ -354,7 +356,7 @@ test('puffer gives a full second of anticipation and is dangerous only when puff
       assert.equal(hitsPuffer({ x: 118 + r + 19, y: 500 }, item), false);
     }
     const run = createGame(); run.nextEncounter = Infinity; run.items = [item]; Object.assign(run.player, { y: 500, wet: true });
-    step(run, .001, false); assert.equal(run.ended, phase === 'puffed');
+    step(run, .001, false); assert.equal(run.ended, false); assert.equal(run.energy, phase === 'puffed' ? 70 : 100);
   }
 });
 
@@ -369,4 +371,70 @@ test('empty final nest can be reached, waits for ascent, and settles without adv
     for (let i = 0; i < 240 && !g.ended; i++) step(g, 1 / 60, true);
     assert.equal(g.endReason, 'complete'); assert.equal(g.time, time); assert.equal(g.delivered, cargo);
   }
+});
+
+test('coasting cannot finish any stage; no-food endurance is bounded even without hazards', () => {
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(() => .5, stage);
+    while (!g.ended && g.time < 80) step(g, 1 / 60, false);
+    assert.equal(g.endReason, 'energy'); assert.ok(g.time < 40); assert.equal(g.delivered, 0);
+    const empty = createGame(() => .5, stage); empty.items = []; empty.nextEncounter = Infinity;
+    while (!empty.ended) step(empty, 1 / 60, false);
+    assert.ok(empty.time > 35 && empty.time < 35.4); assert.equal(empty.fish, 0);
+  }
+});
+
+test('a full pouch keeps earning points and replenishing energy, including golden fish', () => {
+  for (const golden of [false, true]) {
+    const g = createGame(); g.cargo = WORLD.capacity; g.energy = 50;
+    g.items = [{kind: 'fish', ...beakPosition(g.player), golden}];
+    step(g, .001, false);
+    assert.equal(g.cargo, WORLD.capacity); assert.equal(g.fish, 1);
+    assert.equal(g.score, golden ? 50 : 10); assert.equal(g.energy, golden ? 62 : 54);
+    g.energy = 99; g.items = [{kind: 'fish', ...beakPosition(g.player), golden}]; step(g, .001, false);
+    assert.equal(g.energy, 100);
+  }
+});
+
+test('contacts cost energy once, protect briefly, and never take cargo or air', () => {
+  const g = createGame(); g.nextEncounter = Infinity; g.cargo = 10; g.combo = 8; g.comboTime = 4;
+  const gull = {kind: 'gull', x: 118, y: 285}; g.items = [gull];
+  assert.equal(step(g, .01, false).filter(e => e.kind === 'hurt').length, 1);
+  assert.equal(g.energy, 85); assert.equal(g.cargo, 10); assert.equal(g.player.breath, WORLD.breath); assert.equal(g.combo, 0);
+  for (let i = 0; i < 125; i++) { gull.x = 118; step(g, .01, false); }
+  assert.equal(g.energy, 85, 'same actor cannot drain every frame or after protection expires');
+  const next = {kind: 'gull', x: 118, y: 285}; g.items = [next]; g.player.y = 285;
+  step(g, .01, false); assert.equal(g.energy, 70, 'a new encounter can hurt again');
+  g.items = [{kind: 'gull', x: 118, y: 285}]; step(g, .01, false);
+  assert.equal(g.energy, 70, 'overlapping actors cannot stack damage during protection');
+  g.player.hurt = 0; g.energy = 10; step(g, .01, false);
+  assert.equal(g.endReason, 'energy'); assert.equal(g.energy, 0);
+});
+
+test('bay already contains the main cast; later stages increase combinations and reserve puffer', () => {
+  assert.deepEqual(STAGES[0].encounters.filter(k => k !== 'calm').sort(), ['turtle','boat','shark','gull','jelly','island','surfer','driftwood','diver'].sort());
+  assert.ok(!STAGES[0].encounters.some(k => k.includes('puffer')));
+  const combinations = STAGES.map(s => s.encounters.filter(k => k.includes('-')).length);
+  assert.ok(combinations[0] < combinations[1] && combinations[1] < combinations[2]);
+  assert.ok(STAGES[0].spacing > STAGES[1].spacing && STAGES[1].spacing > STAGES[2].spacing);
+});
+
+test('exhaustion at the nest cannot trigger a completion, feeding itself freezes energy', () => {
+  const g = createGame(); g.time = 10; g.energy = .01; g.items = [{kind:'nest',final:true,x:118,celebration:0}];
+  step(g, .01, false); assert.equal(g.endReason, 'energy'); assert.equal(g.feeding, 0);
+  const fed = createGame(); fed.energy = 50; fed.cargo = 20; fed.items = [{kind:'nest',final:true,x:118,celebration:0}];
+  step(fed, .01, false); for (let i = 0; i < 200; i++) step(fed, .02, false);
+  assert.equal(fed.endReason, 'complete'); assert.equal(fed.energy, 50);
+});
+
+test('low energy keeps steering and air unchanged; a harpoon that hit gives no dodge bonus', () => {
+  const fresh = createGame(), tired = createGame(); tired.energy = 10;
+  for (const g of [fresh,tired]) {g.items = [];g.nextEncounter = Infinity;}
+  for (let i=0;i<100;i++) {step(fresh,.01,i<50);step(tired,.01,i<50);}
+  assert.equal(tired.player.y,fresh.player.y);assert.equal(tired.player.vy,fresh.player.vy);assert.equal(tired.player.breath,fresh.player.breath);
+  const g=createGame();g.nextEncounter=Infinity;Object.assign(g.player,{y:500,wet:true});
+  g.items=[{kind:'harpoon',x:118,y:500,vx:-200,vy:0,life:2}];
+  assert.ok(step(g,.01,false).some(e=>e.kind==='hurt'));
+  for(let i=0;i<30;i++)step(g,.01,false);
+  assert.equal(g.score,0,'absorbing a shot is not outsmarting it');
 });

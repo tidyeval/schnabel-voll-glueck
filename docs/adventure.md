@@ -1,5 +1,7 @@
 # Pips Nest-Abenteuer · Ticket #2
 
+Historische Abnahme des ersten Etappenstands. Das anschließende Nutzerfeedback ersetzt die damalige Gegnerverteilung und tödliche Akteurkontakte durch [aktives Sammeln und Energieverlust](energy.md).
+
 Drei kurze Etappen führen zu dauerhaft freigeschalteten Nestern. Ein Fehler setzt nur den aktuellen Versuch zurück. Pips Haltung, Augen, Atembläschen und Entspannung vermitteln Luftnot und Rettung; im laufenden Spiel wurden keine weiteren Anzeigen eingeführt. Der neue Kugelfisch und situationsbezogene Reaktionen führen die warme Gestaltung aus Ticket #1 weiter. Während der Umsetzung wurde zusätzlich die vom Nutzer gelieferte Musik beauftragt (AC9).
 
 ## Abnahme
