@@ -1,22 +1,49 @@
 <!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Schnabelglück · Animationsprüfung</title>
-<style>body{margin:0;background:#fff5df;color:#285652;font:16px system-ui}header{padding:12px;display:flex;gap:12px;flex-wrap:wrap}canvas{display:block;max-width:100%;height:auto;margin:auto;width:390px}select,button{font:inherit}label{display:flex;gap:6px;align-items:center}</style>
-<header><select id="scene" aria-label="Szene"><option>Pip</option><option>Tiere</option><option>Menschen</option><option>Umgebung</option><option>Füttern</option><option>Knappe Luft</option></select><select id="outfit" aria-label="Outfit"><option value="classic">Klassisch</option><option value="flower">Blume</option><option value="sailor">Matrose</option></select><label><input type="checkbox" id="reduced">Reduzierte Bewegung</label><button id="pause">Pause</button></header><canvas width="480" height="850"></canvas>
+<style>body{margin:0;background:#fff5df;color:#285652;font:16px system-ui}header{padding:12px;display:flex;gap:12px;flex-wrap:wrap}canvas{display:block;max-width:100%;height:auto;margin:auto;width:390px;height:844px}select,button{font:inherit}label{display:flex;gap:6px;align-items:center}p{max-width:650px;margin:12px auto;padding:0 12px}</style>
+<header><select id="scene" aria-label="Szene"><option>Pip</option><option>Tiere</option><option>Menschen</option><option>Umgebung</option><option>Füttern</option><option>Knappe Luft</option><option>Luftnot</option><option>Kugelfisch</option><option>Bucht</option><option>Hafen</option><option>Riff</option></select><select id="outfit" aria-label="Outfit"><option value="classic">Klassisch</option><option value="flower">Blume</option><option value="sailor">Matrose</option></select><label><input type="checkbox" id="reduced">Reduzierte Bewegung</label><button id="pause">Pause</button><label>Zeit <input id="seek" type="range" min="0" max="12" step=".05" value="0"></label></header>
+<p id="description">Reproduzierbare Zustandsvorschau ohne HUD, Klang oder Haptik. Die Regler gehören nur zur Prüfseite.</p><canvas width="480" height="850"></canvas>
 <script type="module">
-const prefix=new URLSearchParams(location.search).get('stage')==='before'?'../test-results/polish/before':'../src';
-const {drawWorld}=await import(`${prefix}/art.js`);const {createGame}=await import(`${prefix}/game.js`);
-const canvas=document.querySelector('canvas'),c=canvas.getContext('2d'),g=createGame(()=>.5);let t=0,last,paused=false;
+const {drawWorld}=await import('../src/art.js');const {createGame,step,beakPosition}=await import('../src/game.js');
+const canvas=document.querySelector('canvas'),c=canvas.getContext('2d');let t=0,last,paused=false;
+const scenes=document.querySelector('#scene'),seek=document.querySelector('#seek');
+const preview=()=>{const g=createGame(()=>.5);g.nextEncounter=Infinity;g.items=[];return g;};
+function sample(scene,time){
+ const g=preview(),p=g.player;
+ if(['Bucht','Hafen','Riff'].includes(scene)){
+   g.stage=['Bucht','Hafen','Riff'].indexOf(scene);g.items=g.stage===0?[{kind:'turtle',x:300,y:480,baseY:480}]:g.stage===1?[{kind:'boat',x:340,y:360,cast:time%4}]:[{kind:'reef',x:370},{kind:'jelly',x:290,y:660,phase:.4},{kind:'puffer',x:200,y:640,phase:'puffed',timer:1}];return g;
+ }
+ if(scene==='Knappe Luft'||scene==='Luftnot'){
+   Object.assign(p,{y:710,wet:true,vy:0});g.cargo=20;
+   // Real depletion, followed by a timely release and the resulting relief.
+   for(let elapsed=0;elapsed<time;elapsed+=1/60){if(elapsed>=5&&elapsed<5+1/60)g.items=[{kind:'fish',...beakPosition(p)}];step(g,1/60,scene==='Luftnot'||elapsed<5.25);}
+ }else if(scene==='Pip'){
+   Object.assign(p,{y:460,wet:true});g.cargo=19;
+   g.items=[{kind:'fish',x:220,y:440}];
+   for(let elapsed=0;elapsed<Math.min(time,3);elapsed+=1/60){
+     if(elapsed>.55&&elapsed<.57)g.items=[{kind:'fish',...beakPosition(p)}];
+     step(g,1/60,elapsed<.7);
+   }
+ }else if(scene==='Kugelfisch'){
+   g.stage=2;const item={kind:'puffer',x:470,y:665,phase:'idle',timer:0};g.items=[item];
+   for(let elapsed=0;elapsed<Math.min(time,3.8);elapsed+=1/60)step(g,1/60,false);
+   item.x=300;g.items=[item];
+ }else if(scene==='Füttern'){
+   g.cargo=20;g.items=[{kind:'nest',final:true,x:360,y:360,served:false,celebration:0}];
+   for(let elapsed=0;elapsed<Math.min(time,4.5);elapsed+=1/60)step(g,1/60,false);
+ }else if(scene==='Tiere'){
+   Object.assign(p,{y:440,wet:true});g.items=[{kind:'turtle',x:170,y:440,baseY:440},{kind:'shark',x:460,y:660,lane:'deep',phase:'track'}];
+   for(let elapsed=0;elapsed<Math.min(time,3);elapsed+=1/60)step(g,1/60,elapsed<.8);
+ }else if(scene==='Menschen'){
+   g.items=[{kind:'boat',x:481,y:360,cast:-1},{kind:'surfer',x:750,y:360}];
+   // Keep Pip safely below the surface, and expose both post-encounter reactions.
+   Object.assign(p,{y:580,wet:true});
+   for(let elapsed=0;elapsed<Math.min(time,4.5);elapsed+=1/60){step(g,1/60,false);p.y=580;p.vy=0;p.wet=true;p.breath=8;}
+ }else g.items=[{kind:'island',x:110},{kind:'reef',x:370},{kind:'whirlpool',x:340,y:530},{kind:'driftwood',x:250,y:360},{kind:'bubble',x:270,y:490}];
+ return g;
+}
+window.paintPreview=(scene,time,outfit='classic',reduced=false)=>{const g=sample(scene,time);drawWorld(c,g,'playing',time,outfit,[],reduced);return {y:g.player.y,air:g.player.breath,relief:g.player.relief,feeding:g.feeding,settling:g.settling,items:g.items.map(i=>({kind:i.kind,phase:i.phase,reaction:i.reaction}))};};
+function paint(){window.paintPreview(scenes.value,t,document.querySelector('#outfit').value,document.querySelector('#reduced').checked);}
 document.querySelector('#pause').onclick=()=>{paused=!paused;document.querySelector('#pause').textContent=paused?'Weiter':'Pause'};
-function frame(now){const dt=Math.min(.05,(now-(last??now))/1000);last=now;if(!paused)t+=dt;
-const p=g.player,scene=document.querySelector('#scene').value,cycle=t%12;p.y=265;p.wet=false;p.vy=0;p.spin=0;p.feedX=undefined;p.gulp=0;p.breach=0;p.breath=8;g.feeding=0;g.cargo=0;g.items=[];
-if(scene==='Pip'){
- p.y=265+Math.sin(Math.max(0,Math.min(1,(cycle-2)/5))*Math.PI)*320;p.wet=p.y>372;p.vy=cycle<4.5?160:-160;
- g.cargo=cycle>4?20:0;p.gulp=cycle>4&&cycle<4.5?.3:0;p.breach=cycle>7&&cycle<7.6?.5:0;
- if(cycle>8&&cycle<9.3)p.spin=(cycle-8)/1.3*Math.PI*4;
- g.items=[{kind:'fish',x:250,y:470},{kind:'fish',x:300,y:500,golden:true}];
-}else if(scene==='Knappe Luft'){p.y=500;p.wet=true;p.breath=3-(t%3);}
-else if(scene==='Tiere') g.items=[{kind:'shark',x:290,y:660,phase:t%4<1?'warn':t%4<2?'dash':'cruise'},{kind:'turtle',x:290,y:440,baseY:440},{kind:'gull',x:300,y:280},{kind:'jelly',x:390,y:550,phase:(Math.sin(t*2)+1)/2},{kind:'fish',x:160,y:420},{kind:'fish',x:220,y:400,golden:true},{kind:'fish',x:380,y:230,flying:true}];
-else if(scene==='Menschen')g.items=[{kind:'boat',x:180,y:360,cast:t%4},{kind:'surfer',x:370,y:360,escaping:t%8>6},{kind:'diver',x:320,y:620,phase:t%4<1.1?'aim':t%4<1.7?'locked':'reload',aimX:118,aimY:530},{kind:'harpoon',x:300-(t%4)*80,y:610-(t%4)*20,vx:-80,vy:-20}];
-else if(scene==='Umgebung')g.items=[{kind:'island',x:110},{kind:'reef',x:370},{kind:'whirlpool',x:340,y:530},{kind:'driftwood',x:250,y:360},{kind:'bubble',x:270,y:490}];
-else {g.feeding=1;g.cargo=20-Math.floor(t*4)%21;p.y=285;p.feedX=175;g.items=[{kind:'nest',x:250,y:360,served:true,celebration:2}]}
-drawWorld(c,g,'playing',t,document.querySelector('#outfit').value,[],document.querySelector('#reduced').checked);requestAnimationFrame(frame)}requestAnimationFrame(frame);
+seek.oninput=()=>{t=Number(seek.value);paused=true;paint();};scenes.onchange=()=>{t=0;paint();};
+function frame(now){const dt=Math.min(.05,(now-(last??now))/1000);last=now;if(!paused){t=(t+dt)%12;seek.value=t;}paint();requestAnimationFrame(frame)}requestAnimationFrame(frame);
 </script></html>

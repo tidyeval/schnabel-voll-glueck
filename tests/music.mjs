@@ -29,3 +29,27 @@ settings.music = false; audio.update(102); assert.equal(music.value, 0);
 audio.pause(); assert.equal(context.state, 'suspended');
 audio.start(); assert.equal(context.state, 'running'); assert.equal(fetches, 1);
 console.log('Music fade-out, loop fade-in, mute and pause/resume passed');
+
+// Decode the actual bundled track in both engines; the mock above proves the envelope.
+const { chromium, webkit } = await import('@playwright/test');
+const { readdir } = await import('node:fs/promises');
+const { createHash } = await import('node:crypto');
+const track = (await readdir(new URL('../dist/assets/', import.meta.url))).find(name => name.startsWith('soundtrack-'));
+const expected = createHash('sha256').update(await readFile(new URL('../src/assets/soundtrack.mp3', import.meta.url))).digest('hex');
+for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
+  const browser = await engine.launch();
+  try {
+    const page = await browser.newPage(); await page.goto(process.env.PELICAN_URL || 'http://localhost:4173');
+    const result = await page.evaluate(async track => {
+      const response = await fetch(new URL(`assets/${track}`, location.href));
+      if (!response.ok) throw new Error('Bundled music failed to load');
+      const bytes = await response.arrayBuffer();
+      const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');
+      const context = new (window.AudioContext || window.webkitAudioContext)();
+      const buffer = await context.decodeAudioData(bytes); await context.close();
+      return { hash, duration: buffer.duration, channels: buffer.numberOfChannels };
+    }, track);
+    assert.equal(result.hash, expected); assert.ok(result.duration > 0); assert.equal(result.channels, 2);
+    console.log(`${name}: bundled stereo track decoded, ${result.duration.toFixed(2)}s; source hash matches`);
+  } finally { await browser.close(); }
+}

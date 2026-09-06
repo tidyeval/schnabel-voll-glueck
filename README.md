@@ -51,34 +51,23 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 
 ## Spielumfang
 
-- Pip trägt bis zu 20 Fische im sichtbar wachsenden Kehlsack. Volle Ladung verlangsamt das Auftauchen um bis zu etwa 21 Prozent. Weitere Fische geben weiterhin Fangpunkte und Energie.
-- In regelmäßigen ruhigen Abschnitten erscheinen Nester. Über Wasser anfliegen zum Füttern oder unter Wasser weiterziehen. Die 1,8 Sekunden lange Fütterung pausiert die Spielwelt; jeder abgelieferte Fisch gibt 15 Bonuspunkte, leert den Schnabel und füllt die Tauchluft. Der Rekord wird beim Abliefern gespeichert.
+- Drei Etappen führen von Nest zu Nest: **Geschützte Bucht**, **Fischerhafen**, **Korallenriff**. Erfolgreiche Fischrouten dauern etwa 63–68 Sekunden aktiver Spielzeit. Die Uhr zeigt die verstrichene Meereszeit; es gibt keinen zeitgesteuerten Rundenschluss. Fütterung und Pause zählen nicht mit.
+- Am sicheren Abschlussnest auftauchen. Auch mit leerem Schnabel kann Pip ankommen; das Nest wartet, falls er noch unter Wasser ist. Nach Fütterung und einer kurzen Ruhepause wird die nächste Etappe dauerhaft freigeschaltet. „Nochmal“ startet dieselbe Etappe frisch; im Startmenü lassen sich freigeschaltete Etappen wiederholen. Das dritte Nest schließt das Abenteuer ab.
+- Etappen beginnen mit voller Energie/Luft, leerem Schnabel und neuen Punkten/Fangserien. Etappenrekorde werden getrennt gespeichert. Der frühere Rundenrekord, Fischsammlung, Outfits und Einstellungen bleiben erhalten. Fische werden pro beendetem Versuch genau einmal gutgeschrieben.
+- Pip trägt bis zu 20 Fische im sichtbar wachsenden Kehlsack. Volle Ladung verlangsamt das Auftauchen um bis zu etwa 21 Prozent. Weitere Fische geben weiterhin Fangpunkte und Energie. Jeder abgelieferte Fisch gibt 15 Bonuspunkte.
+- In der Bucht wechseln ruhige Fangwege mit Schildkröte, Hai, Insel und Möwe. Im Hafen kommen Boote/Netze, Treibholz, Surfer und Taucher einzeln vor. Im Riff werden Qualle, Kugelfisch, Felsenpassage und Wirbel zunächst einzeln eingeführt; erst danach werden Felsen und Kugelfisch kombiniert. Fischspuren zeigen Wege, Goldfische locken zu Umwegen. Erholungsabschnitte und Luftblasen folgen den Gefahren.
+- Der Kugelfisch erschrickt, holt Luft, bläht sich auf und entspannt wieder. Er kündigt die gefährliche Phase mindestens eine Sekunde an. Nur der aufgeblasene, sichtbar stachelige Körper ist tödlich. Schildkröten ziehen bei Berührung kurz den Kopf ein; Pip wackelt, ohne Luft, Beute oder seine Position zu verlieren.
+- Haie kündigen ihren Sprint durch körperliche Anspannung an und erholen sich danach. Auftauchen beendet ihre Verfolgung. Fischer werfen Netze in einem festen Bogen und reagieren auf einen Fehlwurf. Taucher legen ihre Schussrichtung vor dem Abschuss fest; eine vorbeigelassene Harpune gibt einmalig 25 Punkte. Surfer drehen bei knapper Luft ab und winken nach einer überstandenen Begegnung.
+- Inseln müssen überflogen werden, Riffe lassen eine mittlere Unterwasserpassage offen. Möwen, Quallen, Treibholz, Boote/Fischer, Netze, Haie, Taucher und Harpunen bleiben gefährlich. Wirbel ziehen nach unten und lassen sich durch Loslassen verlassen.
+- Acht Sekunden Tauchluft; zwei Sekunden über Wasser füllen sie vollständig auf. Warnbeginn berücksichtigt Tiefe und Kehlsackgewicht. Pips Augen, Kopfhaltung, Bewegung und echte Atembläschen zeigen die Dringlichkeit; beim Auftauchen holt er sichtbar Luft und entspannt sich. Die bestehende Luftanzeige bleibt, zusätzliche schwebende Warnsymbole und Spieltext-Popups entfallen. Reduzierte Bewegung behält informative Posen und Gegnervorzeichen bei.
+- Pip schaut zum nächsten Fisch, öffnet den Schnabel und lässt den Kehlsack nachschwingen. Küken hüpfen unterschiedlich, erwarten die Fütterung und reagieren anschließend verschieden. Der Hafen hat entfernte Speicherhäuser/Stege, das Riff Korallen am Meeresboden; die Bucht behält ihre sonnige Inselküste.
+- Nach dem Auftauchen innerhalb von 1,2 Sekunden zweimal kurz tippen für einen Überschlag (+50), dreimal für einen doppelten (+120). Zwischen den Tipps höchstens 0,32 Sekunden. Punkte erst nach vollständiger Drehung, einmal pro Auftauchen; Wasserkontakt bricht den Trick ab. Halten taucht weiterhin ab.
+- Fangserien bis zum vierfachen Multiplikator mit 8,5 Sekunden Zeit zum Ausweichen. Fünf Fische in einem Tauchgang geben einmal je Versuch 100 Bonuspunkte. Luftblasen geben bis zu zwei Sekunden Tauchluft, fliegende Fische belohnen Luftpausen.
+- Lokale Fischsammlung: Blume ab 25 und Matrosenmütze ab 80 gesammelten Fischen. Keine Käufe und kein Konto.
+- Hintergrundmusik: **shake-that-ra-main-version-41288-02-07.mp3**, lokal eingebettet, rund 127,69 Sekunden. Sechs Sekunden Fade-out am Ende, 1,5 Sekunden Fade-in beim Neustart. Etappenwechsel startet den Track nicht erneut; Pause hält die Musik an. Getrennte Schalter für Musik, Sounds und Haptik.
+- Offline-Spiel und gespeicherter Fortschritt funktionieren nach der Installation weiter. Das Startmenü bietet Installation und Update-Prüfung; bereitstehende Updates werden erst durch Antippen aktiviert. Die nativen Apps enthalten Spiel und Musik lokal. Pause bei Fokusverlust bleibt erhalten.
 
-- Haie schwimmen der Spielrichtung entgegen und werden allmählich schneller. Ab 10 Sekunden werden zusätzliche Hai-Begegnungen und Zweiergruppen auf zwei Tiefen freigeschaltet, ab 30 Sekunden drei Tiere und ab 50 Sekunden vier. Das Gegenschwimmtempo der Haie steigt alle 20 Sekunden; die Gruppengröße bleibt bei maximal vier. Manche Gruppen kombinieren Haie mit sanft paddelnden Schildkröten. Die mittlere Passage bleibt frei; Kontakt mit einer Schildkröte beendet die Runde ebenfalls.
-- Ab 15 Sekunden können Taucher erscheinen: bewegliche Ziellinie, 0,6 Sekunden festes Ziel, Harpunenschuss und Nachladen. Erfolgreich vorbeigelassene Harpunen geben einmalig 25 Punkte.
-- Ab 25 Sekunden kommen Surfer dazu. Bei knapper Luft drehen sie ab; bei ausreichender Luft blockieren sie die Oberfläche kurz.
-- Ab 20 Sekunden werden Inseln freigeschaltet, die vollständig überflogen werden müssen; ab 30 Sekunden Felsen mit einer mittleren Unterwasserpassage. Fischspuren und Warnungen zeigen den Weg. Ab 75 Sekunden können Möwen über dem Riff oder ein tiefer Hai hinter der Insel dazukommen. Inselbegegnungen lassen mehr Abstand zum nächsten Hindernis.
-- Ab 10 Sekunden enthalten ausgewählte Begegnungen zwei Gefahrenebenen mit mittlerem Durchgang. Danach folgen eine Luftblase, zusätzliche Fische und weiterhin ruhige Begegnungen.
-
-- Nach und nach kommen Möwen, pulsierende Quallen, Treibholz und Wasserwirbel dazu. Jede zweite Begegnung bleibt ruhig. Möwen, Quallen und Treibholz sind bei Kontakt tödlich; Wirbel ziehen nach unten, lassen sich aber durch Loslassen verlassen.
-
-- Nach dem Auftauchen innerhalb von 1,2 Sekunden zweimal kurz tippen für einen Überschlag (+50), dreimal für einen doppelten (+120). Zwischen den Tipps höchstens 0,32 Sekunden. Punkte erst nach vollständiger Drehung, einmal pro Auftauchen; Wasserkontakt bricht den Trick ab. Halten taucht weiterhin ab. Boote, Fischer und Netze bleiben während des Tricks tödlich.
-
-- Haie verfolgen Pip zunehmend schneller, warnen vor einem Sprint und behalten dabei dessen Richtung. Auftauchen beendet die Verfolgung.
-- Luftblasen geben bis zu zwei Sekunden Tauchluft zurück. Fliegende Fische belohnen Luftpausen in ruhigen Abschnitten.
-- Das Startmenü bietet Installation (oder eine Anleitung) und Update-Prüfung. Ein bereitstehendes Update wird erst durch Antippen aktiviert; Rekorde bleiben erhalten.
-
-- Animierte Küste mit Leuchtturm, Palmen, Lichtstrahlen, Fischen und Pip; lokal gezeichnete Canvas-Grafik ohne Asset-Downloads.
-- Runden bis 2:30 Minuten, Energie durch Fische, goldene Fische, Fangserien bis zum vierfachen Multiplikator mit 8,5 Sekunden Zeit zum Ausweichen.
-- Das Tempo steigt während der Runde gleichmäßig nach 20 Sekunden von 150 langsam bis maximal 210; Begegnungsabstände sinken behutsam bis mindestens 880.
-- Gestaltete Fischrouten wechseln zwischen Netzdurchquerungen, flachen Wegen über Haien und ruhigen Fangabschnitten. Goldfische bieten freiwillige Umwege.
-- Animierte Fischer mit Regenjacke und Schnurrbart auf Holzbooten mit Rettungsring, Eimer und Tauwerk. Sie kündigen den Wurf an, holen aus, werfen das Netz im Bogen und holen es wieder ein. Netzzeichnung und Trefferprüfung verwenden dieselbe Kontur. Kontakt mit Fischer, Boot, Netz oder Hai beendet die Runde sofort.
-- Acht Sekunden Tauchluft, Warnung bei drei Sekunden und Game Over bei leerem Vorrat. Rechtzeitig loslassen! Zwei Sekunden über Wasser füllen die Luft vollständig auf.
-- Schnabelposition und Fangbereich bewegen sich gemeinsam. Pip öffnet beim Fangen den Schnabel, der Kehlsack federt nach; in der Luft schlägt er mit beiden Flügeln, unter Wasser legt er sie an. Auftauchen gibt einen kurzen Aufwärtsimpuls mit Spritzern, anschließend gleitet er ruhiger.
-- Fünf Fische in einem Tauchgang geben einmal pro Runde 100 Bonuspunkte.
-- Lokale Rekorde und Fischsammlung; Blume ab 25 und Matrosenmütze ab 80 gesammelten Fischen. Keine Käufe und kein Konto.
-- Hintergrundmusik: „getaway-driver-21-on-the-block-main-version-45640-01-44.mp3“, lokal eingebettet. Sechs Sekunden Fade-out vor dem Ende, automatischer Neustart mit 1,5 Sekunden Fade-in. Pause hält auch die Musik an.
-- Getrennte Schalter für Musik, Sounds und Haptik. Pause bei Fokusverlust; reduzierte Bewegung wird berücksichtigt.
+[Abnahme und reproduzierbare Nachweise für Pips Nest-Abenteuer, Ticket #2](docs/adventure.md).
 
 ## Prüfen
 
@@ -88,13 +77,15 @@ npx playwright install chromium webkit
 npm run build
 npm run preview  # in einem separaten Terminal laufen lassen
 npm run test:browser
-node tests/music.mjs # Musik-Loop, Fade und Pause
+node tests/music.mjs # Musik-Loop, Fade, Pause und echtes MP3-Decoding
+node tests/adventure.mjs # Alle Etappen per Browsereingabe, Fortschritt, Offline-Neustart
+node tests/adventure-visual.mjs # Kontaktbögen; Dev-Server auf Port 5175 nötig
 node tests/pwa.mjs # Installation und Update mit Erhalt der Rekorde
 ```
 
-Die Modelltests prüfen Bewegung, Fänge, Punkte, Mission, sofortiges Game Over, Netzphasen und -konturen, Luftmangel und zunehmendes Tempo, komplette sichere Fischrouten, Rundenschluss und Entity-Lebensdauer. Die Browserprüfung spielt in Chromium und WebKit, prüft Pause, Einstellungen, Neustart, Tauchluft und Speicherung sowie in Chromium den Offline-Neustart. Screenshots entstehen unter `test-results/`. `PELICAN_URL` kann die Testadresse überschreiben.
+Die Modelltests prüfen Bewegung, Fänge, Punkte, Mission, sofortiges Game Over, Netzphasen und -konturen, Luftmangel und zunehmendes Tempo, komplette sichere Fischrouten, Nestabschluss, Fortschrittsspeicherung und Entity-Lebensdauer. Die Browserprüfung spielt in Chromium und WebKit, prüft Pause, Einstellungen, Neustart, Tauchluft und Speicherung sowie in Chromium den Offline-Neustart. Screenshots entstehen unter `test-results/`. `PELICAN_URL` kann die Testadresse überschreiben.
 
-`src/game.js` enthält die Spiellogik, `src/art.js` die Illustration, `src/main.js` Eingabe und Oberfläche und `src/audio.js` Klang und Haptik. Die App-Icons sind aus `public/icon.svg` mit `node scripts/icons.mjs` reproduzierbar.
+`src/game.js` enthält die Spiellogik, `src/art.js` die Illustration, `src/main.js` Eingabe und Oberfläche und `src/audio.js` Klang und Haptik; `src/progress.js` validiert und verbucht gespeicherte Etappenergebnisse. Die App-Icons sind aus `public/icon.svg` mit `node scripts/icons.mjs` reproduzierbar.
 
 ## Validierung
 

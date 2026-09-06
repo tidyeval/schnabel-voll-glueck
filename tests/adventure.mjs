@@ -1,0 +1,81 @@
+import { chromium, webkit } from '@playwright/test';
+import assert from 'node:assert/strict';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { createServer } from 'node:http';
+import { createGame, step } from '../src/game.js';
+const out='test-results/adventure'; await mkdir(out,{recursive:true});
+async function serveBuild() {
+  const server=createServer(async(req,res)=>{
+    try {
+      const path=new URL(req.url,'http://localhost').pathname;
+      const ext=path.split('.').pop();
+      res.setHeader('Content-Type',({js:'text/javascript',css:'text/css',mp3:'audio/mpeg',svg:'image/svg+xml',png:'image/png',webmanifest:'application/manifest+json'})[ext]||'text/html');
+      res.setHeader('Cache-Control','no-store');res.setHeader('Vary','Origin');
+      res.end(await readFile(new URL('../dist'+(path==='/'?'/index.html':path),import.meta.url)));
+    }catch{res.writeHead(404);res.end();}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  return {url:`http://127.0.0.1:${server.address().port}/`,close:()=>new Promise(resolve=>server.close(resolve))};
+}
+function route(stage) {
+  const g=createGame(()=>.5,stage), inputs=[]; let last=false, elapsed=0;
+  while(!g.ended && elapsed<90) {
+    const p=g.player;
+    const next=g.items.filter(i=>i.kind==='fish'&&!i.golden&&i.x>p.x-12).sort((a,b)=>a.x-b.x)[0];
+    const target=next&&next.x<p.x+150&&p.breath>3?next.y:265;
+    const holding=target>p.y+p.vy*.11;
+    if(holding!==last){inputs.push({at:elapsed*1000,holding});last=holding;}
+    step(g,1/60,holding);elapsed+=1/60;
+  }
+  assert.equal(g.endReason,'complete'); return inputs;
+}
+const traces=[0,1,2].map(route);await writeFile(`${out}/routes.json`,JSON.stringify(traces));
+for(const [name,engine] of [['chromium',chromium],['webkit',webkit]].filter(([name])=>!process.env.BROWSER||process.env.BROWSER===name)) {
+  const server=await serveBuild(),url=server.url;
+  const browser=await engine.launch();const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  await context.addInitScript(()=>{Math.random=()=>.5;});
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.clock.install();
+  await page.goto(url);await page.locator('#stages option').first().waitFor({state:'attached'});
+  await page.evaluate(()=>localStorage.setItem('pelican-v1',JSON.stringify({record:987,totalFish:100,outfit:'sailor',music:false,sound:false,haptics:false})));
+  await page.reload();await page.locator('#stages option').first().waitFor({state:'attached'});
+  for(let stage=0;stage<3;stage++) {
+    if(stage===0)await page.locator('#play').click();else await page.locator('#next-stage').click();
+    await page.evaluate(inputs=>{
+      const start=performance.now();let index=0;
+      function tick(now){while(index<inputs.length&&inputs[index].at<=now-start){const input=inputs[index++];document.querySelector('canvas').dispatchEvent(new KeyboardEvent(input.holding?'keydown':'keyup',{code:'Space',key:' ',bubbles:true}));}if(now-start<76000)requestAnimationFrame(tick);}
+      requestAnimationFrame(tick);
+    },traces[stage]);
+    await page.clock.runFor(20000);await page.screenshot({path:`${out}/${name}-stage-${stage}.png`});
+    await page.clock.runFor(55000);
+    assert.deepEqual(errors, [], 'no input or gameplay exceptions');
+    const title=await page.locator('#result-title').textContent();
+    assert.ok(await page.locator('#result-dialog').isVisible(),`stage ${stage} finished`);
+    assert.ok(title.includes(stage===2?'Alle Küken':'Willkommen'),`${name} stage ${stage}: ${title}`);
+    const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('pelican-v1')));
+    assert.equal(saved.completed,stage+1);assert.equal(saved.record,987);assert.ok(saved.bests[stage]>0);
+    const fish=Number(await page.locator('#result-fish').textContent());
+    const previous=stage===0?100:JSON.parse(await page.getAttribute('body','data-bank')).totalFish;
+    assert.equal(saved.totalFish,previous+fish,'exactly one banking per attempt');
+    await page.evaluate(s=>document.body.setAttribute('data-bank',JSON.stringify(s)),saved);
+    await page.screenshot({path:`${out}/${name}-nest-${stage}.png`});
+    console.log(`${name}: stage ${stage+1} complete, ${fish} fish banked once`);
+    await page.clock.runFor(2000);
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('pelican-v1'))),saved,'ended frames cannot bank twice');
+  }
+  assert.ok(await page.locator('#next-stage').isHidden());
+  await page.locator('#again').click();assert.equal(await page.locator('#score').textContent(),'0');
+  await page.keyboard.down('Space');await page.clock.runFor(9100);await page.keyboard.up('Space');
+  assert.equal(await page.locator('#result-title').textContent(),'Die Luft ist aus!');
+  await page.locator('#back-home').click();assert.equal(await page.locator('#stages').inputValue(),'2');
+  await page.locator('#stages').selectOption('0');await page.locator('#play').click();assert.equal(await page.locator('#score').textContent(),'0');
+  await page.locator('#pause').click();await page.locator('#quit').click();
+  await page.reload();await page.locator('#stages option').first().waitFor({state:'attached'});assert.equal(await page.locator('#stages').inputValue(),'2');
+  await page.evaluate(()=>navigator.serviceWorker.ready);
+  // WebKit's setOffline aborts before service-worker navigation. Stop the origin
+  // in both engines instead; no-store responses rule out ordinary HTTP cache.
+  await server.close();await assert.rejects(context.request.get(url,{timeout:1000}));
+  if(name==='chromium')await context.setOffline(true);
+ await page.reload();await page.locator('#stages option').first().waitFor({state:'attached'});
+  assert.equal(await page.locator('#stages').inputValue(),'2');await page.locator('#play').click();await page.clock.runFor(500);assert.ok(await page.locator('#hud').isVisible());
+  assert.deepEqual(errors,[]);await browser.close();console.log(`${name}: all three real-input stages, bank, replay, reload and offline passed`);
+}

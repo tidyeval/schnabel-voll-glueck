@@ -9,7 +9,9 @@ self.addEventListener('activate', event => event.waitUntil(Promise.all([
 ])));
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
-  event.respondWith(caches.open(CACHE).then(cache => cache.match(event.request).then(cached => cached || fetch(event.request).catch(error => {
+  // The precache contains only this build's public assets. Origin-dependent CORS
+  // headers must not turn a cached same-origin asset into an offline miss.
+  event.respondWith(caches.open(CACHE).then(cache => cache.match(event.request, { ignoreVary: true }).then(cached => cached || fetch(event.request).catch(error => {
     if (event.request.mode === 'navigate') return cache.match(new URL('index.html', self.registration.scope).href);
     throw error;
   }))));

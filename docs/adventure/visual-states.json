@@ -1,0 +1,846 @@
+{
+  "chromium": [
+    {
+      "scene": "Knappe Luft",
+      "time": 0,
+      "label": "Entspannt",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 710,
+      "air": 8,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 4.9,
+      "label": "Knappe Luft",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 710,
+      "air": 3.083333333333351,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Luftnot",
+      "time": 6.2,
+      "label": "Dringend · weiterhin gehalten",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 710,
+      "air": 1.7833333333333554,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 7.55,
+      "label": "Luftholen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 345.5301273877399,
+      "air": 1.1000000000000234,
+      "relief": 1.3666666666666671,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 8.2,
+      "label": "Erleichtert",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 285.6177593092978,
+      "air": 3.7000000000000286,
+      "relief": 0.7166666666666676,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Pip",
+      "time": 0,
+      "label": "Blick zum Fisch",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 460,
+      "air": 8,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "fish"
+        }
+      ]
+    },
+    {
+      "scene": "Pip",
+      "time": 0.7,
+      "label": "Fang",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 614.7253172397935,
+      "air": 7.3000000000000025,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Pip",
+      "time": 2.3,
+      "label": "Auftauchen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 391.65934115884136,
+      "air": 5.683333333333342,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Füttern",
+      "time": 0.5,
+      "label": "Ankunft",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "nest"
+        }
+      ]
+    },
+    {
+      "scene": "Füttern",
+      "time": 2,
+      "label": "Füttern",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 285,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0.9666666666666694,
+      "items": [
+        {
+          "kind": "nest"
+        }
+      ]
+    },
+    {
+      "scene": "Füttern",
+      "time": 3.4,
+      "label": "Satt",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 285,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "settling": 0.7833333333333333,
+      "items": [
+        {
+          "kind": "nest"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 0,
+      "label": "Ruhig",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "idle"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 0.2,
+      "label": "Erschrecken",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "startle"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 0.8,
+      "label": "Aufblasen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "inflate"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 1.5,
+      "label": "Aufgeblasen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "puffed"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 2.6,
+      "label": "Abschwellen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "deflate"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 3.5,
+      "label": "Verlegen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "rest"
+        }
+      ]
+    },
+    {
+      "scene": "Tiere",
+      "time": 0.4,
+      "label": "Schildkröte",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 515.8646319176471,
+      "air": 7.583333333333335,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "turtle",
+          "reaction": 0.3999999999999992
+        },
+        {
+          "kind": "shark",
+          "phase": "track",
+          "reaction": 0
+        }
+      ]
+    },
+    {
+      "scene": "Tiere",
+      "time": 1,
+      "label": "Hai spannt an",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 603.9695526697045,
+      "air": 7.0000000000000036,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "turtle",
+          "reaction": 0
+        },
+        {
+          "kind": "shark",
+          "phase": "warn",
+          "reaction": 0
+        }
+      ]
+    },
+    {
+      "scene": "Tiere",
+      "time": 2.2,
+      "label": "Hai erholt sich",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 356.4070657988364,
+      "air": 6.116666666666673,
+      "relief": 0.5833333333333331,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "shark",
+          "phase": "cruise",
+          "reaction": 0.7333333333333328
+        }
+      ]
+    },
+    {
+      "scene": "Menschen",
+      "time": 2.7,
+      "label": "Fischer Fehlwurf",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 580,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "boat",
+          "reaction": 0.9333333333333338
+        },
+        {
+          "kind": "surfer",
+          "reaction": 0
+        }
+      ]
+    },
+    {
+      "scene": "Menschen",
+      "time": 4.4,
+      "label": "Surfer winkt",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 580,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "surfer",
+          "reaction": 0.8499999999999995
+        }
+      ]
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · classic",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · classic · ruhig",
+      "outfit": "classic",
+      "reduced": true,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · flower",
+      "outfit": "flower",
+      "reduced": false,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · flower · ruhig",
+      "outfit": "flower",
+      "reduced": true,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · sailor",
+      "outfit": "sailor",
+      "reduced": false,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · sailor · ruhig",
+      "outfit": "sailor",
+      "reduced": true,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    }
+  ],
+  "webkit": [
+    {
+      "scene": "Knappe Luft",
+      "time": 0,
+      "label": "Entspannt",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 710,
+      "air": 8,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 4.9,
+      "label": "Knappe Luft",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 710,
+      "air": 3.083333333333351,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Luftnot",
+      "time": 6.2,
+      "label": "Dringend · weiterhin gehalten",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 710,
+      "air": 1.7833333333333554,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 7.55,
+      "label": "Luftholen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 345.5301273877399,
+      "air": 1.1000000000000234,
+      "relief": 1.3666666666666671,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 8.2,
+      "label": "Erleichtert",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 285.6177593092978,
+      "air": 3.7000000000000286,
+      "relief": 0.7166666666666676,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Pip",
+      "time": 0,
+      "label": "Blick zum Fisch",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 460,
+      "air": 8,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "fish"
+        }
+      ]
+    },
+    {
+      "scene": "Pip",
+      "time": 0.7,
+      "label": "Fang",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 614.7253172397935,
+      "air": 7.3000000000000025,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Pip",
+      "time": 2.3,
+      "label": "Auftauchen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 391.65934115884136,
+      "air": 5.683333333333342,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Füttern",
+      "time": 0.5,
+      "label": "Ankunft",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "nest"
+        }
+      ]
+    },
+    {
+      "scene": "Füttern",
+      "time": 2,
+      "label": "Füttern",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 285,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0.9666666666666694,
+      "items": [
+        {
+          "kind": "nest"
+        }
+      ]
+    },
+    {
+      "scene": "Füttern",
+      "time": 3.4,
+      "label": "Satt",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 285,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "settling": 0.7833333333333333,
+      "items": [
+        {
+          "kind": "nest"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 0,
+      "label": "Ruhig",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "idle"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 0.2,
+      "label": "Erschrecken",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "startle"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 0.8,
+      "label": "Aufblasen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "inflate"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 1.5,
+      "label": "Aufgeblasen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "puffed"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 2.6,
+      "label": "Abschwellen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "deflate"
+        }
+      ]
+    },
+    {
+      "scene": "Kugelfisch",
+      "time": 3.5,
+      "label": "Verlegen",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 265,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "puffer",
+          "phase": "rest"
+        }
+      ]
+    },
+    {
+      "scene": "Tiere",
+      "time": 0.4,
+      "label": "Schildkröte",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 515.8646319176471,
+      "air": 7.583333333333335,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "turtle",
+          "reaction": 0.3999999999999992
+        },
+        {
+          "kind": "shark",
+          "phase": "track",
+          "reaction": 0
+        }
+      ]
+    },
+    {
+      "scene": "Tiere",
+      "time": 1,
+      "label": "Hai spannt an",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 603.9695526697045,
+      "air": 7.0000000000000036,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "turtle",
+          "reaction": 0
+        },
+        {
+          "kind": "shark",
+          "phase": "warn",
+          "reaction": 0
+        }
+      ]
+    },
+    {
+      "scene": "Tiere",
+      "time": 2.2,
+      "label": "Hai erholt sich",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 356.4070657988364,
+      "air": 6.116666666666673,
+      "relief": 0.5833333333333331,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "shark",
+          "phase": "cruise",
+          "reaction": 0.7333333333333328
+        }
+      ]
+    },
+    {
+      "scene": "Menschen",
+      "time": 2.7,
+      "label": "Fischer Fehlwurf",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 580,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "boat",
+          "reaction": 0.9333333333333338
+        },
+        {
+          "kind": "surfer",
+          "reaction": 0
+        }
+      ]
+    },
+    {
+      "scene": "Menschen",
+      "time": 4.4,
+      "label": "Surfer winkt",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 580,
+      "air": 8,
+      "relief": 0,
+      "feeding": 0,
+      "items": [
+        {
+          "kind": "surfer",
+          "reaction": 0.8499999999999995
+        }
+      ]
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · classic",
+      "outfit": "classic",
+      "reduced": false,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · classic · ruhig",
+      "outfit": "classic",
+      "reduced": true,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · flower",
+      "outfit": "flower",
+      "reduced": false,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · flower · ruhig",
+      "outfit": "flower",
+      "reduced": true,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · sailor",
+      "outfit": "sailor",
+      "reduced": false,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    },
+    {
+      "scene": "Knappe Luft",
+      "time": 5.3,
+      "label": "Luftnot + Fang · sailor · ruhig",
+      "outfit": "sailor",
+      "reduced": true,
+      "y": 707.9076744590035,
+      "air": 2.683333333333352,
+      "relief": 0,
+      "feeding": 0,
+      "items": []
+    }
+  ]
+}

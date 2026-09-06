@@ -14,3 +14,7 @@
 #play .play-arrow{display:grid;place-items:center;width:10cqw;height:10cqw;min-width:36px;min-height:36px;border-radius:50%;background:#fff8dcaa;box-shadow:inset 0 1px 0 #fffdf0,0 2px 0 #c8904840;color:#698755;transform:rotate(5deg)}
 #play svg{width:55%;height:55%}#play:hover{background:linear-gradient(165deg,#fff0bd,#ffdb91 72%,#f9c17b);transform:translateY(-2px)}#play:active{transform:translateY(4px);box-shadow:inset 0 2px 0 #fff9dc,0 1px 0 #c58d4b,0 4px 10px #164f4920}#play:focus-visible{outline:3px solid #fff8dc;outline-offset:7px}
 @media(prefers-reduced-motion:reduce){#play{transition:none}}
+
+.start-bottom{top:auto;gap:4px;}.record{margin-bottom:.5cqw}.stage-picker{display:flex;flex-direction:column;gap:1cqw;color:#fff6dc;font-size:2.5cqw;text-align:left;margin-bottom:1cqw;pointer-events:auto}.stage-picker select{font:inherit;font-size:3.2cqw;font-weight:700;color:#254f4b;border:1px solid #e9e5c2;border-radius:2.5cqw;background:#fff6df;padding:2cqw;width:100%;min-height:36px}.stage-picker small{font-size:2.2cqw}.primary #play-label{font-size:4.1cqw;font-weight:800}.start-bottom .quiet-button{padding:2.5cqw 0}#next-stage{margin-bottom:3cqw}.primary.hidden+ #again{margin-top:0}.start-bottom .app-actions{margin-top:0}
+
+.hero-label{top:30%}

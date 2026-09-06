@@ -1,21 +1,18 @@
 import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
-import { createGame, step, press, WORLD } from './game.js';
+import { createGame, step, press, WORLD, STAGES, airState } from './game.js';
 import { drawWorld } from './art.js';
 import { createAudio } from './audio.js';
+import { readProgress, recordAttempt, unlocks } from './progress.js';
 
 const $ = id => document.getElementById(id);
 const app = $('app'), canvas = $('world'), ctx = canvas.getContext('2d');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const defaults = { record: 0, totalFish: 0, outfit: 'classic', music: true, sound: true, haptics: true };
-let saved = {};
-try { saved = JSON.parse(localStorage.getItem('pelican-v1')) || {}; } catch { /* Storage can be unavailable in private browsers. */ }
-const prefs = { ...defaults };
-for (const key of ['record', 'totalFish']) if (Number.isSafeInteger(saved[key]) && saved[key] >= 0) prefs[key] = saved[key];
-for (const key of ['music', 'sound', 'haptics']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
-const unlocks = { classic: 0, flower: 25, sailor: 80 };
-if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;
+let raw;
+try { raw = localStorage.getItem('pelican-v1'); } catch { /* Storage can be unavailable. */ }
+const prefs = readProgress(raw);
+let selectedStage = Math.min(prefs.completed, STAGES.length - 1);
 const audio = createAudio(prefs);
 let game = createGame(), mode = 'menu', holding = false, effects = [], last = 0, animation = 0, toastUntil = 0;
 function text(id, value) { if ($(id).textContent !== String(value)) $(id).textContent = value; }
@@ -25,14 +22,27 @@ function persist() {
 }
 function toast(message) { text('toast', message); $('toast').classList.remove('hidden'); toastUntil = performance.now() + 3000; }
 function clock(seconds) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
-function refreshMenu() { text('record', prefs.record.toLocaleString('de-DE')); text('wallet', `${prefs.totalFish} Fische`); }
+function refreshMenu() {
+  text('record', prefs.record.toLocaleString('de-DE')); text('wallet', `${prefs.totalFish} Fische`);
+  $('stages').replaceChildren(...STAGES.map((stage, i) => {
+    const option = document.createElement('option'); option.value = i;
+    option.textContent = `${i < prefs.completed ? '✓ ' : ''}${stage.name}${i > prefs.completed ? ' · noch verschlossen' : ''}`;
+    option.disabled = i > prefs.completed; return option;
+  }));
+  $('stages').value = selectedStage;
+  text('stage-best', `Etappenrekord: ${prefs.bests[selectedStage]} Punkte`);
+  text('play-label', prefs.completed ? 'Weiter gehts!' : 'Los gehts!');
+}
+$('stages').onchange = () => { selectedStage = Number($('stages').value); refreshMenu(); };
+
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start() {
-  closeDialogs(); game = createGame(); effects = []; mode = 'playing'; holding = false;
+  closeDialogs(); game = createGame(Math.random, selectedStage); effects = []; mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
   $('toast').classList.add('hidden'); audio.start(); updateHud(); canvas.focus();
 }
 function home() {
+  selectedStage = Math.min(prefs.completed, STAGES.length - 1);
   closeDialogs(); mode = 'menu'; holding = false; effects = []; audio.pause();
   $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); refreshMenu(); $('play').focus();
 }
@@ -44,39 +54,43 @@ function pause(showDialog = true) {
 function resume() { closeDialogs(); holding = false; mode = 'playing'; last = performance.now(); audio.start(); canvas.focus(); }
 function finish() {
   if (mode === 'ended') return;
-  const record = game.score > prefs.record;
-  prefs.record = Math.max(prefs.record, game.score); prefs.totalFish += game.fish;
+  const record = game.score > prefs.bests[game.stage];
+  game.ended = true; recordAttempt(prefs, game);
+  const complete = game.endReason === 'complete';
+  const final = complete && game.stage === STAGES.length - 1;
+  $('next-stage').classList.toggle('hidden', !complete || final);
+  text('again', 'Nochmal');
   mode = 'ended'; holding = false; game.ended = true; persist();
-  text('result-kicker', record ? 'GAME OVER · NEUER REKORD!' : 'GAME OVER');
-  text('result-title', { turtle: 'Eine Schildkröte erwischt!', island: 'Die Insel erwischt!', reef: 'Am Felsen hängen geblieben!', diver: 'Taucher voraus!', harpoon: 'Von der Harpune erwischt!', surfer: 'Surfer voraus!', gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: 'Runde geschafft!' }[game.endReason] || 'Bis zur nächsten Runde!');
+  text('result-kicker', complete ? (final ? 'ALLE NESTER ERREICHT' : 'NEST ERREICHT') : record ? 'NEUER ETAPPENREKORD' : STAGES[game.stage].name);
+  text('result-title', { puffer: 'Ein aufgeblasener Kugelfisch!', island: 'Die Insel erwischt!', reef: 'Am Felsen hängen geblieben!', diver: 'Taucher voraus!', harpoon: 'Von der Harpune erwischt!', surfer: 'Surfer voraus!', gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: final ? 'Alle Küken satt. Herz auch.' : 'Willkommen im Nest!' }[game.endReason] || 'Bis zur nächsten Runde!');
   text('result-score', game.score); text('result-fish', game.fish); text('result-combo', game.bestCombo); text('result-time', clock(game.time));
-  text('result-mission', game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.');
+  text('result-mission', complete ? (final ? 'Pip hat alle drei Nester erreicht. Besuche deine Lieblingsbucht wieder!' : `Weiter zum ${STAGES[game.stage + 1].name === 'Fischerhafen' ? 'Fischerhafen' : 'Korallenriff'}. Dein Fortschritt ist gespeichert.`) : game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.');
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
 }
 function updateHud() {
   text('cargo-value', `${game.cargo}/${WORLD.capacity}`);
   text('cargo-label', game.feeding ? 'KÜKEN FÜTTERN ♥' : game.cargo >= WORLD.capacity ? 'SCHNABEL VOLL · ZUM NEST ↑' : 'BEUTE IM SCHNABEL');
-  text('score', game.score); text('time', clock(Math.ceil(WORLD.duration - game.time)));
+  text('score', game.score); text('time', clock(Math.floor(game.time)));
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
   const p = game.player;
   $('air').classList.toggle('hidden', !p.wet && p.breath >= WORLD.breath);
-  $('air').classList.toggle('low-air', p.breath <= 3);
-  const urgency = Math.max(0, 1 - p.breath / 3);
+  const { level, urgency } = airState(p, game.cargo);
+  $('air').classList.toggle('low-air', level > 0);
   const pulse = reducedMotion ? 2 : 2 + (1 + Math.sin(animation * (5 + urgency * 5))) * 2;
-  $('air').style.boxShadow = p.wet && p.breath <= 3 ? `0 0 0 ${pulse}px #ffd59a66` : '';
-  text('air-label', p.breath <= 3 ? 'AUFTAUCHEN ↑' : 'TAUCHLUFT');
+  $('air').style.boxShadow = level ? `0 0 0 ${pulse}px #ffd59a66` : '';
+  text('air-label', level ? 'AUFTAUCHEN' : 'TAUCHLUFT');
   text('air-value', `${p.breath.toFixed(1)} s`);
   $('air-fill').style.width = `${p.breath / WORLD.breath * 100}%`;
   $('air').setAttribute('aria-valuenow', p.breath.toFixed(1));
   $('combo').classList.toggle('hidden', game.combo < 5); text('combo', `${Math.min(4, 1 + Math.floor(game.combo / 5))}× KOMBO`);
   text('mission-count', game.mission ? '+100' : `${Math.min(5, game.diveFish)}/5`); text('mission-icon', game.mission ? '✓' : '✧');
   text('mission-text', game.mission ? 'Tauchmission geschafft!' : 'Fange 5 Fische in einem Tauchgang');
-  $('tutorial').classList.toggle('hidden', game.fish > 0 || game.time > 5 || p.y > 560);
-  text('tutorial', p.wet ? 'Loslassen — und wieder ab nach oben ↑' : 'Halten — abtauchen und Fische fangen ↓');
+
 }
 canvas.tabIndex = 0;
-$('play').onclick = start; $('again').onclick = start; $('back-home').onclick = home;
+$('play').onclick = start; $('again').onclick = () => { selectedStage = game.stage; start(); };
+$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(); }; $('back-home').onclick = home;
 $('pause').onclick = () => pause(); $('resume').onclick = resume;
 $('quit').onclick = finish;
 $('settings').onclick = () => { pause(false); $('settings-dialog').showModal(); };
@@ -134,15 +148,9 @@ function frame(now) {
   if (mode === 'playing') {
     for (const event of step(game, dt, holding)) {
       if (event.kind === 'end') { finish(); break; }
-      if (event.x !== undefined) effects.push({ ...event, life: 1 });
+      if (event.x !== undefined && event.kind !== 'warning') effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
-      if (event.kind === 'islandWarning') toast('Insel voraus! Jetzt auftauchen und darüberfliegen ↑');
-      if (event.kind === 'reefWarning') toast('Felsen voraus! Folge den Fischen durch die Mitte.');
-      if (event.kind === 'delivery') { holding = false; prefs.record = Math.max(prefs.record, game.score); persist(); }
-      if (event.kind === 'outsmart') toast('Ausgetrickst! +25 Punkte');
-      if (event.kind === 'trick') toast(`${event.turns === 2 ? 'Doppelter Überschlag' : 'Überschlag'}! +${event.points} Punkte`);
-      if (event.kind === 'airBonus') toast('Luftblase! +2 Sekunden Tauchluft');
-      if (event.kind === 'mission') toast('✦ Fünf auf einen Tauchgang! +100 Punkte');
+      if (event.kind === 'delivery') holding = false;
     }
     updateHud();
   }

@@ -1,0 +1,25 @@
+{
+  "stage": "after",
+  "hardware": "darwin arm64 Apple M3 Max",
+  "viewport": "390x844, DPR 2, canvas 960x1700",
+  "browsers": {
+    "chromium": {
+      "version": "153.0.8010.12",
+      "frames": 1801,
+      "p95": 16.700000000000728,
+      "reef": {
+        "frames": 1801,
+        "p95": 16.799999999995634
+      }
+    },
+    "webkit": {
+      "version": "26.6",
+      "frames": 1802,
+      "p95": 18,
+      "reef": {
+        "frames": 1801,
+        "p95": 18
+      }
+    }
+  }
+}

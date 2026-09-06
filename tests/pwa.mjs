@@ -10,6 +10,7 @@ const server = createServer(async (req, res) => {
     if (path === '/sw.js') body = Buffer.from(body.toString() + '\n// test deployment ' + version + (version > 1 ? `\nself.addEventListener('install', event => event.waitUntil(new Promise(resolve => setTimeout(resolve, 2000))));` : ''));
     const ext = path.split('.').pop();
     res.setHeader('Content-Type', ({ js: 'text/javascript', css: 'text/css', webmanifest: 'application/manifest+json', png: 'image/png', svg: 'image/svg+xml' })[ext] || 'text/html');
+    res.setHeader('Vary', 'Origin, X-Offline-Probe');
     res.setHeader('Cache-Control', 'no-store'); res.end(body);
   } catch { res.writeHead(404); res.end(); }
 });
@@ -25,7 +26,7 @@ try {
   await page.locator('#install').click(); assert.equal(await page.evaluate(() => window.installClicked), true);
   await page.evaluate(() => navigator.serviceWorker.ready); await page.reload();
   await page.evaluate(async () => {
-    localStorage.setItem('pelican-v1', JSON.stringify({ record: 123, totalFish: 42 }));
+    localStorage.setItem('pelican-v1', JSON.stringify({ record: 123, totalFish: 42, completed: 2, bests: [300, 400, 0] }));
     const cache = await caches.open('unrelated-site'); await cache.put(location.href, new Response('wrong site'));
   });
   await page.reload(); await page.locator('#play').waitFor();
@@ -50,6 +51,15 @@ try {
   assert.equal(await page.locator('h1').textContent(), 'Schnabelglück');
   assert.equal(await page.locator('#record').textContent(), '123');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).totalFish), 42);
+  await page.evaluate(() => navigator.serviceWorker.ready); await page.reload();
+  await page.context().setExtraHTTPHeaders({ 'X-Offline-Probe': 'reopened' });
+  await page.context().setOffline(true); await page.reload();
+  assert.equal(await page.locator('#stages').inputValue(), '2');
+  await page.locator('#play').click();
+  assert.ok(await page.locator('#hud').isVisible());
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).completed), 2);
+  await page.context().setOffline(false);
+  console.log('Offline restart preserves unlocked reef');
   console.log('Stale cached page recovered; records and fish preserved');
   console.log('Install fallback, install action, scoped cache, real waiting-worker update and preserved records passed');
 } finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
