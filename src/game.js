@@ -63,6 +63,11 @@ export function hitsBoat(player, boat) {
     Math.hypot(x - clamp(x, boat.x + left, boat.x + right), y - clamp(y, WORLD.water + top, WORLD.water + bottom)) < radius);
 }
 
+export function hitsFisher(player, boat) {
+  const x = player.x, y = player.y - 8, radius = 18;
+  return Math.hypot(x - clamp(x, boat.x - 30, boat.x + 25), y - clamp(y, WORLD.water - 100, WORLD.water - 17)) < radius;
+}
+
 export function terrainBlocks(item) {
   return (item.kind === 'buoy' ? [[-32, 245, 64, 220]]
     : item.kind === 'coral' ? [[-85, 610, 170, 240]]
@@ -82,7 +87,7 @@ export function hitsTerrain(player, item) {
 
 // One journey: more speed and less space as active play time accumulates.
 export function paceAt(seconds) {
-  const progress = clamp(seconds / 120, 0, 1);
+  const progress = clamp(seconds / 90, 0, 1);
   return { speed: 180 + 60 * progress, spacing: 960 - 60 * progress };
 }
 export const STAGES = [
@@ -122,7 +127,8 @@ function encounter(game) {
   const arc = (base, height) => Array.from({ length: 11 }, (_, i) => base + Math.sin(i / 10 * Math.PI) * height);
   const depths = kind === 'boat' ? [432,475,530,595,620,620,615,560,490,435,405]
     : ['reef', 'buoy'].includes(kind) ? [440,470,490,510,520,530,530,510,470,435,405]
-    : kind === 'shark' || kind === 'island' ? arc(410, 30)
+    : kind === 'shark' ? arc([410, 475, 540][variant], 30)
+    : kind === 'island' ? arc(410, 30)
     : kind === 'turtle' ? arc([410,475,565][variant], 40)
     : kind === 'coral' ? arc(410, 35)
     : arc(440, 65);
@@ -134,13 +140,19 @@ function encounter(game) {
     arc(base, 35).slice(2, 9).forEach((y, i) => addFish(668 + i * 64, y, 'alternate'));
   }
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false, look: game.boats++ % 4 });
-  if (kind === 'shark') game.items.push({ kind, x: 880, y: 660, baseY: 660, lane: 'deep' });
-  if (kind === 'turtle') game.items.push({ kind, x: 890, y: 480, baseY: 480 });
+  const animalY = (index = 0) => {
+    const mode = (variant + index) % 3;
+    if ((kind === 'shark' && game.stage === 0 && game.wave === 1) || mode === 0) return depths[Math.min(9, 5 + index)];
+    if (mode === 1 && game.player.wet) return clamp(game.player.y, 410, 590);
+    return [435, 520, 570][(variant + index) % 3];
+  };
+  if (kind === 'shark') { const y = animalY(); game.items.push({ kind, x: 880, y, baseY: y }); }
+  if (kind === 'turtle') { const y = animalY(); game.items.push({ kind, x: 890, y, baseY: y }); }
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
   companions.forEach((companion, index) => {
-    const y = companion === 'gull' ? 285 : companion === 'turtle' ? 580 : 665;
+    const y = companion === 'gull' ? 285 : ['shark', 'turtle'].includes(companion) ? animalY(index + 1) : 665;
     game.items.push({ kind: companion, x: companion === 'coral' ? 890 : 960 + index * 120,
-      y, baseY: y, lane: companion === 'shark' ? 'deep' : undefined,
+      y, baseY: y,
       phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
   });
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
@@ -214,12 +226,12 @@ export function step(game, dt, holding) {
   p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
   p.y = clamp(p.y + p.vy * dt, 265, 710);
   if (p.y === 265 || p.y === 710) p.vy = 0;
-  p.relief = Math.max(0, (p.relief || 0) - dt); p.bump = Math.max(0, (p.bump || 0) - dt);
+  p.relief = Math.max(0, (p.relief || 0) - dt); p.bump = Math.max(0, (p.bump || 0) - dt); p.confused = Math.max(0, (p.confused || 0) - dt); p.kick = Math.max(0, (p.kick || 0) - dt);
   p.gulp = Math.max(0, p.gulp - dt); p.breach = Math.max(0, p.breach - dt);
   const wet = p.y > WORLD.water + 12;
   if (wet !== p.wet) {
     events.push({ kind: wet ? 'splash' : 'breach', x: p.x, y: WORLD.water });
-    if (wet) { game.diveFish = 0; p.turns = 0; p.spin = 0; p.trickUntil = -1; }
+    if (wet) { game.diveFish = 0; p.turns = 0; p.spin = 0; p.kick = 0; p.trickUntil = -1; }
     else { p.relief = previousAir.level ? 1.5 : .65; p.breach = .6; p.vy = -235; p.trickUntil = game.time + 1.2; p.taps = 0; p.tapAt = -10; p.trickUsed = false; }
     p.wet = wet;
   }
@@ -235,7 +247,6 @@ export function step(game, dt, holding) {
     }
     if (item.kind === 'nest') {
       item.celebration = Math.max(0, item.celebration - dt);
-      if (!item.warned && item.x < 650) { item.warned = true; events.push({ kind: 'nestWarning' }); }
       if (!item.served && !p.wet && (item.final || game.cargo > 0) && Math.abs(item.x - p.x) < 65) {
         item.served = true; item.celebration = 3; game.feeding = 1.8; game.feedingTotal = game.cargo;
         p.y = 285; p.vy = 0; p.spin = 0; p.turns = 0; p.feedX = item.x - 55;
@@ -316,6 +327,12 @@ export function step(game, dt, holding) {
       else item.x -= 15 * dt;
     }
     if (item.kind === 'gull') {
+      item.reaction = Math.max(0, (item.reaction || 0) - dt);
+      if (item.kicked) {
+        item.x += (game.speed + 320) * dt; item.y -= 110 * dt;
+        if (item.x > 650 || item.y < 100) item.caught = true;
+        continue;
+      }
       if (!item.warned && item.x < 480) { item.warned = true; events.push({ kind: 'warning', x: item.x, y: item.y - 40 }); }
       item.x -= 20 * dt; item.y = 285 + Math.sin(game.time * 2) * 18;
     }
@@ -342,7 +359,7 @@ export function step(game, dt, holding) {
         if (before < 1.45 && item.cast >= 1.45) events.push({ kind: 'netSplash', x: item.x - 70, y: WORLD.water });
         // Once the fully sunken net has passed Pip, the fisherman reels it in.
         if (item.cast >= 2.1 && item.cast < 2.55 && item.x - 18 < p.x - 20) item.cast = 2.55;
-        if (before < 2.55 && item.cast >= 2.55) item.reaction = 1.2;
+        if (before < 2.55 && item.cast >= 2.55) { item.reaction = 1.2; item.reactionKind = 'miss'; }
       }
     }
     if (item.kind === 'fish') {
@@ -362,6 +379,7 @@ export function step(game, dt, holding) {
       }
     } else {
       const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
+      const fisherHit = item.kind === 'boat' && hitsFisher(p, item);
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
         : ['island', 'reef', 'buoy', 'coral'].includes(item.kind) ? hitsTerrain(p, item)
@@ -373,8 +391,16 @@ export function step(game, dt, holding) {
         : item.kind === 'jelly' ? Math.abs(item.x - p.x) < 35 && p.y > item.y - 35 && p.y < item.y + 20 + item.phase * 65
         : item.kind === 'driftwood' ? Math.abs(item.x - p.x) < 65 && Math.abs(p.y - WORLD.water) < 30
         : hitsBoat(p, item) || netHit;
+      if (hit && item.kind === 'gull' && !p.wet && p.turns) {
+        item.kicked = true; item.reaction = 1; item.reactionKind = 'kicked';
+        p.kick = .45;
+        game.score += 75; events.push({ kind: 'kick', x: item.x, y: item.y, points: 75 });
+        continue;
+      }
       if (hit && (!contactDamage[item.kind] || (!item.hit && !p.hurt))) {
         if (contactDamage[item.kind]) {
+          if (item.kind === 'gull') { item.reaction = 1.1; item.reactionKind = 'confused'; p.confused = 1.1; }
+          if (fisherHit) { item.reaction = 1.2; item.reactionKind = 'angry'; }
           item.hit = true; p.hurt = ENERGY.protection; p.bump = .6;
           game.energy = Math.max(0, game.energy - contactDamage[item.kind]);
           game.combo = 0; game.comboTime = 0; p.turns = 0; p.spin = 0;

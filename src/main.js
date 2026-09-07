@@ -69,8 +69,6 @@ function finish() {
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
 }
 function updateHud() {
-  text('cargo-value', `${game.cargo}/${WORLD.capacity}`);
-  text('cargo-label', game.feeding ? 'KÜKEN FÜTTERN ♥' : 'VORRAT FÜR DIE KÜKEN');
   text('score', game.score); text('time', clock(Math.floor(game.time)));
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
@@ -86,9 +84,6 @@ function updateHud() {
   $('air').setAttribute('aria-valuemax', WORLD.breath);
   $('air').setAttribute('aria-valuenow', p.breath.toFixed(1));
   $('combo').classList.toggle('hidden', game.combo < 5); text('combo', `${Math.min(4, 1 + Math.floor(game.combo / 5))}× KOMBO`);
-  text('mission-count', game.mission ? '+100' : `${Math.min(5, game.diveFish)}/5`); text('mission-icon', game.mission ? '✓' : '✧');
-  text('mission-text', game.mission ? 'Tauchmission geschafft!' : 'Fange 5 Fische in einem Tauchgang');
-
 }
 canvas.tabIndex = 0;
 $('play').onclick = () => start(); $('again').onclick = () => { selectedStage = game.stage; start(); };

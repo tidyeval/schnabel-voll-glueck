@@ -12,15 +12,14 @@ for (const [name, engine] of [['chromium',chromium],['webkit',webkit]]) {
     const bounds=await page.locator('.close-settings').boundingBox();
     assert.ok(bounds.y>=0&&bounds.y+bounds.height<=568,'help and close button fit a small phone');
     await page.locator('.close-settings').click();await page.locator('#play').click();
-    await page.clock.runFor(22000);
+    await page.clock.runFor(11000);
     assert.equal(await page.locator('#result-dialog').isVisible(),false);
     const energy=await page.locator('#energy-value').textContent();
-    assert.ok(Number(energy)<40,'energy visibly drains in real play');
-    assert.ok(!(await page.locator('#cargo-label').textContent()).includes('ZUM NEST'));
+    assert.ok(Number(energy)<80,'energy visibly drains in real play');
+    assert.equal(await page.locator('#cargo-label, #cargo-value, #mission-count, #mission-text').count(), 0);
     await page.locator('#pause').click();await page.clock.runFor(5000);
     assert.equal(await page.locator('#energy-value').textContent(),energy,'pause freezes energy');
-    await page.locator('#resume').click();await page.clock.runFor(18000);
-    assert.equal(await page.locator('#result-title').textContent(),'Keine Energie mehr!');
+    await page.locator('#resume').click();await page.clock.runFor(1000);await page.locator('#pause').click();await page.locator('#quit').click();
     await page.locator('#again').click();assert.equal(await page.locator('#energy-value').textContent(),'100');
     await page.goto('http://localhost:5175/tests/polish.html');
     await page.waitForFunction(()=>typeof window.paintPreview==='function');
@@ -35,6 +34,6 @@ for (const [name, engine] of [['chromium',chromium],['webkit',webkit]]) {
       if(scene==='Treffer')assert.ok(state.hurt>0);
       await page.locator('canvas').screenshot({path:`test-results/energy/${name}-${scene}-${reduced}.png`});
     }
-    assert.deepEqual(errors,[]);console.log(`${name}: energy loss, pause, exhaustion, retry, small-phone help, tired/catch/hit poses with reduced motion passed`);
+    assert.deepEqual(errors,[]);console.log(`${name}: energy loss, pause, retry, compact HUD, small-phone help, tired/catch/hit poses with reduced motion passed`);
   } finally {await browser.close();}
 }

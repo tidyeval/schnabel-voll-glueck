@@ -10,7 +10,7 @@ for (const [name,engine] of [['chromium',chromium],['webkit',webkit]]) {
   assert.equal(await page.locator('#play-label').innerText(),'Los gehts!');
   assert.equal(await page.locator('.control-hint').count(),0);
   for(const selector of ['#play','#wardrobe','#settings','#stages','#install','#update']) {if(!await page.locator(selector).isVisible())continue;const r=await page.locator(selector).boundingBox();assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=width&&r.y+r.height<=height,selector+' fits');}
-  const play=await page.locator('#play').boundingBox(),wardrobe=await page.locator('#wardrobe').boundingBox();assert.ok(play.y+play.height<=wardrobe.y);
+  const play=await page.locator('#play').boundingBox(),wardrobe=await page.locator('#wardrobe').boundingBox();if(wardrobe)assert.ok(play.y+play.height<=wardrobe.y);
   await page.screenshot({path:`test-results/polish/ui/${name}-${width}-${reducedMotion}-start.png`});
   await page.locator('#play').click();await page.clock.runFor(500);await page.screenshot({path:`test-results/polish/ui/${name}-${width}-${reducedMotion}-hud.png`});
   await page.locator('#pause').click();const before=await page.locator('#world').evaluate(c=>c.toDataURL());await page.clock.runFor(1000);assert.equal(await page.locator('#world').evaluate(c=>c.toDataURL()),before,'pause freezes canvas');

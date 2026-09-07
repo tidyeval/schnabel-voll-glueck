@@ -72,7 +72,8 @@ function pelicanWing(c, lift, fold, back) {
   c.restore();
 }
 export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = false, happy = false, gulp = 0, breach = 0, cargo = 0, breath = WORLD.breath, reducedMotion = false, expression = {}) {
-  c.save(); c.translate(x, y); c.rotate(tilt); c.scale(scale, scale);
+  const confused = expression.confused || 0;
+  c.save(); c.translate(x, y); c.rotate(tilt + (reducedMotion ? 0 : Math.sin(confused * 18) * .28 * Math.min(1, confused))); c.scale(scale, scale);
   const fullness = cargo / WORLD.capacity;
   const state = airState({ y, wet, breath }, cargo);
   const lowAir = state.level > 0, urgency = state.urgency;
@@ -98,8 +99,11 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   if (!wet) pelicanWing(c, lift, fold, true);
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#d9955c'; c.lineWidth = 5; c.lineCap = 'round';
-  for (let i = 0; i < 2; i++) { c.beginPath(); c.moveTo(-17 + i * 17, 27); c.lineTo(-24 + i * 19, 36 + flap * 2); c.stroke();
-    path(c, '#e7a662', p => { p.moveTo(-29 + i * 19, 33 + flap * 2); p.lineTo(-41 + i * 19, 40 + flap * 2); p.lineTo(-30 + i * 19, 41 + flap * 2); p.lineTo(-22 + i * 19, 46 + flap * 2); p.lineTo(-15 + i * 19, 39 + flap * 2); p.closePath(); }, '#c98550', .8); }
+  for (let i = 0; i < 2; i++) {
+    const kicking = expression.kick > 0 && i === 1, dx = kicking ? 42 : -24 + i * 19, dy = kicking ? 14 : 36 + flap * 2;
+    c.beginPath(); c.moveTo(-17 + i * 17, 27); c.lineTo(dx, dy); c.stroke();
+    path(c, '#e7a662', p => { p.moveTo(dx - 5, dy - 3); p.lineTo(dx + (kicking ? 15 : -12), dy + 4); p.lineTo(dx + (kicking ? 7 : -1), dy + 8); p.lineTo(dx + (kicking ? 17 : 7), dy + 12); p.lineTo(dx + 4, dy + 10); p.closePath(); }, '#c98550', .8);
+  }
   c.restore();
   ellipse(c, -17, 7, 38, 30 + bite * 2, gradient(c, -20, 38, '#fffaf0', '#dce6d0'), -.16);
   c.save(); headPose();
@@ -120,6 +124,8 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
     ellipse(c, 25, -46, 4.8 + urgency, 5.8 + urgency, '#294b49'); ellipse(c, 25.5, -49.5, 1.5, 1.7, '#fffdf1');
     path(c, null, p => { p.moveTo(18, -54 - urgency * 2); p.lineTo(32, -51 + urgency); }, '#8f765f', 1.8);
     if (!reducedMotion) for (let i = 0; i < Math.ceil(urgency * 3); i++) { const rise = (t * (18 + urgency * 9) + i * 10) % 25; ellipse(c, 91 + i * 5, -27 - rise, 1.5 + i * .5, 1.5 + i * .5, '#e4f8e3aa'); }
+  } else if (confused) {
+    path(c, null, p => { p.moveTo(19, -50); p.lineTo(30, -41); p.moveTo(30, -50); p.lineTo(19, -41); }, '#31524f', 2.2);
   } else if (hurt) path(c, null, p => { p.moveTo(20, -49); p.lineTo(27, -45); p.lineTo(20, -42); }, '#31524f', 2.8);
   else if (tired > 0) {
     ellipse(c, 25, -45, 4.4, 5.4 - tired * 3.5, '#294b49');
@@ -222,7 +228,8 @@ function boat(c, item, water, t) {
   const age = item.cast, windup = clamp(age / .85, 0, 1), throwing = clamp((age - .85) / .6, 0, 1);
   const hauling = age >= 2.55, resting = age < 0 || age >= 3.25;
   const bob = Math.sin(t * 2) * 2;
-  const hand = item.reaction > 0 ? { x: 16, y: -78 } : resting ? { x: 17, y: -38 } : hauling ? { x: -10 + Math.sin(t * 12) * 7, y: -44 } : { x: 16 + windup * 19 - throwing * 65, y: -40 - windup * 45 + throwing * 36 };
+  const angry = item.reaction > 0 && item.reactionKind === 'angry';
+  const hand = item.reaction > 0 ? { x: (angry ? 70 : 16) + (angry ? Math.sin(t * 28) * 11 : 0), y: -78 } : resting ? { x: 17, y: -38 } : hauling ? { x: -10 + Math.sin(t * 12) * 7, y: -44 } : { x: 16 + windup * 19 - throwing * 65, y: -40 - windup * 45 + throwing * 36 };
   const net = netShape(item);
   if (age >= 0 && age < 1.45) {
     c.save(); c.setLineDash([5, 6]); c.strokeStyle = '#fff1b4'; c.lineWidth = 2;
@@ -278,7 +285,7 @@ function boat(c, item, water, t) {
   path(c, shade, p => { p.moveTo(-24, -64); p.lineTo(-17, -82); p.quadraticCurveTo(0, -89, 15, -79); p.lineTo(22, -63); p.closePath(); });
   path(c, '#8c7451', p => { p.moveTo(-20, -69); p.quadraticCurveTo(0, -62, 19, -68); p.lineTo(21, -63); p.quadraticCurveTo(-1, -56, -23, -63); p.closePath(); });
   path(c, null, p => { p.moveTo(-26, -63); p.quadraticCurveTo(-2, -57, 23, -63); }, coat, 6);
-  const annoyed = age >= 0;
+  const annoyed = age >= 0 || angry;
   path(c, null, p => { p.moveTo(-15, -57 - (annoyed ? 2 : 0)); p.lineTo(-8, -55); p.moveTo(0, -55); p.lineTo(7, -57 - (annoyed ? 2 : 0)); }, '#725c48', 2.3);
   ellipse(c, -11, -52, 1.6, 2, '#3e514a'); ellipse(c, 3, -52, 1.6, 2, '#3e514a');
   ellipse(c, -5, -45, 6, 4.5, '#dfaa89');
@@ -286,9 +293,10 @@ function boat(c, item, water, t) {
   ellipse(c, -4, -32, hauling ? 4 : 2, hauling ? 3 : 1, '#9b7157'); c.restore();
   path(c, null, p => { p.moveTo(8, -48); p.quadraticCurveTo(24, -40, hand.x, hand.y); }, shade, 9);
   ellipse(c, hand.x, hand.y, 5.5, 5, '#efc7a1');
+  if (angry) for (let i = -1; i <= 1; i++) ellipse(c, hand.x + i * 4, hand.y - 4, 2.5, 3, '#efc7a1');
   path(c, null, p => { p.moveTo(-25, -43); p.quadraticCurveTo(-38, -26, -16, -24); }, coat, 8);
   ellipse(c, -16, -24, 5, 4, '#efc7a1');
-  if (!net) {
+  if (!net && !angry) {
     for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(hand.x + 2, hand.y + 8 + i * 3, 10 + i, 4, -.2, 0, TAU); c.strokeStyle = '#dfc38f'; c.lineWidth = 1.5; c.stroke(); }
   }
   c.restore();
@@ -458,12 +466,16 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       }
       if (item.kind === 'gull') {
         const wing = Math.sin(motion * 10) * 18;
-        path(c, '#f8f2dc', p => { p.moveTo(item.x, item.y); p.quadraticCurveTo(item.x - 18, item.y - 18, item.x - 38, item.y - wing); p.quadraticCurveTo(item.x - 22, item.y + 2, item.x - 3, item.y + 7); p.closePath(); }, '#918b73', 1);
-        path(c, '#fff8e8', p => { p.moveTo(item.x, item.y); p.quadraticCurveTo(item.x + 16, item.y - 18, item.x + 38, item.y - wing); p.quadraticCurveTo(item.x + 24, item.y + 2, item.x + 3, item.y + 7); p.closePath(); }, '#918b73', 1);
-        ellipse(c, item.x, item.y, 18, 10, '#eee8d4'); ellipse(c, item.x - 13, item.y - 7, 9, 9, '#fff9e8');
-        path(c, '#e6a953', p => { p.moveTo(item.x - 19, item.y - 9); p.lineTo(item.x - 34, item.y - 4); p.lineTo(item.x - 19, item.y - 1); p.closePath(); }, '#ad7043', .8);
-        ellipse(c, item.x - 16, item.y - 10, 2.3, 2.5, '#315852'); ellipse(c, item.x - 16.8, item.y - 10.8, .7, .8, '#fff');
-        path(c, null, p => { p.moveTo(item.x + 9, item.y + 5); p.lineTo(item.x + 21, item.y + 9); }, '#b8ad91', 2);
+        c.save(); c.translate(item.x, item.y);
+        if (!reducedMotion) c.rotate(item.kicked ? (1 - item.reaction) * 8 : item.reactionKind === 'confused' ? Math.sin(item.reaction * 16) * .7 : 0);
+        else if (item.kicked) c.rotate(-.35);
+        path(c, '#f8f2dc', p => { p.moveTo(0, 0); p.quadraticCurveTo(-18, -18, -38, -wing); p.quadraticCurveTo(-22, 2, -3, 7); p.closePath(); }, '#918b73', 1);
+        path(c, '#fff8e8', p => { p.moveTo(0, 0); p.quadraticCurveTo(16, -18, 38, -wing); p.quadraticCurveTo(24, 2, 3, 7); p.closePath(); }, '#918b73', 1);
+        ellipse(c, 0, 0, 18, 10, '#eee8d4'); ellipse(c, -13, -7, 9, 9, '#fff9e8');
+        path(c, '#e6a953', p => { p.moveTo(-19, -9); p.lineTo(-34, -4); p.lineTo(-19, -1); p.closePath(); }, '#ad7043', .8);
+        if (item.reactionKind === 'confused') path(c, null, p => { p.moveTo(-20, -13); p.lineTo(-12, -6); p.moveTo(-12, -13); p.lineTo(-20, -6); }, '#315852', 1.7);
+        else { ellipse(c, -16, -10, 2.3, 2.5, '#315852'); ellipse(c, -16.8, -10.8, .7, .8, '#fff'); }
+        path(c, null, p => { p.moveTo(9, 5); p.lineTo(21, 9); }, '#b8ad91', 2); c.restore();
       }
       if (item.kind === 'jelly') {
         const pulse = Math.sin(motion * 4) * 2, depth = 20 + item.phase * 65;
@@ -503,15 +515,16 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(motion * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
     }
     c.save();
-    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
+    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
   }
   for (let i = 0; i < 4; i++) {
     path(c, null, p => { for (let x = -10; x <= 490; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + motion * 1.6 + i * .3) * 3; if (x === -10) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#fff1c8cc', '#dceccf88', '#c3ead455', '#b7e4cc22'][i], i === 0 ? 2 : 1);
   }
   for (const e of effects) {
     c.save(); c.globalAlpha = Math.min(1, e.life * 2);
-    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick' || e.kind === 'outsmart' || e.kind === 'delivery') {
+    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick' || e.kind === 'outsmart' || e.kind === 'delivery' || e.kind === 'kick') {
       if (!reducedMotion) for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
+      if (e.kind === 'kick') { c.fillStyle = '#fff2b6'; c.font = "bold 15px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText(`KUNG-FU +${e.points}`, e.x, e.y - 42); }
     } else if (!reducedMotion && ['splash', 'breach', 'netSplash'].includes(e.kind)) {
       for (let i = 0; i < 9; i++) { const v = i - 4; const age = 1 - e.life; ellipse(c, e.x + v * age * (e.kind === 'netSplash' ? 31 : 19), e.y - Math.sin(age * Math.PI) * ((e.kind === 'breach' ? 45 : 27) - Math.abs(v) * 3), 2 * e.life, 4 * e.life, '#e8f8de'); }
     }

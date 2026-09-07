@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createGame, step, WORLD, paceAt, STAGES, hitsTerrain } from '../src/game.js';
 import { readProgress } from '../src/progress.js';
+import { routeController } from './route-controller.js';
 
 test('one continuous pace rises smoothly, carries across nests and excludes paused/feeding time', () => {
   let previous = paceAt(0);
   for (let t = 1; t <= 300; t++) {
     const next = paceAt(t);
-    assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .501);
+    assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .67);
     assert.ok(next.spacing <= previous.spacing && next.spacing >= 900);
     previous = next;
   }
@@ -46,10 +47,10 @@ test('removing difficulty preserves possessions, unlocks and the best previous s
 });
 
 
-test('the journey reaches full pace after two minutes and adds sharks in every stage', () => {
-  assert.deepEqual(paceAt(60), { speed: 210, spacing: 930 });
-  assert.deepEqual(paceAt(120), { speed: 240, spacing: 900 });
-  assert.deepEqual(paceAt(300), paceAt(120));
+test('the journey reaches full pace after ninety seconds and adds sharks in every stage', () => {
+  assert.deepEqual(paceAt(45), { speed: 210, spacing: 930 });
+  assert.deepEqual(paceAt(90), { speed: 240, spacing: 900 });
+  assert.deepEqual(paceAt(300), paceAt(90));
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
     let sharks = 0;
@@ -59,4 +60,22 @@ test('the journey reaches full pace after two minutes and adds sharks in every s
     }
     assert.ok(sharks === [5, 7, 10][stage], `stage ${stage}: ${sharks} sharks`);
   }
+});
+
+test('the first shark interrupts the fish route before thirty seconds but leaves an escape', () => {
+  const run = avoid => {
+    const g = createGame(() => .5), control = routeController(); let hit = false, warned = false;
+    for (let i = 0; i < 30 * 60 && !g.ended; i++) {
+      let holding = control(g);
+      const shark = g.items.find(item => item.kind === 'shark' && !item.hit && item.x > g.player.x - 90 && item.x < g.player.x + 300);
+      if (avoid && shark) holding = g.player.y < 600;
+      const events = step(g, 1 / 60, holding);
+      hit ||= events.some(event => event.kind === 'hurt') && g.items.some(item => item.kind === 'shark' && item.hit);
+      warned ||= events.some(event => event.kind === 'warning');
+    }
+    return { g, hit, warned };
+  };
+  const following = run(false), evading = run(true);
+  assert.equal(following.hit, true); assert.equal(following.warned, true); assert.ok(following.g.time < 30);
+  assert.equal(evading.hit, false); assert.equal(evading.g.ended, false); assert.ok(evading.g.wave >= 5);
 });

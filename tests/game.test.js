@@ -1,7 +1,7 @@
 import test from 'node:test';
 import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsTerrain, STAGES, ENERGY, airState, hitsPuffer, pufferRadius } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, STAGES, ENERGY, airState, hitsPuffer, pufferRadius } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, survives a hit and ends on exhaustion', () => {
   const g = createGame(() => .5);
@@ -63,6 +63,7 @@ test('fishermen announce a fixed cast, splash once and retrieve their visible ne
   for (let i = 0; i < 160; i++) splashes += step(g, .01, true).filter(e => e.kind === 'netSplash').length;
   assert.equal(splashes, 1);
   assert.equal(netShape(boat).phase, 'haul');
+  assert.equal(boat.reactionKind, 'miss');
   boat.cast = 3.25;
   assert.equal(netShape(boat), null, 'retrieved nets cannot hit Pip');
   for (const cast of [1, 1.5, 2.2, 2.8]) {
@@ -147,6 +148,29 @@ test('sharks track faster later, telegraph a fixed dash, and stop pursuing above
   assert.ok(movement[1] > movement[0] * 2);
 });
 
+test('sharks and turtles vary between fish, player and independent upper-water lanes', () => {
+  for (const [kind, y] of [['shark', 445], ['turtle', 535]]) {
+    const g = createGame(() => 0); g.wave = STAGES[0].encounters.indexOf(kind);
+    Object.assign(g.player, { y, wet: true }); g.items = []; g.distance = g.nextEncounter;
+    step(g, .01, false);
+    const animal = g.items.find(item => item.kind === kind);
+    const crossing = g.items.find(item => item.kind === 'fish' && Math.abs(item.x - animal.x) < 40);
+    assert.ok(animal.x > WORLD.width && crossing, `${kind} arrives visibly from ahead`);
+    assert.ok(Math.abs(crossing.y - animal.baseY) < 35, `${kind} crosses the school`);
+    const before = { x: animal.x, y: animal.y }; step(g, .01, false);
+    assert.ok(animal.x < before.x && Math.abs(animal.y - before.y) < 2, `${kind} enters continuously`);
+  }
+  for (const [kind, entry] of [['shark', 'shark-gull'], ['turtle', 'turtle']]) {
+    const current = createGame(() => .5); current.wave = STAGES[0].encounters.indexOf(entry);
+    Object.assign(current.player, { y: 515, wet: true }); current.items = []; current.distance = current.nextEncounter; step(current, .01, false);
+    assert.ok(Math.abs(current.items.find(item => item.kind === kind).baseY - 515) < 2, `${kind} can choose Pips current depth`);
+    const independent = createGame(() => .99); independent.wave = STAGES[0].encounters.indexOf(entry);
+    Object.assign(independent.player, { y: 430, wet: true }); independent.items = []; independent.distance = independent.nextEncounter; step(independent, .01, false);
+    const animal = independent.items.find(item => item.kind === kind);
+    assert.equal(animal.baseY, 570); assert.ok(Math.abs(animal.baseY - independent.player.y) > 100, `${kind} does not always copy Pip or the school`);
+  }
+});
+
 test('bubbles refill capped air once', () => {
   const g = createGame(); g.player.breath = 4;
   g.items = [{ kind: 'bubble', x: g.player.x, y: g.player.y }];
@@ -190,6 +214,39 @@ test('water and surface collisions cancel incomplete tricks without bonus', () =
   }
   assert.ok(hitsBoat({ x: 118, y: 370 }, { x: 198 }), 'bow contact counts before centers meet');
   assert.ok(!hitsBoat({ x: 118, y: 440 }, { x: 118 }), 'clear water below hull remains safe');
+});
+
+test('air contacts trigger angry and confused reactions without repeat damage', () => {
+  const fisher = createGame(); fisher.nextEncounter = Infinity; fisher.player.y = 280;
+  const boat = { kind: 'boat', x: fisher.player.x + 7, cast: -1, reaction: 0 }; fisher.items = [boat];
+  assert.ok(hitsFisher(fisher.player, boat));
+  assert.ok(step(fisher, .01, false).some(event => event.kind === 'hurt'));
+  assert.equal(boat.reactionKind, 'angry'); assert.ok(boat.reaction > 1); assert.equal(fisher.energy, 70);
+  for (let i = 0; i < 25; i++) step(fisher, .05, false);
+  assert.equal(boat.reaction, 0); assert.equal(fisher.energy, 70);
+
+  const gullRun = createGame(); gullRun.nextEncounter = Infinity; gullRun.player.y = 285;
+  const gull = { kind: 'gull', x: gullRun.player.x, y: 285 }; gullRun.items = [gull];
+  step(gullRun, .01, false);
+  assert.equal(gull.reactionKind, 'confused'); assert.ok(gull.reaction > 1 && gullRun.player.confused > 1); assert.equal(gullRun.energy, 85);
+  for (let i = 0; i < 24; i++) step(gullRun, .05, false);
+  assert.equal(gullRun.player.confused, 0); assert.equal(gull.reaction, 0); assert.equal(gullRun.energy, 85);
+});
+
+test('an active air trick kicks each gull once for 75 points and keeps spinning', () => {
+  const g = createGame(); g.nextEncounter = Infinity; Object.assign(g.player, { y: 285, wet: false, turns: 1, spin: .1 });
+  const gull = { kind: 'gull', x: g.player.x, y: 285 }; g.items = [gull];
+  const events = step(g, .001, false);
+  assert.equal(events.filter(event => event.kind === 'kick').length, 1);
+  assert.equal(g.score, 75); assert.equal(g.energy, 100); assert.equal(g.player.turns, 1);
+  assert.equal(gull.kicked, true); assert.equal(gull.hit, undefined); assert.ok(g.player.kick > 0);
+  gull.x = g.player.x; gull.y = 285; step(g, .001, false); assert.equal(g.score, 75);
+  for (let i = 0; i < 20; i++) step(g, .05, false);
+  assert.equal(g.score, 125, 'the completed single salto still awards its regular bonus');
+
+  const wet = createGame(); wet.nextEncounter = Infinity; Object.assign(wet.player, { y: 400, wet: true, turns: 1 });
+  wet.items = [{ kind: 'gull', x: wet.player.x, y: 400 }]; step(wet, .001, false);
+  assert.equal(wet.score, 0, 'water contact is never a kung-fu kick');
 });
 
 test('gulls and driftwood collide, jelly tentacles pulse, whirlpools pull without instant death', () => {

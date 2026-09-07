@@ -2,7 +2,7 @@ import { chromium, webkit } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const out='test-results/adventure';await mkdir(out,{recursive:true});
-const cases=[['Knappe Luft',0,'Entspannt'],['Knappe Luft',4.9,'Knappe Luft'],['Luftnot',6.2,'Dringend · weiterhin gehalten'],['Knappe Luft',7.55,'Luftholen'],['Knappe Luft',8.2,'Erleichtert'],['Pip',0,'Blick zum Fisch'],['Pip',.7,'Fang'],['Pip',2.3,'Auftauchen'],['Füttern',.5,'Ankunft'],['Füttern',2,'Füttern'],['Füttern',3.4,'Satt'],['Kugelfisch',0,'Ruhig'],['Kugelfisch',.2,'Erschrecken'],['Kugelfisch',.8,'Aufblasen'],['Kugelfisch',1.5,'Aufgeblasen'],['Kugelfisch',2.6,'Abschwellen'],['Kugelfisch',3.5,'Verlegen'],['Tiere',.4,'Schildkröte'],['Tiere',1,'Hai spannt an'],['Tiere',2.2,'Hai erholt sich'],['Menschen',2.7,'Fischer Fehlwurf'],['Menschen',4.4,'Surfer winkt']];
+const cases=[['Knappe Luft',0,'Entspannt'],['Knappe Luft',4.9,'Knappe Luft'],['Luftnot',6.2,'Dringend · weiterhin gehalten'],['Knappe Luft',7.55,'Luftholen'],['Knappe Luft',8.2,'Erleichtert'],['Pip',0,'Blick zum Fisch'],['Pip',.7,'Fang'],['Pip',2.3,'Auftauchen'],['Füttern',.5,'Ankunft'],['Füttern',2,'Füttern'],['Füttern',3.4,'Satt'],['Kugelfisch',0,'Ruhig'],['Kugelfisch',.2,'Erschrecken'],['Kugelfisch',.8,'Aufblasen'],['Kugelfisch',1.5,'Aufgeblasen'],['Kugelfisch',2.6,'Abschwellen'],['Kugelfisch',3.5,'Verlegen'],['Tiere',.4,'Schildkröte'],['Tiere',1,'Hai spannt an'],['Tiere',2.2,'Hai erholt sich'],['Menschen',2.7,'Fischer Fehlwurf'],['Menschen',4.4,'Surfer winkt'],['Fischer-Kollision',.15,'Fischer schüttelt die Faust'],['Möwen-Kollision',.15,'Pip und Möwe verdutzt'],['Kung-Fu',.15,'Salto-Kick · +75'],['Fischer-Kollision',.15,'Fischer-Kollision · ruhig','classic',true],['Möwen-Kollision',.15,'Möwen-Kollision · ruhig','classic',true],['Kung-Fu',.15,'Salto-Kick · ruhig','classic',true]];
 for(const outfit of ['classic','flower','sailor'])for(const reduced of [false,true])cases.push(['Knappe Luft',5.3,`Luftnot + Fang · ${outfit}${reduced?' · ruhig':''}`,outfit,reduced]);
 const evidence={};
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
@@ -16,11 +16,16 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
    const dx=(i%3)*390,dy=Math.floor(i/3)*390;
    c.fillStyle='#285652';c.font='15px system-ui';c.fillText(label,dx+12,dy+23);
    // World units at actual 390px phone scale, cropped vertically only.
-   const sy=scene==='Kugelfisch'?520:['Knappe Luft','Luftnot'].includes(scene)?Math.max(0,state.y-160):scene==='Tiere'?370:scene==='Menschen'||scene==='Füttern'?210:Math.max(0,state.y-170);
+   const sy=scene==='Kugelfisch'?520:['Knappe Luft','Luftnot'].includes(scene)?Math.max(0,state.y-160):scene==='Tiere'?370:scene==='Menschen'||scene==='Füttern'||scene==='Fischer-Kollision'?210:Math.max(0,state.y-170);
    c.drawImage(canvas,0,sy,480,340,dx,dy+34,390,338);
   });
   window.sheet=sheet;return states;
  },cases);
+ const state=scene=>evidence[name].find(item=>item.scene===scene&&!item.reduced);
+ assert.equal(state('Fischer-Kollision').items[0].reactionKind,'angry');
+ assert.ok(state('Möwen-Kollision').confused>0&&state('Möwen-Kollision').items[0].reactionKind==='confused');
+ assert.equal(state('Kung-Fu').score,75);assert.equal(state('Kung-Fu').energy,100);assert.equal(state('Kung-Fu').items[0].kicked,true);
+ for(const scene of ['Fischer-Kollision','Möwen-Kollision','Kung-Fu'])assert.ok(evidence[name].some(item=>item.scene===scene&&item.reduced));
  await page.evaluate(()=>{document.querySelector('header').style.display='none';document.querySelector('p').style.display='none';document.querySelector('canvas').style.display='none';window.sheet.style.width='1170px';window.sheet.style.height='auto';window.sheet.style.margin='0';document.body.append(window.sheet);});await page.setViewportSize({width:1170,height:Math.ceil(cases.length/6)*780});await page.screenshot({path:`${out}/${name}-reactions.png`,fullPage:true});
  for(let part=0;part<Math.ceil(cases.length/6);part++)await page.screenshot({path:`${out}/${name}-reactions-${part}.png`,clip:{x:0,y:part*780,width:1170,height:780}});
  assert.deepEqual(errors,[]);await browser.close();

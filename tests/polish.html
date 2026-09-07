@@ -1,6 +1,6 @@
 <!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Schnabelglück · Animationsprüfung</title>
 <style>body{margin:0;background:#fff5df;color:#285652;font:16px system-ui}header{padding:12px;display:flex;gap:12px;flex-wrap:wrap}canvas{display:block;max-width:100%;height:auto;margin:auto;width:390px;height:844px}select,button{font:inherit}label{display:flex;gap:6px;align-items:center}p{max-width:650px;margin:12px auto;padding:0 12px}</style>
-<header><select id="scene" aria-label="Szene"><option>Pip</option><option>Müde</option><option>Stärkung</option><option>Treffer</option><option>Tiere</option><option>Menschen</option><option>Umgebung</option><option>Füttern</option><option>Knappe Luft</option><option>Luftnot</option><option>Kugelfisch</option><option>Bucht</option><option>Hafen</option><option>Riff</option></select><select id="outfit" aria-label="Outfit"><option value="classic">Klassisch</option><option value="flower">Blume</option><option value="sailor">Matrose</option></select><label><input type="checkbox" id="reduced">Reduzierte Bewegung</label><button id="pause">Pause</button><label>Zeit <input id="seek" type="range" min="0" max="12" step=".05" value="0"></label></header>
+<header><select id="scene" aria-label="Szene"><option>Pip</option><option>Müde</option><option>Stärkung</option><option>Treffer</option><option>Tiere</option><option>Menschen</option><option>Fischer-Kollision</option><option>Möwen-Kollision</option><option>Kung-Fu</option><option>Umgebung</option><option>Füttern</option><option>Knappe Luft</option><option>Luftnot</option><option>Kugelfisch</option><option>Bucht</option><option>Hafen</option><option>Riff</option></select><select id="outfit" aria-label="Outfit"><option value="classic">Klassisch</option><option value="flower">Blume</option><option value="sailor">Matrose</option></select><label><input type="checkbox" id="reduced">Reduzierte Bewegung</label><button id="pause">Pause</button><label>Zeit <input id="seek" type="range" min="0" max="12" step=".05" value="0"></label></header>
 <p id="description">Reproduzierbare Zustandsvorschau ohne HUD, Klang oder Haptik. Die Regler gehören nur zur Prüfseite.</p><canvas width="480" height="850"></canvas>
 <script type="module">
 const {drawWorld}=await import('../src/art.js');const {createGame,step,beakPosition}=await import('../src/game.js');
@@ -39,6 +39,11 @@ function sample(scene,time){
  }else if(scene==='Tiere'){
    Object.assign(p,{y:440,wet:true});g.items=[{kind:'turtle',x:170,y:440,baseY:440},{kind:'shark',x:460,y:660,lane:'deep',phase:'track'}];
    for(let elapsed=0;elapsed<Math.min(time,3);elapsed+=1/60)step(g,1/60,elapsed<.8);
+ }else if(['Fischer-Kollision','Möwen-Kollision','Kung-Fu'].includes(scene)){
+   Object.assign(p,{y:scene==='Fischer-Kollision'?280:285,wet:false,turns:scene==='Kung-Fu'?1:0,spin:scene==='Kung-Fu'?.1:0});
+   g.items=[scene==='Fischer-Kollision'?{kind:'boat',x:p.x+7,y:360,cast:-1,reaction:0}:{kind:'gull',x:p.x,y:p.y}];
+   step(g,.001,false);
+   for(let elapsed=0;elapsed<Math.min(time,.3);elapsed+=1/60)step(g,1/60,false);
  }else if(scene==='Menschen'){
    g.items=[{kind:'boat',x:481,y:360,cast:-1},{kind:'surfer',x:750,y:360}];
    // Keep Pip safely below the surface, and expose both post-encounter reactions.
@@ -47,7 +52,7 @@ function sample(scene,time){
  }else g.items=[{kind:'island',x:110},{kind:'reef',x:370},{kind:'whirlpool',x:340,y:530},{kind:'driftwood',x:250,y:360},{kind:'bubble',x:270,y:490}];
  return g;
 }
-window.paintPreview=(scene,time,outfit='classic',reduced=false)=>{const g=sample(scene,time);drawWorld(c,g,'playing',time,outfit,[],reduced);return {energy:g.energy,hurt:g.player.hurt,gulp:g.player.gulp,y:g.player.y,air:g.player.breath,relief:g.player.relief,feeding:g.feeding,settling:g.settling,items:g.items.map(i=>({kind:i.kind,phase:i.phase,reaction:i.reaction}))};};
+window.paintPreview=(scene,time,outfit='classic',reduced=false)=>{const g=sample(scene,time);drawWorld(c,g,'playing',time,outfit,[],reduced);return {score:g.score,energy:g.energy,hurt:g.player.hurt,confused:g.player.confused,kick:g.player.kick,gulp:g.player.gulp,y:g.player.y,air:g.player.breath,relief:g.player.relief,feeding:g.feeding,settling:g.settling,items:g.items.map(i=>({kind:i.kind,phase:i.phase,reaction:i.reaction,reactionKind:i.reactionKind,kicked:i.kicked}))};};
 function paint(){window.paintPreview(scenes.value,t,document.querySelector('#outfit').value,document.querySelector('#reduced').checked);}
 document.querySelector('#pause').onclick=()=>{paused=!paused;document.querySelector('#pause').textContent=paused?'Weiter':'Pause'};
 seek.oninput=()=>{t=Number(seek.value);paused=true;paint();};scenes.onchange=()=>{t=0;paint();};
