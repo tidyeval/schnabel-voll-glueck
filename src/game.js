@@ -87,14 +87,31 @@ export function hitsTerrain(player, item) {
 
 // One journey: more speed and less space as active play time accumulates.
 export function paceAt(seconds) {
-  const progress = clamp(seconds / 90, 0, 1);
-  return { speed: 180 + 60 * progress, spacing: 960 - 60 * progress };
+  const points = [[0, 190, 900], [55, 210, 870], [100, 230, 830], [150, 255, 790]];
+  seconds = Math.max(0, seconds);
+  const upper = points.findIndex(point => seconds <= point[0]);
+  if (upper < 0) return { speed: 255, spacing: 790 };
+  if (upper === 0) return { speed: 190, spacing: 900 };
+  const [fromTime, fromSpeed, fromSpacing] = points[upper - 1];
+  const [toTime, toSpeed, toSpacing] = points[upper];
+  const progress = (seconds - fromTime) / (toTime - fromTime);
+  return { speed: fromSpeed + (toSpeed - fromSpeed) * progress, spacing: fromSpacing + (toSpacing - fromSpacing) * progress };
 }
 export const STAGES = [
-  { name: 'Geschützte Bucht', encounters: ['turtle', 'shark', 'gull', 'boat', 'jelly', 'island', 'buoy', 'shark-gull', 'boat-jelly', 'shark-turtle', 'buoy-shark', 'shark-gull'] },
-  { name: 'Fischerhafen', encounters: ['coral', 'driftwood', 'surfer', 'diver', 'reef', 'shark-shark-turtle', 'boat-jelly', 'shark-shark-gull', 'buoy-coral-shark', 'surfer-shark', 'driftwood-jelly-gull', 'shark-gull-turtle'] },
-  { name: 'Korallenriff', encounters: ['puffer', 'whirlpool', 'reef-puffer-gull', 'shark-shark-gull', 'buoy-coral-shark', 'shark-turtle-turtle', 'boat-jelly-gull', 'shark-jelly-gull', 'reef-puffer-shark', 'shark-shark-gull', 'buoy-coral-shark', 'shark-gull-turtle'] },
+  { name: 'Geschützte Bucht', encounters: ['turtle', 'shark', 'gull', 'boat', 'shark-shark', 'turtle-turtle', 'jelly', 'buoy', 'shark-shark', 'boat-jelly', 'shark-turtle', 'island'] },
+  { name: 'Fischerhafen', encounters: ['coral', 'shark', 'driftwood', 'shark-shark', 'turtle-turtle', 'surfer', 'shark-shark', 'diver', 'reef', 'shark-shark', 'turtle-turtle', 'buoy-coral-shark'] },
+  { name: 'Korallenriff', encounters: ['puffer', 'shark-shark', 'turtle-turtle', 'whirlpool', 'shark-shark', 'reef-puffer-shark', 'shark-shark', 'turtle-turtle', 'buoy-coral-shark', 'shark-shark', 'boat-jelly-shark', 'shark-shark'] },
 ];
+export const UNDERWATER_BANDS = [
+  { id: 'upper', y: 420 },
+  { id: 'middle', y: 535 },
+  { id: 'lower', y: 650 },
+];
+export const PAIR_PATTERNS = new Map([
+  ['0:4', 'staggered'], ['0:8', 'staggered'],
+  ['1:3', 'staggered'], ['1:6', 'parallel'], ['1:9', 'staggered'],
+  ['2:1', 'parallel'], ['2:4', 'staggered'], ['2:6', 'parallel'], ['2:9', 'staggered'], ['2:11', 'parallel'],
+]);
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, protection: 1.2 };
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
@@ -122,8 +139,20 @@ function encounter(game) {
     game.nextEncounter = Infinity;
     return;
   }
+  const sharkCount = entry.split('-').filter(kind => kind === 'shark').length;
+  if (sharkCount > 1 && game.items.some(item => item.kind === 'shark' && !item.caught)) {
+    game.nextEncounter = game.distance + 180;
+    return;
+  }
+  const wave = game.wave;
   const [kind, ...companions] = entry.split('-');
+  const pairPattern = PAIR_PATTERNS.get(`${game.stage}:${wave}`) || 'single';
   const variant = Math.floor(game.random() * 3);
+  let bandVariant = (Math.floor(game.random() * 3) + wave + Math.floor(wave / 3)) % UNDERWATER_BANDS.length;
+  if (sharkCount > 1) {
+    if (bandVariant === game.lastPairBand) bandVariant = (bandVariant + 1) % UNDERWATER_BANDS.length;
+    game.lastPairBand = bandVariant;
+  }
   const arc = (base, height) => Array.from({ length: 11 }, (_, i) => base + Math.sin(i / 10 * Math.PI) * height);
   const depths = kind === 'boat' ? [432,475,530,595,620,620,615,560,490,435,405]
     : ['reef', 'buoy'].includes(kind) ? [440,470,490,510,520,530,530,510,470,435,405]
@@ -140,44 +169,62 @@ function encounter(game) {
     arc(base, 35).slice(2, 9).forEach((y, i) => addFish(668 + i * 64, y, 'alternate'));
   }
   if (kind === 'boat') game.items.push({ kind, x: 890, y: WORLD.water, cast: -1, hit: false, look: game.boats++ % 4 });
-  const animalY = (index = 0) => {
-    const mode = (variant + index) % 3;
-    if ((kind === 'shark' && game.stage === 0 && game.wave === 1) || mode === 0) return depths[Math.min(9, 5 + index)];
-    if (mode === 1 && game.player.wet) return clamp(game.player.y, 410, 590);
-    return [435, 520, 570][(variant + index) % 3];
+  const animalPosition = (index = 0) => {
+    const bandIndex = kind === 'shark' && game.stage === 0 && wave === 1 ? 1 : (bandVariant + index) % UNDERWATER_BANDS.length;
+    return UNDERWATER_BANDS[bandIndex];
   };
-  if (kind === 'shark') { const y = animalY(); game.items.push({ kind, x: 880, y, baseY: y }); }
-  if (kind === 'turtle') { const y = animalY(); game.items.push({ kind, x: 890, y, baseY: y }); }
+  const bands = [];
+  if (kind === 'shark' || kind === 'turtle') {
+    const band = animalPosition(); bands.push(band.id);
+    game.items.push({ kind, x: kind === 'shark' ? 880 : 890, y: band.y, baseY: band.y, lane: band.id, encounterForm: pairPattern, warningTime: game.stage === 0 && wave === 1 ? 1.15 : [.85, .7, .58][game.stage] });
+  }
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
   companions.forEach((companion, index) => {
-    const y = companion === 'gull' ? 285 : ['shark', 'turtle'].includes(companion) ? animalY(index + 1) : 665;
-    game.items.push({ kind: companion, x: companion === 'coral' ? 890 : 960 + index * 120,
-      y, baseY: y,
+    const band = ['shark', 'turtle'].includes(companion) ? animalPosition(index + 1) : null;
+    if (band) bands.push(band.id);
+    const y = companion === 'gull' ? 285 : band?.y ?? 665;
+    const pairX = pairPattern === 'parallel' ? 900 + index * 30 : pairPattern === 'staggered' ? 1010 + index * 120 : 960 + index * 120;
+    game.items.push({ kind: companion, x: companion === 'coral' ? 890 : pairX,
+      y, baseY: y, lane: band?.id, encounterForm: pairPattern, warningTime: companion === 'shark' ? [.85, .7, .58][game.stage] : undefined,
       phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
   });
+  if (sharkCount > 1) {
+    const freeBand = UNDERWATER_BANDS.find(band => !bands.includes(band.id));
+    game.items.filter(item => item.kind === 'fish' && item.route === wave && item.lane === 'main').forEach((fish, index) => {
+      fish.y = freeBand.y + Math.sin(index / 10 * Math.PI) * 24;
+    });
+  } else if (game.stage === 0 && wave === 1) {
+    game.items.filter(item => item.kind === 'fish' && !item.golden && item.route === wave && item.lane === 'main').forEach((fish, index) => {
+      fish.y = UNDERWATER_BANDS[1].y + Math.sin(index / 10 * Math.PI) * 20;
+    });
+  }
+  game.encounterTrace.push({ stage: game.stage, wave, entry, form: pairPattern, bands });
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
-  if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
+  if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: sharkCount > 1 ? UNDERWATER_BANDS[bandVariant].y : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
   if (kind === 'diver') game.items.push({ kind, x: 890, y: 620, phase: 'idle', timer: 0 });
   if (kind === 'surfer') game.items.push({ kind, x: 890, y: WORLD.water, escaping: false });
   game.items.push({ kind: 'bubble', x: 1120, y: 540 });
   // End the school below the surface, then leave room to breathe and do a trick.
-  [440, 415, 400].forEach((y, i) => addFish(1220 + i * 60, y));
+  [440, 415, 400].forEach((y, i) => addFish(1220 + i * 60, y, 'exit'));
   const terrain = game.items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind));
   game.items = game.items.filter(item => item.kind !== 'fish' || !terrain.some(block => hitsTerrain(item, block)));
   game.wave++;
-  game.nextEncounter += paceAt(game.elapsed + game.time).spacing + (kind === 'island' ? 180 : 0);
+  const nextEntry = STAGES[game.stage].encounters[game.wave] || '';
+  const approachSpace = ['island', 'reef', 'buoy', 'coral'].some(obstacle => nextEntry.split('-').includes(obstacle)) ? 300 : 0;
+  const recoverySpace = sharkCount > 1 || entry === 'turtle-turtle' ? 150 : entry === 'buoy-coral-shark' ? 180 : 0;
+  game.nextEncounter += paceAt(game.elapsed + game.time).spacing + approachSpace + recoverySpace + (kind === 'island' ? 180 : 0);
 }
 
 export function createGame(random = Math.random, stage = 0, elapsed) {
   stage = Number.isInteger(stage) ? clamp(stage, 0, STAGES.length - 1) : 0;
-  elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : stage * 65;
+  elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : [0, 55, 100][stage];
   return {
     elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
-    nextEncounter: 100, wave: 0, boats: 0, ended: false,
+    nextEncounter: 100, wave: 0, boats: 0, lastPairBand: -1, encounterTrace: [], ended: false,
   };
 }
 
@@ -274,15 +321,18 @@ export function step(game, dt, holding) {
       }
     }
     if (item.kind === 'shark') {
-      item.x -= (12 + Math.min(28, Math.floor(game.time / 20) * 4)) * dt;
-      const pursuit = 16 + Math.min(54, Math.max(0, game.time - 20) * .3);
+      const journeyTime = game.elapsed + game.time;
+      item.x -= (12 + Math.min(32, Math.floor(journeyTime / 20) * 4)) * dt;
+      const pursuit = 16 + Math.min(62, Math.max(0, journeyTime - 20) * .34);
       item.reaction = Math.max(0, (item.reaction || 0) - dt);
       if (!p.wet || item.x < p.x - 65) { item.phase = 'cruise'; item.attackTime = 0; }
       else if (item.x < 480) {
         if (!item.phase || item.phase === 'cruise') item.phase = 'track';
         if (item.phase === 'track') {
-          item.y += clamp(p.y - item.y, -pursuit * dt, pursuit * dt);
-          if (item.x < p.x + 240) { item.phase = 'warn'; item.attackTime = .85; events.push({ kind: 'warning', x: item.x, y: item.y - 65 }); }
+          const lane = UNDERWATER_BANDS.find(candidate => candidate.id === item.lane);
+          const targetY = lane ? clamp(p.y, lane.y - 24, lane.y + 24) : p.y;
+          item.y += clamp(targetY - item.y, -pursuit * dt, pursuit * dt);
+          if (item.x < p.x + 240) { item.phase = 'warn'; item.attackTime = item.warningTime ?? .85; events.push({ kind: 'warning', x: item.x, y: item.y - 65 }); }
         } else if (item.phase === 'warn') {
           item.attackTime -= dt;
           if (item.attackTime <= 0) { item.phase = 'dash'; item.attackTime = .55; item.dashY = clamp((p.y - item.y) * 1.4, -110, 110); }
@@ -291,7 +341,9 @@ export function step(game, dt, holding) {
           if (item.attackTime <= 0) { item.phase = 'spent'; item.reaction = .9; }
         }
       }
-      item.y = clamp(item.y, item.lane === 'deep' ? 620 : WORLD.water + 70, item.lane === 'shallow' ? 450 : 720);
+      const lane = UNDERWATER_BANDS.find(candidate => candidate.id === item.lane);
+      item.y = lane ? clamp(item.y, lane.y - 38, lane.y + 38) : clamp(item.y, WORLD.water + 70, 720);
+      if (item.x < p.x - 90) { item.caught = true; continue; }
     }
     if (item.kind === 'diver') {
       if (item.phase === 'idle' && item.x < 475 && p.wet) { item.phase = 'aim'; item.timer = 1.1; }

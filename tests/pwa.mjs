@@ -1,13 +1,28 @@
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { build } from 'vite';
+import viteConfig from '../vite.config.js';
 import { chromium } from '@playwright/test';
 import assert from 'node:assert/strict';
-let version = 1;
+const fixture = await mkdtemp(join(tmpdir(), 'schnabel-pwa-'));
+const builds = [join(fixture, 'build-1'), join(fixture, 'build-2')];
+for (let i = 0; i < builds.length; i++) {
+  const publicDir = join(fixture, `public-${i}`); await cp(new URL('../public', import.meta.url), publicDir, { recursive: true });
+  if (i === 1) {
+    const manifestPath = join(publicDir, 'manifest.webmanifest');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')); manifest.description = 'Aktualisierte kleine Auszeit am Meer.';
+    await writeFile(manifestPath, JSON.stringify(manifest));
+  }
+  await build({ ...viteConfig, publicDir, build: { ...(viteConfig.build || {}), outDir: builds[i], emptyOutDir: true }, logLevel: 'silent' });
+}
+let deployment = 0;
 const server = createServer(async (req, res) => {
   try {
     const path = new URL(req.url, 'http://localhost').pathname;
-    let body = await readFile(new URL('../dist' + (path === '/' ? '/index.html' : path), import.meta.url));
-    if (path === '/sw.js') body = Buffer.from(body.toString() + '\n// test deployment ' + version + (version > 1 ? `\nself.addEventListener('install', event => event.waitUntil(new Promise(resolve => setTimeout(resolve, 2000))));` : ''));
+    let body = await readFile(join(builds[deployment], path === '/' ? 'index.html' : path.slice(1)));
+    if (path === '/sw.js' && deployment > 0) body = Buffer.from(body.toString() + `\nself.addEventListener('install', event => event.waitUntil(new Promise(resolve => setTimeout(resolve, 2000))));`);
     const ext = path.split('.').pop();
     res.setHeader('Content-Type', ({ js: 'text/javascript', css: 'text/css', webmanifest: 'application/manifest+json', png: 'image/png', svg: 'image/svg+xml' })[ext] || 'text/html');
     res.setHeader('Vary', 'Origin, X-Offline-Probe');
@@ -30,7 +45,7 @@ try {
     const cache = await caches.open('unrelated-site'); await cache.put(location.href, new Response('wrong site'));
   });
   await page.reload(); await page.locator('#play').waitFor();
-  version++;
+  deployment = 1;
   await page.locator('#update').click();
   await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration()).installing));
   assert.ok(!(await page.locator('#toast').textContent()).includes('Kein neues Update'), 'never claim no update while it is downloading');
@@ -38,6 +53,7 @@ try {
   await Promise.all([page.waitForEvent('load'), page.locator('#update').click()]);
   assert.equal(await page.locator('#record').textContent(), '123');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).totalFish), 42);
+  assert.equal(await page.evaluate(async () => (await (await caches.match(new URL('manifest.webmanifest', location.href))).json()).description), 'Aktualisierte kleine Auszeit am Meer.');
   await page.screenshot({ path: 'test-results/pwa-menu.png' });
   await page.evaluate(async () => {
     for (const name of await caches.keys()) if (name.startsWith('schnabel-voll-glueck:')) {
@@ -62,4 +78,4 @@ try {
   console.log('Offline restart preserves unlocked reef');
   console.log('Stale cached page recovered; records and fish preserved');
   console.log('Install fallback, install action, scoped cache, real waiting-worker update and preserved records passed');
-} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); }
+} finally { await browser.close(); await new Promise(resolve => server.close(resolve)); await rm(fixture, { recursive: true, force: true }); }

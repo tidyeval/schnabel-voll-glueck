@@ -14,12 +14,21 @@ for (const [name,engine] of [['chromium',chromium],['webkit',webkit]]) {
   await page.screenshot({path:`test-results/polish/ui/${name}-${width}-${reducedMotion}-start.png`});
   await page.locator('#play').click();await page.clock.runFor(500);await page.screenshot({path:`test-results/polish/ui/${name}-${width}-${reducedMotion}-hud.png`});
   await page.locator('#pause').click();const before=await page.locator('#world').evaluate(c=>c.toDataURL());await page.clock.runFor(1000);assert.equal(await page.locator('#world').evaluate(c=>c.toDataURL()),before,'pause freezes canvas');
+  if(width===390&&reducedMotion==='no-preference'){
+   await page.locator('#world').evaluate(canvas=>{const context=canvas.getContext('2d'),clear=context.clearRect.bind(context);window.pausedClears=0;context.clearRect=(...args)=>{window.pausedClears++;return clear(...args);};});
+   await page.clock.runFor(1000);assert.equal(await page.evaluate(()=>window.pausedClears),0,'unchanged pause skips full redraws');
+   await page.setViewportSize({width,height:height-1});await page.evaluate(()=>dispatchEvent(new Event('resize')));await page.clock.runFor(20);assert.equal(await page.evaluate(()=>window.pausedClears),1,'paused resize redraws once');
+   assert.notEqual(await page.locator('#world').evaluate(c=>c.toDataURL()),'','paused resize keeps a rendered scene');
+  }
   if(width===320){
    await page.locator('#resume').click();await page.keyboard.down('Space');await page.clock.runFor(6500);
    assert.ok(await page.locator('#air').evaluate(e=>e.classList.contains('low-air')));
+   assert.equal(await page.locator('#combo').count(),0,'combo badge is absent');
+   const panel=await page.locator('#status-panel').boundingBox();assert.ok(panel.x>=0&&panel.x+panel.width<=width&&panel.height<=64,'shared status panel stays compact');
+   assert.equal(await page.locator('#status-panel').evaluate(panel=>[...panel.querySelectorAll('span,strong,.energy-track,.air-track')].every(child=>{const p=panel.getBoundingClientRect(),c=child.getBoundingClientRect();return c.left>=p.left&&c.right<=p.right&&c.top>=p.top&&c.bottom<=p.bottom;})),true,'status content stays inside its panel');
    assert.equal(await page.locator('#toast').textContent().then(t=>t.includes('Luft wird knapp')),false);
    await page.screenshot({path:`test-results/polish/ui/${name}-low-air-${reducedMotion}.png`});
-   await page.locator('#pause').click();const shadow=await page.locator('#air').evaluate(e=>e.style.boxShadow);await page.clock.runFor(500);assert.equal(await page.locator('#air').evaluate(e=>e.style.boxShadow),shadow);await page.keyboard.up('Space');const breath=Number.parseFloat(await page.locator('#air-value').textContent());await page.locator('#resume').click();await page.clock.runFor(200);assert.ok(Math.abs(Number.parseFloat(await page.locator('#air-value').textContent())-breath)<.4,'resume does not skip warning');
+   await page.locator('#pause').click();const shadow=await page.locator('#status-panel').evaluate(e=>e.style.boxShadow);await page.clock.runFor(500);assert.equal(await page.locator('#status-panel').evaluate(e=>e.style.boxShadow),shadow);await page.keyboard.up('Space');const breath=Number.parseFloat(await page.locator('#air-value').textContent());await page.locator('#resume').click();await page.clock.runFor(200);assert.ok(Math.abs(Number.parseFloat(await page.locator('#air-value').textContent())-breath)<.4,'resume does not skip warning');
   }
   assert.deepEqual(errors,[]);await page.close();
  }

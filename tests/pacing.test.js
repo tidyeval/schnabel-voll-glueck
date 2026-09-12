@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, paceAt, STAGES, hitsTerrain } from '../src/game.js';
+import { createGame, step, WORLD, paceAt, STAGES, hitsTerrain, PAIR_PATTERNS } from '../src/game.js';
 import { readProgress } from '../src/progress.js';
 import { routeController } from './route-controller.js';
 
@@ -9,14 +9,14 @@ test('one continuous pace rises smoothly, carries across nests and excludes paus
   for (let t = 1; t <= 300; t++) {
     const next = paceAt(t);
     assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .67);
-    assert.ok(next.spacing <= previous.spacing && next.spacing >= 900);
+    assert.ok(next.spacing <= previous.spacing && next.spacing >= 790);
     previous = next;
   }
-  const first = createGame(); first.time = 60;
+  const first = createGame(); first.time = 55;
   const next = createGame(Math.random, 1, first.elapsed + first.time);
-  assert.equal(next.speed, paceAt(60).speed);
+  assert.equal(next.speed, paceAt(55).speed);
   assert.equal(next.player.breath, WORLD.breath);
-  next.feeding = 1; step(next, .05, false); assert.equal(next.elapsed + next.time, 60);
+  next.feeding = 1; step(next, .05, false); assert.equal(next.elapsed + next.time, 55);
   assert.equal('difficulty' in next, false);
 });
 
@@ -47,10 +47,11 @@ test('removing difficulty preserves possessions, unlocks and the best previous s
 });
 
 
-test('the journey reaches full pace after ninety seconds and adds sharks in every stage', () => {
-  assert.deepEqual(paceAt(45), { speed: 210, spacing: 930 });
-  assert.deepEqual(paceAt(90), { speed: 240, spacing: 900 });
-  assert.deepEqual(paceAt(300), paceAt(90));
+test('the journey reaches full pace during the final stage and adds sharks in every stage', () => {
+  assert.deepEqual(paceAt(55), { speed: 210, spacing: 870 });
+  assert.deepEqual(paceAt(100), { speed: 230, spacing: 830 });
+  assert.deepEqual(paceAt(150), { speed: 255, spacing: 790 });
+  assert.deepEqual(paceAt(300), paceAt(150));
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
     let sharks = 0;
@@ -58,17 +59,88 @@ test('the journey reaches full pace after ninety seconds and adds sharks in ever
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
       sharks += g.items.filter(item => item.kind === 'shark').length;
     }
-    assert.ok(sharks === [5, 7, 10][stage], `stage ${stage}: ${sharks} sharks`);
+    assert.ok(sharks === [6, 8, 13][stage], `stage ${stage}: ${sharks} sharks`);
+  }
+});
+
+test('paired sharks progress from staggered to parallel with recovery encounters', () => {
+  const forms = [], stageBands = new Map(), warningTimes = [];
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(() => .5, stage);
+    for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
+      g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
+      const trace = g.encounterTrace.at(-1);
+      if (trace.entry === 'shark-shark') {
+        forms.push(trace.form);
+        warningTimes[stage] ??= g.items.find(item => item.kind === 'shark').warningTime;
+        assert.equal(new Set(trace.bands).size, 2, `${stage}/${wave}: pair uses distinct bands`);
+        const signature = trace.bands.join(',');
+        const previous = stageBands.get(stage);
+        if (previous) assert.notEqual(signature, previous, `${stage}/${wave}: pair changes its band combination`);
+        stageBands.set(stage, signature);
+        const next = STAGES[stage].encounters[wave + 1];
+        assert.ok(!next || next !== 'shark-shark', `${stage}/${wave}: pair is followed by recovery`);
+      }
+    }
+  }
+  assert.equal(forms[0], 'staggered');
+  assert.ok(forms.includes('parallel'));
+  assert.deepEqual([...PAIR_PATTERNS.values()].sort(), forms.sort());
+  assert.ok(PAIR_PATTERNS.has('0:4'), 'paired decisions begin by the middle of the bay');
+  assert.deepEqual([0, 1, 2].map(stage => [...PAIR_PATTERNS.keys()].filter(key => key.startsWith(`${stage}:`)).length), [2, 3, 5]);
+  assert.deepEqual(warningTimes, [.85, .7, .58]);
+});
+
+test('every shark pair leaves a reachable band after a visible reaction delay', () => {
+  for (const [key, form] of PAIR_PATTERNS) {
+    const [stage, wave] = key.split(':').map(Number), g = createGame(() => .5, stage);
+    g.wave = wave; g.items = []; g.distance = g.nextEncounter; g.cargo = WORLD.capacity; g.player.y = 535; g.player.wet = true;
+    step(g, .01, false); g.nextEncounter = Infinity;
+    const sharks = g.items.filter(item => item.kind === 'shark');
+    assert.equal(sharks.length, 2); assert.equal(new Set(sharks.map(item => item.lane)).size, 2);
+    assert.ok(sharks.every(shark => shark.warningTime >= .45));
+    const free = ['upper', 'middle', 'lower'].find(lane => !sharks.some(shark => shark.lane === lane));
+    const routeFish = g.items.filter(item => item.kind === 'fish' && !item.golden && item.route === wave && item.lane === 'main');
+    assert.ok(routeFish.every(fish => Math.abs(fish.y - { upper: 420, middle: 535, lower: 650 }[free]) <= 25), `${key}: fish mark the open band`);
+    assert.ok(g.items.some(item => item.kind === 'fish' && item.golden && item.y !== { upper: 420, middle: 535, lower: 650 }[free]), `${key}: golden fish rewards risk`);
+    const target = { upper: 400, middle: 535, lower: 680 }[free];
+    let seenAt, hurt = false, passed = false;
+    for (let i = 0; i < 8 * 60 && !g.ended; i++) {
+      const nearest = Math.min(...sharks.map(shark => shark.x));
+      if (seenAt === undefined && nearest < 650) seenAt = g.time;
+      const reacted = seenAt !== undefined && g.time - seenAt >= .45;
+      const holding = reacted && g.player.y < target;
+      if (reacted && g.player.y > target + 8) g.player.vy = Math.min(g.player.vy, -20);
+      const events = step(g, 1 / 60, holding); hurt ||= events.some(event => event.kind === 'hurt');
+      passed ||= sharks.every(shark => shark.x < g.player.x - 70);
+      if (passed) break;
+    }
+    assert.equal(hurt, false, `${key} ${form}: free ${free} band remains reachable`);
+    assert.equal(passed, true, `${key} ${form}: both sharks pass`);
+  }
+});
+
+test('encounter traces do not repeat and never overlap more than two sharks', () => {
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(() => .5, stage); let maxSharks = 0;
+    for (let i = 0; i < 90 * 60 && !g.ended; i++) {
+      g.energy = 100; g.player.breath = WORLD.breath;
+      step(g, 1 / 60, false);
+      maxSharks = Math.max(maxSharks, g.items.filter(item => item.kind === 'shark').length);
+    }
+    const signatures = g.encounterTrace.map(trace => `${trace.entry}:${trace.form}:${trace.bands.join(',')}`);
+    for (let i = 1; i < signatures.length; i++) assert.notEqual(signatures[i], signatures[i - 1]);
+    assert.ok(maxSharks <= 2, `stage ${stage}: ${maxSharks} active sharks`);
   }
 });
 
 test('the first shark interrupts the fish route before thirty seconds but leaves an escape', () => {
   const run = avoid => {
     const g = createGame(() => .5), control = routeController(); let hit = false, warned = false;
-    for (let i = 0; i < 30 * 60 && !g.ended; i++) {
+    for (let i = 0; i < 15 * 60 && !g.ended && g.wave < 3; i++) {
       let holding = control(g);
       const shark = g.items.find(item => item.kind === 'shark' && !item.hit && item.x > g.player.x - 90 && item.x < g.player.x + 300);
-      if (avoid && shark) holding = g.player.y < 600;
+      if (avoid && shark) holding = false;
       const events = step(g, 1 / 60, holding);
       hit ||= events.some(event => event.kind === 'hurt') && g.items.some(item => item.kind === 'shark' && item.hit);
       warned ||= events.some(event => event.kind === 'warning');
@@ -77,5 +149,5 @@ test('the first shark interrupts the fish route before thirty seconds but leaves
   };
   const following = run(false), evading = run(true);
   assert.equal(following.hit, true); assert.equal(following.warned, true); assert.ok(following.g.time < 30);
-  assert.equal(evading.hit, false); assert.equal(evading.g.ended, false); assert.ok(evading.g.wave >= 5);
+  assert.equal(evading.hit, false); assert.equal(evading.g.ended, false); assert.ok(evading.g.wave >= 3);
 });

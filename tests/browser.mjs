@@ -50,10 +50,13 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.locator('.close-settings').click();
     await page.locator('#quit').click();
     assert.ok(await page.locator('#result-dialog').isVisible());
+    assert.ok(Number(await page.locator('#result-combo').textContent()) > 0, 'best series remains in the result');
     const bank = await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')));
     assert.ok(bank.totalFish > 0); assert.ok(bank.bests[0] >= score); assert.equal(bank.music, false);
     await page.locator('#again').click();
     assert.equal(await page.locator('#score').textContent(), '0');
+    await page.keyboard.press('Escape'); assert.ok(await page.locator('#pause-dialog').isVisible()); await page.locator('#resume').click();
+    await page.evaluate(() => dispatchEvent(new Event('blur'))); assert.ok(await page.locator('#pause-dialog').isVisible()); await page.locator('#resume').click();
     await page.keyboard.down('Space');
     await page.clock.runFor(9100);
     assert.ok(await page.locator('#result-dialog').isVisible());
@@ -63,7 +66,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.clock.runFor(1000);
     assert.equal(await page.locator('#score').textContent(), endedScore);
     await page.locator('#back-home').click();
-    assert.ok(await page.locator('#wardrobe').isHidden());
+    assert.ok(await page.locator('#wardrobe').isVisible());
     if (name === 'chromium') {
       await page.evaluate(() => navigator.serviceWorker.ready);
       await page.reload();

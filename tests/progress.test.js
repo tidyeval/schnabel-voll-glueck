@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readProgress, recordAttempt } from '../src/progress.js';
+import { readProgress, recordAttempt, applyAttempt } from '../src/progress.js';
 import { createGame } from '../src/game.js';
 test('old/invalid saves retain valid possessions and never unlock invalid stages', () => {
   for (const raw of [undefined, 'bad', 'null', '7', '[]', '{"completed":-1,"bests":[null,-4,"7"]}']) {
@@ -22,4 +22,15 @@ test('attempts bank fish once, advance only on completion and preserve the legac
   }
   const failed=createGame(Math.random,1);failed.ended=true;failed.endReason='air';failed.fish=3;recordAttempt(prefs,failed);
   assert.equal(prefs.completed,3);assert.equal(prefs.totalFish,75);assert.equal(prefs.record,987);assert.deepEqual(prefs.bests,[100,100,100]);
+});
+
+test('attempt ledgers merge distinct attempts and ignore repeated identifiers', () => {
+  const prefs = readProgress();
+  const first = { id: 'tab-a', stage: 0, fish: 4, score: 80, endReason: 'complete' };
+  const second = { id: 'tab-b', stage: 0, fish: 6, score: 50, endReason: 'energy' };
+  assert.equal(applyAttempt(prefs, first), true);
+  assert.equal(applyAttempt(prefs, first), false);
+  assert.equal(applyAttempt(prefs, second), true);
+  assert.equal(prefs.totalFish, 10); assert.equal(prefs.bests[0], 80); assert.equal(prefs.completed, 1);
+  assert.deepEqual(prefs.attemptIds, ['tab-a', 'tab-b']);
 });

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, STAGES, ENERGY, airState, hitsPuffer, pufferRadius } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, survives a hit and ends on exhaustion', () => {
   const g = createGame(() => .5);
@@ -148,27 +148,21 @@ test('sharks track faster later, telegraph a fixed dash, and stop pursuing above
   assert.ok(movement[1] > movement[0] * 2);
 });
 
-test('sharks and turtles vary between fish, player and independent upper-water lanes', () => {
-  for (const [kind, y] of [['shark', 445], ['turtle', 535]]) {
-    const g = createGame(() => 0); g.wave = STAGES[0].encounters.indexOf(kind);
-    Object.assign(g.player, { y, wet: true }); g.items = []; g.distance = g.nextEncounter;
+test('sharks and turtles use stable upper, middle and lower underwater bands', () => {
+  const seen = { shark: new Set(), turtle: new Set() };
+  for (let stage = 0; stage < STAGES.length; stage++) for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
+    const g = createGame(() => .5, stage); g.wave = wave; g.items = []; g.distance = g.nextEncounter;
     step(g, .01, false);
-    const animal = g.items.find(item => item.kind === kind);
-    const crossing = g.items.find(item => item.kind === 'fish' && Math.abs(item.x - animal.x) < 40);
-    assert.ok(animal.x > WORLD.width && crossing, `${kind} arrives visibly from ahead`);
-    assert.ok(Math.abs(crossing.y - animal.baseY) < 35, `${kind} crosses the school`);
-    const before = { x: animal.x, y: animal.y }; step(g, .01, false);
-    assert.ok(animal.x < before.x && Math.abs(animal.y - before.y) < 2, `${kind} enters continuously`);
+    for (const item of g.items.filter(item => item.kind === 'shark' || item.kind === 'turtle')) {
+      seen[item.kind].add(item.lane);
+      assert.equal(item.baseY, UNDERWATER_BANDS.find(band => band.id === item.lane).y);
+      Object.assign(g.player, { y: item.lane === 'upper' ? 700 : 400, wet: true });
+      for (let i = 0; i < 120; i++) step(g, .01, false);
+      assert.ok(Math.abs(item.y - item.baseY) <= 38, `${item.kind} stays in its announced band`);
+    }
   }
-  for (const [kind, entry] of [['shark', 'shark-gull'], ['turtle', 'turtle']]) {
-    const current = createGame(() => .5); current.wave = STAGES[0].encounters.indexOf(entry);
-    Object.assign(current.player, { y: 515, wet: true }); current.items = []; current.distance = current.nextEncounter; step(current, .01, false);
-    assert.ok(Math.abs(current.items.find(item => item.kind === kind).baseY - 515) < 2, `${kind} can choose Pips current depth`);
-    const independent = createGame(() => .99); independent.wave = STAGES[0].encounters.indexOf(entry);
-    Object.assign(independent.player, { y: 430, wet: true }); independent.items = []; independent.distance = independent.nextEncounter; step(independent, .01, false);
-    const animal = independent.items.find(item => item.kind === kind);
-    assert.equal(animal.baseY, 570); assert.ok(Math.abs(animal.baseY - independent.player.y) > 100, `${kind} does not always copy Pip or the school`);
-  }
+  assert.deepEqual([...seen.shark].sort(), ['lower', 'middle', 'upper']);
+  assert.deepEqual([...seen.turtle].sort(), ['lower', 'middle', 'upper']);
 });
 
 test('bubbles refill capped air once', () => {
@@ -331,7 +325,7 @@ test('islands force flight, reefs leave a clear passage and full cargo can ascen
   assert.ok(!hitsTerrain({ x: 118, y: 530 }, reef));
   for (const y of [420, 630]) assert.ok(hitsTerrain({ x: 118, y }, reef));
   const g = createGame(); g.time = 120; g.cargo = WORLD.capacity; g.player.y = 710; g.player.wet = true;
-  g.items = [{ kind: 'island', x: g.player.x + 90 + 240 * 3 - 1 }]; g.nextEncounter = Infinity;
+  g.items = [{ kind: 'island', x: g.player.x + 90 + paceAt(120).speed * 3 - 1 }]; g.nextEncounter = Infinity;
   assert.ok(step(g, .01, false).some(e => e.kind === 'islandWarning'));
   for (let i = 0; i < 240 && !g.ended; i++) step(g, 1 / 60, false);
   assert.equal(g.ended, false); assert.equal(g.player.wet, false);
