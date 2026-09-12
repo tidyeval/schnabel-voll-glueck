@@ -126,11 +126,12 @@ Human feedback on 2026-09-12 still found the second pass too easy and too empty.
 
 Base spacing now decreases from 700 to 580 world units, with 180 units before terrain, 90 after pairs/turtle groups, and 120 after the guarded corridor. All shark spawns enforce the two-active-shark cap, including single encounters following pairs. Speed, steering, energy and air rules are unchanged.
 
-The supplied Move and Shake MP3 is bundled for the landing screen, nest delivery, stage results, final completion and game over. Gameplay keeps its existing soundtrack. Music settings control both tracks; pause/background suspends audio. A real tap or key unlocks menu audio on mobile; installation does not guarantee permission for audible autoplay.
+The supplied Move and Shake MP3 is bundled for the landing screen, nest delivery, stage results, final completion and game over. Gameplay keeps its existing soundtrack. Music settings control both tracks; pause/background suspends audio. The landing page attempts autoplay where allowed; a real tap or key unlocks a suspended mobile audio context. Menu music begins at nest feeding and is preserved when resuming feeding/settling; installation does not guarantee permission for audible autoplay.
 
 Proof for this pass:
 
 - All 49 model tests pass, including 18 complete routes across three stages, two cargo levels and three frame intervals; all authored pair escapes; and the two-shark cap over complete routes. The test controller now chooses a safe destination on its current side of a shark even when already close, instead of crossing the shark to seek greater clearance.
+- Chromium and WebKit each completed all three stages using real input, plus banking, replay, reload and offline restart.
 - Both bundled MP3s decode in Chromium and WebKit and match their source hashes. Real mobile browser input verifies menu activation, music mute/unmute, gameplay/result/home switches, and quitting after pause.
 - Production build and native Android/iOS asset synchronization pass. Android debug APK builds with JDK 23 and the local Android SDK; both packaged MP3 hashes match their sources. Physical-device playtesting of difficulty and audio remains outstanding.
 - A deterministic full-route sample has visible actors during 80%/81%/76% of non-final approach play; longest actor-free gaps are 1.50/1.43/1.63 seconds. This measures screen activity, not subjective difficulty.

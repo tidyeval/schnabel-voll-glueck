@@ -88,7 +88,7 @@ function pause(showDialog = true) {
   mode = 'paused'; holding = false; audio.pause();
   if (showDialog) $('pause-dialog').showModal();
 }
-function resume() { closeDialogs(); holding = false; mode = 'playing'; last = performance.now(); audio.start(game.feeding ? 'menu' : 'playing'); canvas.focus(); }
+function resume() { closeDialogs(); holding = false; mode = 'playing'; last = performance.now(); audio.start(game.feeding || game.settling ? 'menu' : 'playing'); canvas.focus(); }
 function finish() {
   if (mode === 'ended') return;
   const record = game.score > prefs.bests[game.stage];
@@ -181,16 +181,20 @@ function resize() {
   needsDraw = true;
 }
 window.addEventListener('resize', resize); resize(); refreshLocale();
+// Autoplay where allowed; the gesture listeners resume a suspended mobile context.
+audio.start('menu');
 function frame(now) {
   const dt = Math.min(.05, Math.max(0, (now - (last || now)) / 1000)); last = now;
   if (mode === 'playing' || mode === 'menu') animation += dt;
   if (mode === 'playing') {
+    const wasFeeding = game.feeding > 0;
     for (const event of step(game, dt, holding)) {
       if (event.kind === 'end') { finish(); break; }
       if (event.x !== undefined && event.kind !== 'warning') effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }
+    if (!wasFeeding && game.feeding > 0) audio.start('menu');
     updateHud();
   }
   if (mode !== 'paused') { for (const effect of effects) effect.life -= dt; effects = effects.filter(e => e.life > 0); }
