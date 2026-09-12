@@ -1,6 +1,6 @@
 # Localize Schnabelglück in English and Spanish
 
-Status: ready_to_land
+Status: done
 
 Type: feature
 
@@ -111,3 +111,7 @@ German, `Happy Beak` in English, and `Pico Feliz` in Spanish.
   `node tests/progress-browser.mjs`, `node tests/pwa.mjs`, `npm run build`, and
   `PELICAN_URL=https://tidyeval.github.io/schnabel-voll-glueck/ node tests/hosting.mjs`
   all passed. `git diff --check` passed.
+
+## Landing
+
+- Implemented and pushed to `origin/main` in `44b49ba1df61f76cc30f207829ce6c90217595c3`.
