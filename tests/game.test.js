@@ -78,7 +78,7 @@ test('air warns, replenishes above water, and exhaustion ends the run immediatel
   assert.equal(warned, 1); assert.equal(g.ended, true); assert.equal(g.endReason, 'air');
   assert.equal(g.player.breath, 0); assert.equal(g.player.wet, true);
   assert.deepEqual(step(g, .05, false), []);
-  const fresh = createGame(); fresh.player.breath = 1;
+  const fresh = createGame(); fresh.items = []; fresh.nextEncounter = Infinity; fresh.player.breath = 1;
   for (let i = 0; i < 120; i++) step(fresh, 1 / 60, false);
   assert.equal(fresh.player.breath, WORLD.breath);
 });
@@ -125,8 +125,8 @@ test('representative safe routes remain playable in every stage with empty and f
       step(g, dt, holding);
     }
     assert.equal(g.endReason, 'complete', `stage ${stage}, cargo ${cargo}, dt ${dt}`);
-    assert.ok(g.time >= 45 && g.time <= 100);
-    assert.ok(g.fish > 65); assert.equal(g.cargo, 0); assert.ok(g.delivered > 0);
+    assert.ok(g.time >= 30 && g.time <= 100);
+    assert.ok(g.fish > 55); assert.equal(g.cargo, 0); assert.ok(g.delivered > 0);
     assert.ok(g.items.every(i => ['nest', 'fish', 'bubble'].includes(i.kind)), 'safe arrival has no lingering hazards');
   }
 });
@@ -356,8 +356,8 @@ test('successive fishermen keep four distinct stable looks', () => {
     g.wave=STAGES[0].encounters.indexOf('boat');g.items=[];g.distance=g.nextEncounter;
     step(g,.01,false);
     const boat=g.items.find(item=>item.kind==='boat');
-    assert.equal(boat.look,i%4);
-    step(g,.01,false);assert.equal(boat.look,i%4);
+    assert.equal(boat.look,(i+1)%4);
+    step(g,.01,false);assert.equal(boat.look,(i+1)%4);
   }
 });
 
@@ -424,7 +424,7 @@ test('coasting cannot finish any stage; no-food endurance is bounded even withou
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
     while (!g.ended && g.time < 110) step(g, 1 / 60, false);
-    assert.ok(['energy', 'buoy'].includes(g.endReason)); assert.equal(g.delivered, 0);
+    assert.ok(['energy', 'buoy', 'fisher'].includes(g.endReason)); assert.equal(g.delivered, 0);
     const empty = createGame(() => .5, stage); empty.items = []; empty.nextEncounter = Infinity;
     while (!empty.ended) step(empty, 1 / 60, false);
     assert.ok(Math.abs(empty.time - (2 + 100 / ENERGY.flightDrain)) < 1 / 60); assert.equal(empty.fish, 0);

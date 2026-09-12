@@ -118,3 +118,21 @@ Keep these steps in this one owning task. Prefer small data descriptions and exi
 - Shark, fisherman, reef, and diver contact now ends the stage immediately. Gull, jellyfish, pufferfish, surfer, driftwood, harpoon, hull, and net contacts retain their energy-damage behavior.
 - All 47 model tests passed after the fatal-contact change. Eighteen representative safe routes covered every stage, empty/full cargo, and three frame intervals; the constrained buoy-coral-shark combination retains a clear middle passage.
 - Chromium and WebKit each completed the full three-stage journey with real key input, then passed banking, replay, reload, and offline restart. Automated runs collected 94/83/70 fish in Chromium and 95/85/72 in WebKit.
+
+
+## Third tuning pass — immediate pressure and menu music
+
+Human feedback on 2026-09-12 still found the second pass too easy and too empty. This supersedes the earlier quiet opening: every stage now starts with a visible fisherman, followed within two seconds by a gull and upper-band shark. Opening fish lead beneath the boat. Turtle recovery groups also include a gull, and the total shark counts including opening actors are 7/9/14.
+
+Base spacing now decreases from 700 to 580 world units, with 180 units before terrain, 90 after pairs/turtle groups, and 120 after the guarded corridor. All shark spawns enforce the two-active-shark cap, including single encounters following pairs. Speed, steering, energy and air rules are unchanged.
+
+The supplied Move and Shake MP3 is bundled for the landing screen, nest delivery, stage results, final completion and game over. Gameplay keeps its existing soundtrack. Music settings control both tracks; pause/background suspends audio. A real tap or key unlocks menu audio on mobile; installation does not guarantee permission for audible autoplay.
+
+Proof for this pass:
+
+- All 49 model tests pass, including 18 complete routes across three stages, two cargo levels and three frame intervals; all authored pair escapes; and the two-shark cap over complete routes. The test controller now chooses a safe destination on its current side of a shark even when already close, instead of crossing the shark to seek greater clearance.
+- Both bundled MP3s decode in Chromium and WebKit and match their source hashes. Real mobile browser input verifies menu activation, music mute/unmute, gameplay/result/home switches, and quitting after pause.
+- Production build and native Android/iOS asset synchronization pass. Android debug APK builds with JDK 23 and the local Android SDK; both packaged MP3 hashes match their sources. Physical-device playtesting of difficulty and audio remains outstanding.
+- A deterministic full-route sample has visible actors during 80%/81%/76% of non-final approach play; longest actor-free gaps are 1.50/1.43/1.63 seconds. This measures screen activity, not subjective difficulty.
+
+Additional changed paths for this feedback: `src/audio.js`, `src/assets/menu-music.mp3`, `tests/music.mjs`.

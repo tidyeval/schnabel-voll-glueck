@@ -87,20 +87,20 @@ export function hitsTerrain(player, item) {
 
 // One journey: more speed and less space as active play time accumulates.
 export function paceAt(seconds) {
-  const points = [[0, 190, 900], [55, 210, 870], [100, 230, 830], [150, 255, 790]];
+  const points = [[0, 190, 700], [55, 210, 660], [100, 230, 620], [150, 255, 580]];
   seconds = Math.max(0, seconds);
   const upper = points.findIndex(point => seconds <= point[0]);
-  if (upper < 0) return { speed: 255, spacing: 790 };
-  if (upper === 0) return { speed: 190, spacing: 900 };
+  if (upper < 0) return { speed: 255, spacing: 580 };
+  if (upper === 0) return { speed: 190, spacing: 700 };
   const [fromTime, fromSpeed, fromSpacing] = points[upper - 1];
   const [toTime, toSpeed, toSpacing] = points[upper];
   const progress = (seconds - fromTime) / (toTime - fromTime);
   return { speed: fromSpeed + (toSpeed - fromSpeed) * progress, spacing: fromSpacing + (toSpacing - fromSpacing) * progress };
 }
 export const STAGES = [
-  { name: 'Geschützte Bucht', encounters: ['turtle', 'shark', 'gull', 'boat', 'shark-shark', 'turtle-turtle', 'jelly', 'buoy', 'shark-shark', 'boat-jelly', 'shark-turtle', 'island'] },
-  { name: 'Fischerhafen', encounters: ['coral', 'shark', 'driftwood', 'shark-shark', 'turtle-turtle', 'surfer', 'shark-shark', 'diver', 'reef', 'shark-shark', 'turtle-turtle', 'buoy-coral-shark'] },
-  { name: 'Korallenriff', encounters: ['puffer', 'shark-shark', 'turtle-turtle', 'whirlpool', 'shark-shark', 'reef-puffer-shark', 'shark-shark', 'turtle-turtle', 'buoy-coral-shark', 'shark-shark', 'boat-jelly-shark', 'shark-shark'] },
+  { name: 'Geschützte Bucht', encounters: ['turtle', 'shark', 'gull', 'boat', 'shark-shark', 'turtle-turtle-gull', 'jelly', 'buoy', 'shark-shark', 'boat-jelly', 'shark-turtle', 'island'] },
+  { name: 'Fischerhafen', encounters: ['coral', 'shark', 'driftwood', 'shark-shark', 'turtle-turtle-gull', 'surfer', 'shark-shark', 'diver', 'reef', 'shark-shark', 'turtle-turtle-gull', 'buoy-coral-shark'] },
+  { name: 'Korallenriff', encounters: ['puffer', 'shark-shark', 'turtle-turtle-gull', 'whirlpool', 'shark-shark', 'reef-puffer-shark', 'shark-shark', 'turtle-turtle-gull', 'buoy-coral-shark', 'shark-shark', 'boat-jelly-shark', 'shark-shark'] },
 ];
 export const UNDERWATER_BANDS = [
   { id: 'upper', y: 420 },
@@ -140,7 +140,7 @@ function encounter(game) {
     return;
   }
   const sharkCount = entry.split('-').filter(kind => kind === 'shark').length;
-  if (sharkCount > 1 && game.items.some(item => item.kind === 'shark' && !item.caught)) {
+  if (sharkCount + game.items.filter(item => item.kind === 'shark' && !item.caught).length > 2) {
     game.nextEncounter = game.distance + 180;
     return;
   }
@@ -212,8 +212,8 @@ function encounter(game) {
   game.items = game.items.filter(item => item.kind !== 'fish' || !terrain.some(block => hitsTerrain(item, block)));
   game.wave++;
   const nextEntry = STAGES[game.stage].encounters[game.wave] || '';
-  const approachSpace = ['island', 'reef', 'buoy', 'coral'].some(obstacle => nextEntry.split('-').includes(obstacle)) ? 300 : 0;
-  const recoverySpace = sharkCount > 1 || entry === 'turtle-turtle' ? 150 : entry === 'buoy-coral-shark' ? 180 : 0;
+  const approachSpace = ['island', 'reef', 'buoy', 'coral'].some(obstacle => nextEntry.split('-').includes(obstacle)) ? 180 : 0;
+  const recoverySpace = sharkCount > 1 || entry === 'turtle-turtle-gull' ? 90 : entry === 'buoy-coral-shark' ? 120 : 0;
   game.nextEncounter += paceAt(game.elapsed + game.time).spacing + approachSpace + recoverySpace + (kind === 'island' ? 180 : 0);
 }
 
@@ -224,8 +224,13 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
     elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
-    items: Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 452 + Math.sin(i * .6) * 18, golden: false })),
-    nextEncounter: 100, wave: 0, boats: 0, lastPairBand: -1, encounterTrace: [], ended: false,
+    items: [
+      { kind: 'boat', x: 460, y: WORLD.water, cast: -1, hit: false, look: 0 },
+      { kind: 'gull', x: 580, y: 285, phase: 0 },
+      { kind: 'shark', x: 700, y: 420, baseY: 420, lane: 'upper', encounterForm: 'single', warningTime: 1.15 },
+      ...Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 590 + Math.sin(i * .6) * 18, golden: false })),
+    ],
+    nextEncounter: 100, wave: 0, boats: 1, lastPairBand: -1, encounterTrace: [], ended: false,
   };
 }
 

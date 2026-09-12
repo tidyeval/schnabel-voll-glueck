@@ -80,7 +80,7 @@ function start(elapsed) {
 }
 function home() {
   selectedStage = Math.min(prefs.completed, STAGES.length - 1);
-  closeDialogs(); mode = 'menu'; holding = false; effects = []; audio.pause();
+  closeDialogs(); mode = 'menu'; holding = false; effects = []; audio.start('menu');
   $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); refreshMenu(); $('play').focus();
 }
 function pause(showDialog = true) {
@@ -88,7 +88,7 @@ function pause(showDialog = true) {
   mode = 'paused'; holding = false; audio.pause();
   if (showDialog) $('pause-dialog').showModal();
 }
-function resume() { closeDialogs(); holding = false; mode = 'playing'; last = performance.now(); audio.start(); canvas.focus(); }
+function resume() { closeDialogs(); holding = false; mode = 'playing'; last = performance.now(); audio.start(game.feeding ? 'menu' : 'playing'); canvas.focus(); }
 function finish() {
   if (mode === 'ended') return;
   const record = game.score > prefs.bests[game.stage];
@@ -104,7 +104,7 @@ function finish() {
   text('result-score', formatNumber(game.score)); text('result-fish', formatNumber(game.fish)); text('result-combo', formatNumber(game.bestCombo)); text('result-time', clock(game.time));
   const resultMessage = complete ? (final ? t('finalMission') : t('nextMission', { stage: stageName(game.stage + 1) })) : game.mission ? t('mission') : t('nextGoal');
   text('result-mission', `${resultMessage} ${saved ? t('saved') : t('saveFailed')}`);
-  closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
+  closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.start('menu'); audio.effect('end');
 }
 function updateHud() {
   text('score', formatNumber(game.score)); text('time', clock(Math.floor(game.time)));
@@ -156,10 +156,17 @@ window.addEventListener('keydown', event => {
   if (event.code === 'Escape' && mode === 'playing') { event.preventDefault(); pause(); }
 });
 window.addEventListener('keyup', event => { if (event.code === 'Space') { holding = false; if (mode === 'playing') event.preventDefault(); } });
-window.addEventListener('blur', () => pause());
-document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); audio.pause(); } });
+function resumeMenuAudio() {
+  if (!document.hidden && (mode === 'menu' || mode === 'ended')) audio.start('menu');
+}
+// A real tap/key unlocks Web Audio on mobile, including installed web apps.
+document.addEventListener('pointerup', resumeMenuAudio);
+document.addEventListener('keydown', resumeMenuAudio);
+window.addEventListener('focus', resumeMenuAudio);
+window.addEventListener('blur', () => { pause(); audio.pause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pause(); audio.pause(); } else resumeMenuAudio(); });
 if (Capacitor.isNativePlatform()) {
-  App.addListener('appStateChange', ({ isActive }) => { if (!isActive) { pause(); audio.pause(); } });
+  App.addListener('appStateChange', ({ isActive }) => { if (!isActive) { pause(); audio.pause(); } else resumeMenuAudio(); });
   App.addListener('backButton', () => {
     if ($('settings-dialog').open) afterSettings();
     else if (mode === 'playing') pause();
@@ -182,7 +189,7 @@ function frame(now) {
       if (event.kind === 'end') { finish(); break; }
       if (event.x !== undefined && event.kind !== 'warning') effects.push({ ...event, life: 1 });
       audio.effect(event.kind);
-      if (event.kind === 'delivery') holding = false;
+      if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }
     updateHud();
   }

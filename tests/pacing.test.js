@@ -9,7 +9,7 @@ test('one continuous pace rises smoothly, carries across nests and excludes paus
   for (let t = 1; t <= 300; t++) {
     const next = paceAt(t);
     assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .67);
-    assert.ok(next.spacing <= previous.spacing && next.spacing >= 790);
+    assert.ok(next.spacing <= previous.spacing && next.spacing >= 580);
     previous = next;
   }
   const first = createGame(); first.time = 55;
@@ -48,9 +48,9 @@ test('removing difficulty preserves possessions, unlocks and the best previous s
 
 
 test('the journey reaches full pace during the final stage and adds sharks in every stage', () => {
-  assert.deepEqual(paceAt(55), { speed: 210, spacing: 870 });
-  assert.deepEqual(paceAt(100), { speed: 230, spacing: 830 });
-  assert.deepEqual(paceAt(150), { speed: 255, spacing: 790 });
+  assert.deepEqual(paceAt(55), { speed: 210, spacing: 660 });
+  assert.deepEqual(paceAt(100), { speed: 230, spacing: 620 });
+  assert.deepEqual(paceAt(150), { speed: 255, spacing: 580 });
   assert.deepEqual(paceAt(300), paceAt(150));
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
@@ -133,12 +133,12 @@ test('every shark pair leaves a reachable band after a visible reaction delay', 
 
 test('encounter traces do not repeat and never overlap more than two sharks', () => {
   for (let stage = 0; stage < STAGES.length; stage++) {
-    const g = createGame(() => .5, stage); let maxSharks = 0;
+    const g = createGame(() => .99, stage), control = routeController(); let maxSharks = 0;
     for (let i = 0; i < 90 * 60 && !g.ended; i++) {
-      g.energy = 100; g.player.breath = WORLD.breath;
-      step(g, 1 / 60, false);
+      step(g, 1 / 60, control(g));
       maxSharks = Math.max(maxSharks, g.items.filter(item => item.kind === 'shark').length);
     }
+    assert.equal(g.endReason, 'complete', 'cap is checked through the entire stage');
     const signatures = g.encounterTrace.map(trace => `${trace.entry}:${trace.form}:${trace.bands.join(',')}`);
     for (let i = 1; i < signatures.length; i++) assert.notEqual(signatures[i], signatures[i - 1]);
     assert.ok(maxSharks <= 2, `stage ${stage}: ${maxSharks} active sharks`);
@@ -161,4 +161,18 @@ test('the first shark interrupts the fish route before thirty seconds but leaves
   const following = run(false), evading = run(true);
   assert.equal(following.hit, true); assert.equal(following.warned, true); assert.ok(following.g.time < 30);
   assert.equal(evading.hit, false); assert.equal(evading.g.ended, false); assert.ok(evading.g.wave >= 3);
+});
+
+
+test('every stage opens with a visible fisherman and gull/shark within the first two seconds', () => {
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(() => .5, stage);
+    assert.ok(g.items.some(item => item.kind === 'boat' && item.x < WORLD.width));
+    const visible = new Set();
+    for (let i = 0; i < 120; i++) {
+      for (const item of g.items) if (item.x > 0 && item.x < WORLD.width) visible.add(item.kind);
+      step(g, 1 / 60, true);
+    }
+    for (const kind of ['boat', 'gull', 'shark']) assert.ok(visible.has(kind), `${stage}: early ${kind}`);
+  }
 });

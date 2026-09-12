@@ -19,7 +19,7 @@ export function routeController() {
       const terrain = game.items.filter(item => ['island','reef','buoy','coral'].includes(item.kind) && item.x > p.x - 120 && item.x < 500);
       const candidates = [265, 420, 480, 500, 535, 570, 590, 650].filter(y => !terrain.some(item => [-20,0,20].some(margin => hitsTerrain({x:p.x,y:y+margin}, {...item,x:p.x}))));
       const clearance = y => Math.min(...sharks.map(shark=>Math.abs(y-shark.y)));
-      const sameSide = candidates.filter(y => sharks.every(shark => shark.y < Math.min(p.y,y)-38 || shark.y > Math.max(p.y,y)+38));
+      const sameSide = candidates.filter(y => sharks.every(shark => (shark.y < p.y && shark.y < y - 75) || (shark.y > p.y && shark.y > y + 75)));
       target = p.y < 380 && candidates.includes(265) ? 265 : (sameSide.length ? sameSide : candidates).sort((a,b) => clearance(b)-clearance(a) || Math.abs(a-p.y)-Math.abs(b-p.y))[0] ?? target;
     }
     return target > p.y + p.vy * .11;

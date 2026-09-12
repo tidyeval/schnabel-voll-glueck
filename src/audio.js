@@ -1,9 +1,11 @@
+import menuMusicURL from './assets/menu-music.mp3?url';
 import musicURL from './assets/soundtrack.mp3?url';
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 export function createAudio(settings) {
-  let context, master, sea, seaGain, musicGain, musicStart = 0, musicDuration = 0, active = false;
+  let context, master, sea, seaGain, active = false, scene = 'playing';
+  const tracks = [];
   function init() {
     if (!context) {
       const Audio = window.AudioContext || window.webkitAudioContext;
@@ -14,14 +16,17 @@ export function createAudio(settings) {
       let last = 0;
       for (let i = 0; i < data.length; i++) { last = (last + (Math.random() * 2 - 1) * .025) / 1.025; data[i] = last; }
       sea = context.createBufferSource(); sea.buffer = buffer; sea.loop = true;
-      musicGain = context.createGain(); musicGain.gain.value = 0; musicGain.connect(master);
-      fetch(musicURL).then(response => {
-        if (!response.ok) throw new Error('Music unavailable');
-        return response.arrayBuffer();
-      }).then(data => context.decodeAudioData(data)).then(buffer => {
-        const music = context.createBufferSource(); music.buffer = buffer; music.loop = true;
-        music.connect(musicGain); musicDuration = buffer.duration; musicStart = context.currentTime; music.start();
-      }).catch(() => { /* Sound effects and gameplay remain available if music cannot load. */ });
+      for (const [name, url] of [['playing', musicURL], ['menu', menuMusicURL]]) {
+        const track = { name, gain: context.createGain(), start: 0, duration: 0 };
+        track.gain.gain.value = 0; track.gain.connect(master); tracks.push(track);
+        fetch(url).then(response => {
+          if (!response.ok) throw new Error('Music unavailable');
+          return response.arrayBuffer();
+        }).then(data => context.decodeAudioData(data)).then(buffer => {
+          const music = context.createBufferSource(); music.buffer = buffer; music.loop = true;
+          music.connect(track.gain); track.duration = buffer.duration; track.start = context.currentTime; music.start();
+        }).catch(() => { /* Effects remain available if a track cannot load. */ });
+      }
       seaGain = context.createGain(); seaGain.gain.value = 0; sea.connect(seaGain); seaGain.connect(master); sea.start();
     }
     context.resume().catch(() => {});
@@ -36,16 +41,16 @@ export function createAudio(settings) {
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
   return {
-    start() { init(); active = true; },
+    start(nextScene = 'playing') { scene = nextScene; init(); active = true; },
     pause() { active = false; if (context) { seaGain.gain.setTargetAtTime(0, context.currentTime, .08); context.suspend().catch(() => {}); } },
     update(time) {
       if (!context || !active) return;
-      seaGain.gain.setTargetAtTime(settings.sound ? .27 + Math.sin(time * .5) * .08 : 0, context.currentTime, .15);
-      if (musicDuration) {
-        const position = (context.currentTime - musicStart) % musicDuration;
-        // Fade for the last six seconds, then gently bring the next loop back in.
-        const envelope = Math.min(1, position / 1.5, (musicDuration - position) / Math.min(6, musicDuration / 2));
-        musicGain.gain.setTargetAtTime(settings.music ? envelope * .8 : 0, context.currentTime, .05);
+      seaGain.gain.setTargetAtTime(settings.sound && scene === 'playing' ? .27 + Math.sin(time * .5) * .08 : 0, context.currentTime, .15);
+      for (const track of tracks) {
+        if (!track.duration) continue;
+        const position = (context.currentTime - track.start) % track.duration;
+        const envelope = Math.min(1, position / 1.5, (track.duration - position) / Math.min(6, track.duration / 2));
+        track.gain.gain.setTargetAtTime(settings.music && scene === track.name ? envelope * .8 : 0, context.currentTime, .08);
       }
     },
     effect(kind) {
