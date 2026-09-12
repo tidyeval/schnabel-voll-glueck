@@ -40,8 +40,21 @@ export function createAudio(settings) {
     oscillator.connect(gain); gain.connect(master); oscillator.start(time); oscillator.stop(time + duration + .03);
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
+  function selectScene(nextScene) {
+    scene = nextScene;
+    if (!context) return;
+    // A scene switch must never leave the previous track audible until the
+    // next animation frame. This matters most when Start is tapped on mobile.
+    for (const track of tracks) {
+      if (track.name === scene) continue;
+      const gain = track.gain.gain;
+      gain.cancelScheduledValues?.(context.currentTime);
+      gain.setValueAtTime?.(0, context.currentTime);
+      gain.setTargetAtTime(0, context.currentTime, .001);
+    }
+  }
   return {
-    start(nextScene = 'playing') { scene = nextScene; init(); active = true; },
+    start(nextScene = 'playing') { init(); selectScene(nextScene); active = true; },
     pause() { active = false; if (context) { seaGain.gain.setTargetAtTime(0, context.currentTime, .08); context.suspend().catch(() => {}); } },
     update(time) {
       if (!context || !active) return;

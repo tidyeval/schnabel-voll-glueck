@@ -30,7 +30,8 @@ audio.pause(); assert.equal(context.state, 'suspended');
 audio.start(); assert.equal(context.state, 'running'); assert.equal(fetches, 2);
 settings.music = true; audio.start('menu'); audio.update(102);
 assert.equal(gains[1].gain.value, 0); assert.equal(gains[2].gain.value, .8); assert.equal(gains[3].gain.value, 0);
-audio.start(); audio.update(102); assert.equal(gains[1].gain.value, .8); assert.equal(gains[2].gain.value, 0);
+audio.start(); assert.equal(gains[2].gain.value, 0, 'switching to gameplay immediately silences menu music');
+audio.update(102); assert.equal(gains[1].gain.value, .8); assert.equal(gains[2].gain.value, 0);
 settings.music = false; audio.start('menu'); audio.update(102); assert.equal(gains[2].gain.value, 0);
 console.log('Music fade-out, loop fade-in, mute and pause/resume passed');
 
