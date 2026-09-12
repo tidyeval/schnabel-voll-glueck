@@ -4,7 +4,8 @@ import { App } from '@capacitor/app';
 import { createGame, step, press, WORLD, STAGES, airState } from './game.js';
 import { drawWorld } from './art.js';
 import { createAudio } from './audio.js';
-import { readProgress, recordAttempt, attemptFromGame, applyAttempt, unlocks } from './progress.js';
+import { readProgress, recordAttempt, attemptFromGame, applyAttempt } from './progress.js';
+import { applyTranslations, currentLocale, formatNumber, setLocale, stageName, t } from './i18n.js';
 
 const $ = id => document.getElementById(id);
 const app = $('app'), canvas = $('world'), ctx = canvas.getContext('2d');
@@ -32,7 +33,7 @@ function persistSettings(key) {
   try {
     const latest = storedProgress(); latest[key] = prefs[key];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(latest)); syncPrefs(latest); return true;
-  } catch { toast('Deine Einstellung konnte gerade nicht gespeichert werden.'); return false; }
+  } catch { toast(t('settingsSaveFailed')); return false; }
 }
 function persistAttempt(attempt) {
   try {
@@ -43,19 +44,33 @@ function persistAttempt(attempt) {
 }
 function toast(message) { text('toast', message); $('toast').classList.remove('hidden'); toastUntil = performance.now() + 3000; }
 function clock(seconds) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
+function refreshLocale() {
+  setLocale(prefs.language); applyTranslations();
+  $('game-title').innerHTML = currentLocale() === 'de' ? 'Schnabel<em>glück</em>' : t('title');
+  document.querySelectorAll('[data-locale]').forEach(button => {
+    const selected = button.dataset.locale === currentLocale();
+    button.setAttribute('aria-pressed', String(selected));
+    button.setAttribute('aria-label', t(`locales.${button.dataset.locale}`));
+  });
+  refreshMenu();
+}
 function refreshMenu() {
   document.querySelector('.record').hidden = prefs.record === 0;
-  text('record', prefs.record.toLocaleString('de-DE')); text('wallet', `${prefs.totalFish} Fische`);
+  text('record', formatNumber(prefs.record));
   $('stages').replaceChildren(...STAGES.map((stage, i) => {
     const option = document.createElement('option'); option.value = i;
-    option.textContent = `${i < prefs.completed ? '✓ ' : ''}${stage.name}${i > prefs.completed ? ' · noch verschlossen' : ''}`;
+    option.textContent = `${i < prefs.completed ? '✓ ' : ''}${stageName(i)}${i > prefs.completed ? ` · ${t('locked')}` : ''}`;
     option.disabled = i > prefs.completed; return option;
   }));
   $('stages').value = selectedStage;
-  text('stage-best', `Rekord: ${prefs.bests[selectedStage]} Punkte`);
-  text('play-label', prefs.completed ? 'Weiter gehts!' : 'Los gehts!');
+  text('stage-best', t('best', { score: formatNumber(prefs.bests[selectedStage]) }));
+  text('play-label', prefs.completed ? t('continue') : t('play'));
 }
 $('stages').onchange = () => { selectedStage = Number($('stages').value); refreshMenu(); };
+document.querySelectorAll('[data-locale]').forEach(button => button.onclick = () => {
+  prefs.language = button.dataset.locale;
+  refreshLocale(); persistSettings('language');
+});
 
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start(elapsed) {
@@ -81,18 +96,18 @@ function finish() {
   const complete = game.endReason === 'complete';
   const final = complete && game.stage === STAGES.length - 1;
   $('next-stage').classList.toggle('hidden', !complete || final);
-  text('again', 'Nochmal');
+  text('again', t('again'));
   mode = 'ended'; holding = false; game.ended = true;
   const saved = persistAttempt(attempt); $('retry-save').classList.toggle('hidden', saved);
-  text('result-kicker', complete ? (final ? 'ALLE NESTER ERREICHT' : 'NEST ERREICHT') : record ? 'NEUER ETAPPENREKORD' : STAGES[game.stage].name);
-  text('result-title', { puffer: 'Ein aufgeblasener Kugelfisch!', island: 'Die Insel erwischt!', reef: 'Am Felsen hängen geblieben!', buoy: 'Eine Boje erwischt!', coral: 'An den Korallen hängen geblieben!', diver: 'Taucher voraus!', harpoon: 'Von der Harpune erwischt!', surfer: 'Surfer voraus!', gull: 'Möwe im Anflug!', jelly: 'Eine Qualle erwischt!', driftwood: 'Treibholz voraus!', air: 'Die Luft ist aus!', shark: 'Vom Hai erwischt!', net: 'Im Netz gelandet!', fisher: 'Fischer voraus!', energy: 'Keine Energie mehr!', complete: final ? 'Alle Küken satt. Herz auch.' : 'Willkommen im Nest!' }[game.endReason] || 'Bis zur nächsten Runde!');
-  text('result-score', game.score); text('result-fish', game.fish); text('result-combo', game.bestCombo); text('result-time', clock(game.time));
-  const resultMessage = complete ? (final ? 'Pip hat alle drei Nester erreicht. Besuche deine Lieblingsbucht wieder!' : `Weiter zum ${STAGES[game.stage + 1].name === 'Fischerhafen' ? 'Fischerhafen' : 'Korallenriff'}.`) : game.mission ? '✦ Tauchmission geschafft! +100 Punkte' : 'Nächstes Ziel: 5 Fische in einem Tauchgang.';
-  text('result-mission', saved ? `${resultMessage} Dein Fortschritt ist gespeichert.` : `${resultMessage} Dein Fortschritt konnte nicht gespeichert werden.`);
+  text('result-kicker', complete ? (final ? t('allNests') : t('nestReached')) : record ? t('newRecord') : stageName(game.stage));
+  text('result-title', game.endReason === 'complete' && final ? t('reasons.final') : t(`reasons.${game.endReason}`) || t('reasons.fallback'));
+  text('result-score', formatNumber(game.score)); text('result-fish', formatNumber(game.fish)); text('result-combo', formatNumber(game.bestCombo)); text('result-time', clock(game.time));
+  const resultMessage = complete ? (final ? t('finalMission') : t('nextMission', { stage: stageName(game.stage + 1) })) : game.mission ? t('mission') : t('nextGoal');
+  text('result-mission', `${resultMessage} ${saved ? t('saved') : t('saveFailed')}`);
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.effect('end');
 }
 function updateHud() {
-  text('score', game.score); text('time', clock(Math.floor(game.time)));
+  text('score', formatNumber(game.score)); text('time', clock(Math.floor(game.time)));
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
   const p = game.player;
@@ -101,7 +116,7 @@ function updateHud() {
   $('air').classList.toggle('low-air', level > 0);
   const pulse = reducedMotion ? 2 : 2 + (1 + Math.sin(animation * (5 + urgency * 5))) * 2;
   $('status-panel').style.boxShadow = level ? `0 0 0 ${pulse}px #ffd59a66` : '';
-  text('air-label', level ? 'AUFTAUCHEN' : 'LUFT');
+  text('air-label', level ? t('surface') : t('air'));
   text('air-value', `${p.breath.toFixed(1)} s`);
   $('air-fill').style.width = `${p.breath / WORLD.breath * 100}%`;
   document.querySelector('.air-track').setAttribute('aria-valuemax', WORLD.breath);
@@ -117,29 +132,16 @@ function afterSettings() { $('settings-dialog').close(); if (mode === 'paused') 
 $('settings-dialog').querySelector('.close').onclick = afterSettings;
 $('settings-dialog').querySelector('.close-settings').onclick = afterSettings;
 for (const key of ['music', 'sound', 'haptics']) { $(key).checked = prefs[key]; $(key).onchange = () => { prefs[key] = $(key).checked; persistSettings(key); }; }
-$('wardrobe').onclick = () => {
-  text('wardrobe-wallet', `${prefs.totalFish} Fische gesammelt. Welcher Look darf’s sein?`);
-  document.querySelectorAll('[data-outfit]').forEach(button => {
-    button.disabled = prefs.totalFish < unlocks[button.dataset.outfit];
-    button.setAttribute('aria-pressed', String(prefs.outfit === button.dataset.outfit));
-  });
-  $('wardrobe-dialog').showModal();
-};
-$('wardrobe-dialog').querySelector('.close').onclick = () => $('wardrobe-dialog').close();
-document.querySelectorAll('[data-outfit]').forEach(button => button.onclick = () => {
-  if (prefs.totalFish < unlocks[button.dataset.outfit]) return;
-  prefs.outfit = button.dataset.outfit; persistSettings('outfit'); $('wardrobe-dialog').close();
-});
 $('retry-save').onclick = () => {
   const attempt = attemptFromGame(game, game.attemptId);
   if (!persistAttempt(attempt)) return;
   $('retry-save').classList.add('hidden');
-  const message = $('result-mission').textContent.replace('Dein Fortschritt konnte nicht gespeichert werden.', '').trim();
-  text('result-mission', `${message} Dein Fortschritt ist gespeichert.`);
+  const message = $('result-mission').textContent.replace(t('saveFailed'), '').trim();
+  text('result-mission', `${message} ${t('saved')}`);
 };
 window.addEventListener('storage', event => {
   if (event.key !== STORAGE_KEY && !event.key?.startsWith(ATTEMPT_PREFIX)) return;
-  try { syncPrefs(storedProgress()); if (mode === 'menu') refreshMenu(); } catch { /* Keep the current in-memory state. */ }
+  try { syncPrefs(storedProgress()); refreshLocale(); } catch { /* Keep the current in-memory state. */ }
 });
 $('pause-dialog').addEventListener('cancel', event => { event.preventDefault(); resume(); });
 $('settings-dialog').addEventListener('cancel', event => { event.preventDefault(); afterSettings(); });
@@ -160,7 +162,6 @@ if (Capacitor.isNativePlatform()) {
   App.addListener('appStateChange', ({ isActive }) => { if (!isActive) { pause(); audio.pause(); } });
   App.addListener('backButton', () => {
     if ($('settings-dialog').open) afterSettings();
-    else if ($('wardrobe-dialog').open) $('wardrobe-dialog').close();
     else if (mode === 'playing') pause();
     else if (mode === 'paused') resume();
     else if (mode === 'ended') home();
@@ -172,7 +173,7 @@ function resize() {
   canvas.width = WORLD.width * ratio; canvas.height = WORLD.height * ratio; ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   needsDraw = true;
 }
-window.addEventListener('resize', resize); resize(); refreshMenu();
+window.addEventListener('resize', resize); resize(); refreshLocale();
 function frame(now) {
   const dt = Math.min(.05, Math.max(0, (now - (last || now)) / 1000)); last = now;
   if (mode === 'playing' || mode === 'menu') animation += dt;
@@ -209,20 +210,20 @@ $('install-help').querySelector('button').onclick = () => $('install-help').clos
 function updateStatus() {
   const downloading = Boolean(registration?.installing);
   $('update').disabled = downloading;
-  text('update', reloadReady || registration?.waiting ? 'Update verfügbar · neu laden' : downloading ? 'Update wird geladen …' : 'Updates prüfen');
+  text('update', reloadReady || registration?.waiting ? t('updateReady') : downloading ? t('updateLoading') : t('update'));
 }
 $('update').onclick = async () => {
   if (reloadReady) { location.reload(); return; }
   if (registration?.waiting) { applyingUpdate = true; registration.waiting.postMessage({ type: 'SKIP_WAITING' }); return; }
-  if (!registration) { toast('Offline-Modus wird noch vorbereitet.'); return; }
-  $('update').disabled = true; text('update', 'Update wird geprüft …');
+  if (!registration) { toast(t('offlinePreparing')); return; }
+  $('update').disabled = true; text('update', t('updateChecking'));
   try {
     await registration.update();
     // update() finishes the check, not the installation of the downloaded files.
-    if (registration.installing) toast('Update wird geladen. Bitte die App geöffnet lassen.');
-    else if (registration.waiting) toast('Update bereit. Jetzt neu laden.');
-    else toast('Deine App ist auf dem aktuellen Stand.');
-  } catch { toast('Update-Prüfung fehlgeschlagen. Bitte die Internetverbindung prüfen.'); }
+    if (registration.installing) toast(t('updateLoaded'));
+    else if (registration.waiting) toast(t('updateNow'));
+    else toast(t('upToDate'));
+  } catch { toast(t('updateFailed')); }
   finally { updateStatus(); }
 };
 if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
@@ -237,13 +238,13 @@ if (import.meta.env.PROD && !Capacitor.isNativePlatform() && 'serviceWorker' in 
       const worker = reg.installing; updateStatus();
       worker?.addEventListener('statechange', () => {
         updateStatus();
-        if (worker.state === 'installed' && reg.waiting) toast('Update bereit – im Startmenü neu laden.');
-        if (worker.state === 'redundant') toast('Update konnte nicht geladen werden. Bitte erneut prüfen.');
+        if (worker.state === 'installed' && reg.waiting) toast(t('updateMenu'));
+        if (worker.state === 'redundant') toast(t('updateUnavailable'));
       });
     };
     watchDownload(); reg.addEventListener('updatefound', watchDownload);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) reg.update().catch(() => {});
     });
-  }).catch(() => toast('Offline-Modus gerade nicht verfügbar.'));
+  }).catch(() => toast(t('offlineUnavailable')));
 }

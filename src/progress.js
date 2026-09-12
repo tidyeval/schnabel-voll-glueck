@@ -1,4 +1,5 @@
 import { STAGES } from './game.js';
+import { localeFrom } from './i18n.js';
 export const unlocks = { classic: 0, flower: 25, sailor: 80 };
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const attemptIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
@@ -6,7 +7,7 @@ export function readProgress(raw) {
   let saved;
   try { saved = JSON.parse(raw); } catch { /* Old or unavailable storage starts fresh. */ }
   saved = saved && typeof saved === 'object' ? saved : {};
-  const prefs = { record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', music: true, sound: true, haptics: true, attemptIds: attemptIds(saved.attemptIds),
+  const prefs = { record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', music: true, sound: true, haptics: true, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))) };
   for (const key of ['music', 'sound', 'haptics']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
   if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;

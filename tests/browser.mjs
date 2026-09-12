@@ -66,7 +66,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.clock.runFor(1000);
     assert.equal(await page.locator('#score').textContent(), endedScore);
     await page.locator('#back-home').click();
-    assert.ok(await page.locator('#wardrobe').isVisible());
+    assert.equal(await page.locator('#wardrobe').count(), 0);
     if (name === 'chromium') {
       await page.evaluate(() => navigator.serviceWorker.ready);
       await page.reload();

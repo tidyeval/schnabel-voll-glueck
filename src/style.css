@@ -34,6 +34,9 @@ h1 em{color:#e78c57;font-style:normal}
 .quiet-button{background:none;display:flex;align-items:center;justify-content:center;gap:2cqw;width:100%;padding:4cqw 0;font-size:2.9cqw;font-weight:600}
 .start-bottom .quiet-button{color:#f1f9df;margin-top:1.5cqw}
 .quiet-button span{font-size:2.1cqw;font-weight:500;opacity:.65}
+.language-picker{display:flex;justify-content:center;gap:2.5cqw;padding:1.5cqw 0;pointer-events:auto}
+.language-picker button{display:grid;place-items:center;width:9cqw;height:9cqw;min-width:34px;min-height:34px;padding:0;border:2px solid #fff7d9aa;border-radius:50%;background:#164a4966;font-size:5cqw;line-height:1;box-shadow:0 2px 5px #123d3b33}
+.language-picker button[aria-pressed=true]{border-color:#ffdb86;background:#fff8db;box-shadow:0 0 0 2px #d5975a88;color:#214d4d}
 .hidden{display:none!important}
 #hud{position:absolute;inset:0;z-index:3;pointer-events:none}
 .score-row{position:absolute;top:12%;left:7%;right:7%;display:flex;justify-content:space-between;align-items:center}
@@ -126,6 +129,8 @@ dialog{position:fixed;max-height:85svh}
 .start-bottom .quiet-button{min-height:36px;padding:1.5cqw 0}
 .start-bottom .app-actions:has(button:not([hidden])){min-height:36px}
 #play{min-height:52px}
+.language-picker{padding:0}
+.language-picker button{min-width:30px;min-height:30px}
 .hero-label{display:none}
 .intro{top:10%}
 .intro p{margin-top:2cqw}

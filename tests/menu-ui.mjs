@@ -12,26 +12,20 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.clock.install();
     await page.goto(process.env.PELICAN_URL || 'http://localhost:4173');
     await page.locator('#play').waitFor();
-    await page.locator('#wardrobe').focus(); await page.keyboard.press('Enter');
-    assert.equal(await page.locator('[data-outfit="classic"]').isDisabled(), false);
-    assert.equal(await page.locator('[data-outfit="flower"]').isDisabled(), true);
-    assert.equal(await page.locator('[data-outfit="sailor"]').isDisabled(), true);
-    await page.locator('#wardrobe-dialog .close').click();
     await page.evaluate(() => localStorage.setItem('pelican-v1', JSON.stringify({ completed: 2, totalFish: 90, outfit: 'sailor', bests: [123, 456, 789], music: false, sound: false })));
     await page.reload(); await page.locator('#play').waitFor();
     assert.equal(await page.locator('[name=difficulty]').count(), 0);
     assert.equal(await page.locator('#result-difficulty').count(), 0);
-    assert.ok(await page.locator('#wardrobe').isVisible());
+    assert.equal(await page.locator('#wardrobe').count(), 0);
+    assert.equal(await page.locator('#wardrobe-dialog').count(), 0);
     assert.equal(await page.locator('#stage-best').textContent(), 'Rekord: 789 Punkte');
     await page.locator('#stages').selectOption('0');
     assert.equal(await page.locator('#stage-best').textContent(), 'Rekord: 123 Punkte');
-    await page.locator('#wardrobe').click();
-    assert.equal(await page.locator('[data-outfit="sailor"]').getAttribute('aria-pressed'), 'true');
     const sailor = await page.locator('#world').evaluate(canvas => canvas.toDataURL());
-    await page.locator('[data-outfit="flower"]').click();
+    await page.locator('[data-locale="en"]').focus(); await page.keyboard.press('Enter');
     await page.clock.runFor(20);
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).outfit), 'flower');
-    assert.notEqual(await page.locator('#world').evaluate(canvas => canvas.toDataURL()), sailor, 'selected outfit is rendered');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-v1')).outfit), 'sailor');
+    assert.equal(await page.locator('#world').evaluate(canvas => canvas.toDataURL()), sailor, 'language changes do not alter the selected outfit');
     await page.screenshot({ path: `${out}/${name}-320.png` });
     const bounds = await page.locator('.start-bottom').boundingBox();
     const intro = await page.locator('.intro').boundingBox();
@@ -58,6 +52,6 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: `${out}/${name}-390.png` });
     assert.deepEqual(errors, []);
-    console.log(`${name}: no difficulty choices, air HUD, pause, replay and small-phone layout passed`);
+    console.log(`${name}: language picker, air HUD, pause, replay and small-phone layout passed`);
   } finally { await browser.close(); }
 }
