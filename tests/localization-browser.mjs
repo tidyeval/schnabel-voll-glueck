@@ -25,6 +25,8 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
       assert.equal(await page.evaluate(() => document.documentElement.lang), locale);
       assert.equal(await page.title(), copy.title);
       assert.equal(await page.locator('#game-title').innerText(), copy.title);
+      assert.equal(await page.locator('#game-title em').innerText(), { de: 'glück', en: 'Beak', es: 'Feliz' }[locale]);
+      assert.equal(await page.locator('#game-title').evaluate(title => getComputedStyle(title).color !== getComputedStyle(title.querySelector('em')).color), true, 'every localized title uses two colors');
       assert.equal(await page.locator('#play-label').innerText(), copy.play);
       assert.match(await page.locator('#stages').innerText(), new RegExp(copy.stage));
       assert.equal(await button.getAttribute('aria-pressed'), 'true');

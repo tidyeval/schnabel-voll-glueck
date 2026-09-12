@@ -46,7 +46,7 @@ function toast(message) { text('toast', message); $('toast').classList.remove('h
 function clock(seconds) { return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`; }
 function refreshLocale() {
   setLocale(prefs.language); applyTranslations();
-  $('game-title').innerHTML = currentLocale() === 'de' ? 'Schnabel<em>glück</em>' : t('title');
+  $('game-title').innerHTML = { de: 'Schnabel<em>glück</em>', en: 'Happy <em>Beak</em>', es: 'Pico <em>Feliz</em>' }[currentLocale()];
   document.querySelectorAll('[data-locale]').forEach(button => {
     const selected = button.dataset.locale === currentLocale();
     button.setAttribute('aria-pressed', String(selected));

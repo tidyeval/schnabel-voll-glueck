@@ -17,7 +17,8 @@ export function routeController() {
     const sharks = game.items.filter(i => i.kind === 'shark' && !i.caught && i.x > p.x - 90 && i.x < 500);
     if (sharks.length) {
       const terrain = game.items.filter(item => ['island','reef','buoy','coral'].includes(item.kind) && item.x > p.x - 120 && item.x < 500);
-      const candidates = [265, 420, 480, 500, 535, 570, 590, 650].filter(y => !terrain.some(item => [-20,0,20].some(margin => hitsTerrain({x:p.x,y:y+margin}, {...item,x:p.x}))));
+      const boatAhead = game.items.some(item => item.kind === 'boat' && item.x > p.x - 100 && item.x < 500);
+      const candidates = [265, 420, 480, 500, 535, 570, 590, 650].filter(y => (!boatAhead || y >= 480) && !terrain.some(item => [-20,0,20].some(margin => hitsTerrain({x:p.x,y:y+margin}, {...item,x:p.x}))));
       const clearance = y => Math.min(...sharks.map(shark=>Math.abs(y-shark.y)));
       const sameSide = candidates.filter(y => sharks.every(shark => (shark.y < p.y && shark.y < y - 75) || (shark.y > p.y && shark.y > y + 75)));
       target = p.y < 380 && candidates.includes(265) ? 265 : (sameSide.length ? sameSide : candidates).sort((a,b) => clearance(b)-clearance(a) || Math.abs(a-p.y)-Math.abs(b-p.y))[0] ?? target;

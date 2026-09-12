@@ -9,7 +9,7 @@ test('one continuous pace rises smoothly, carries across nests and excludes paus
   for (let t = 1; t <= 300; t++) {
     const next = paceAt(t);
     assert.ok(next.speed >= previous.speed && next.speed - previous.speed <= .67);
-    assert.ok(next.spacing <= previous.spacing && next.spacing >= 580);
+    assert.ok(next.spacing <= previous.spacing && next.spacing >= 640);
     previous = next;
   }
   const first = createGame(); first.time = 55;
@@ -48,9 +48,9 @@ test('removing difficulty preserves possessions, unlocks and the best previous s
 
 
 test('the journey reaches full pace during the final stage and adds sharks in every stage', () => {
-  assert.deepEqual(paceAt(55), { speed: 210, spacing: 660 });
-  assert.deepEqual(paceAt(100), { speed: 230, spacing: 620 });
-  assert.deepEqual(paceAt(150), { speed: 255, spacing: 580 });
+  assert.deepEqual(paceAt(55), { speed: 210, spacing: 720 });
+  assert.deepEqual(paceAt(100), { speed: 230, spacing: 680 });
+  assert.deepEqual(paceAt(150), { speed: 255, spacing: 640 });
   assert.deepEqual(paceAt(300), paceAt(150));
   for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(() => .5, stage);
@@ -88,7 +88,7 @@ test('paired sharks progress from staggered to parallel with recovery encounters
   assert.deepEqual([...PAIR_PATTERNS.values()].sort(), forms.sort());
   assert.ok(PAIR_PATTERNS.has('0:4'), 'paired decisions begin by the middle of the bay');
   assert.deepEqual([0, 1, 2].map(stage => [...PAIR_PATTERNS.keys()].filter(key => key.startsWith(`${stage}:`)).length), [2, 3, 5]);
-  assert.deepEqual(warningTimes, [.85, .7, .58]);
+  assert.deepEqual(warningTimes, [.95, .8, .68]);
 });
 
 test('the buoy and coral combination keeps its middle passage clear of the fatal shark', () => {

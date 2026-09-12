@@ -137,3 +137,10 @@ Proof for this pass:
 - A deterministic full-route sample has visible actors during 80%/81%/76% of non-final approach play; longest actor-free gaps are 1.50/1.43/1.63 seconds. This measures screen activity, not subjective difficulty.
 
 Additional changed paths for this feedback: `src/audio.js`, `src/assets/menu-music.mp3`, `tests/music.mjs`.
+
+
+## Fourth tuning pass — modest relief after mobile feedback
+
+The user found the third pass slightly too difficult. Base spacing increases by 60 world units throughout the journey (760 → 640, about 9% more room), and normal shark warnings gain 0.10 seconds (0.95/0.80/0.68). The opening gull and shark move 60/80 units later while the fisherman remains immediately visible and all three appear within two seconds. Actor counts and the increasing pace remain intact.
+
+All 49 model tests pass, including 18 complete stage routes and every pair escape. The route controller now excludes surfacing into a nearby fisherman when choosing a shark escape. Production build, native asset sync and Android debug APK build pass. The companion title fix renders Happy Beak and Pico Feliz with the same emphasized second-color treatment as German; Chromium and WebKit verify both title colors, all languages, persistence and mobile layout. Human difficulty feedback remains the deciding evidence for subsequent tuning.

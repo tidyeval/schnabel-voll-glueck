@@ -87,11 +87,11 @@ export function hitsTerrain(player, item) {
 
 // One journey: more speed and less space as active play time accumulates.
 export function paceAt(seconds) {
-  const points = [[0, 190, 700], [55, 210, 660], [100, 230, 620], [150, 255, 580]];
+  const points = [[0, 190, 760], [55, 210, 720], [100, 230, 680], [150, 255, 640]];
   seconds = Math.max(0, seconds);
   const upper = points.findIndex(point => seconds <= point[0]);
-  if (upper < 0) return { speed: 255, spacing: 580 };
-  if (upper === 0) return { speed: 190, spacing: 700 };
+  if (upper < 0) return { speed: 255, spacing: 640 };
+  if (upper === 0) return { speed: 190, spacing: 760 };
   const [fromTime, fromSpeed, fromSpacing] = points[upper - 1];
   const [toTime, toSpeed, toSpacing] = points[upper];
   const progress = (seconds - fromTime) / (toTime - fromTime);
@@ -176,7 +176,7 @@ function encounter(game) {
   const bands = [];
   if (kind === 'shark' || kind === 'turtle') {
     const band = animalPosition(); bands.push(band.id);
-    game.items.push({ kind, x: kind === 'shark' ? 880 : 890, y: band.y, baseY: band.y, lane: band.id, encounterForm: pairPattern, warningTime: game.stage === 0 && wave === 1 ? 1.15 : [.85, .7, .58][game.stage] });
+    game.items.push({ kind, x: kind === 'shark' ? 880 : 890, y: band.y, baseY: band.y, lane: band.id, encounterForm: pairPattern, warningTime: game.stage === 0 && wave === 1 ? 1.15 : [.95, .8, .68][game.stage] });
   }
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
   companions.forEach((companion, index) => {
@@ -186,7 +186,7 @@ function encounter(game) {
     const y = companion === 'gull' ? 285 : band?.y ?? 665;
     const pairX = pairPattern === 'parallel' ? 900 + index * 30 : pairPattern === 'staggered' ? 1010 + index * 120 : 960 + index * 120;
     game.items.push({ kind: companion, x: companion === 'coral' ? 890 : pairX,
-      y, baseY: y, lane: band?.id, encounterForm: pairPattern, warningTime: companion === 'shark' ? [.85, .7, .58][game.stage] : undefined,
+      y, baseY: y, lane: band?.id, encounterForm: pairPattern, warningTime: companion === 'shark' ? [.95, .8, .68][game.stage] : undefined,
       phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
   });
   if (sharkCount > 1) {
@@ -226,8 +226,8 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: [
       { kind: 'boat', x: 460, y: WORLD.water, cast: -1, hit: false, look: 0 },
-      { kind: 'gull', x: 580, y: 285, phase: 0 },
-      { kind: 'shark', x: 700, y: 420, baseY: 420, lane: 'upper', encounterForm: 'single', warningTime: 1.15 },
+      { kind: 'gull', x: 640, y: 285, phase: 0 },
+      { kind: 'shark', x: 780, y: 420, baseY: 420, lane: 'upper', encounterForm: 'single', warningTime: 1.15 },
       ...Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 590 + Math.sin(i * .6) * 18, golden: false })),
     ],
     nextEncounter: 100, wave: 0, boats: 1, lastPairBand: -1, encounterTrace: [], ended: false,
