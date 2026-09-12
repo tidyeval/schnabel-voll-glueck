@@ -112,7 +112,7 @@ export const PAIR_PATTERNS = new Map([
   ['1:3', 'staggered'], ['1:6', 'parallel'], ['1:9', 'staggered'],
   ['2:1', 'parallel'], ['2:4', 'staggered'], ['2:6', 'parallel'], ['2:9', 'staggered'], ['2:11', 'parallel'],
 ]);
-export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, protection: 1.2 };
+export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2 };
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
 // Includes continued descent during reaction time and the turn from diving to rising.
@@ -180,7 +180,8 @@ function encounter(game) {
   }
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
   companions.forEach((companion, index) => {
-    const band = ['shark', 'turtle'].includes(companion) ? animalPosition(index + 1) : null;
+    const guardedCorridor = kind === 'buoy' && companions.includes('coral') && companion === 'shark';
+    const band = guardedCorridor ? UNDERWATER_BANDS[0] : ['shark', 'turtle'].includes(companion) ? animalPosition(index + 1) : null;
     if (band) bands.push(band.id);
     const y = companion === 'gull' ? 285 : band?.y ?? 665;
     const pairX = pairPattern === 'parallel' ? 900 + index * 30 : pairPattern === 'staggered' ? 1010 + index * 120 : 960 + index * 120;
@@ -257,7 +258,8 @@ export function step(game, dt, holding) {
   game.distance += game.speed * dt;
   p.hurt = Math.max(0, (p.hurt || 0) - dt);
   // Check before encounters/nest arrival: coasting cannot bypass exhaustion.
-  game.energy = Math.max(0, game.energy - Math.min(dt, Math.max(0, game.time - ENERGY.grace)) * ENERGY.drain);
+  const energyDrain = p.wet ? ENERGY.drain : ENERGY.flightDrain;
+  game.energy = Math.max(0, game.energy - Math.min(dt, Math.max(0, game.time - ENERGY.grace)) * energyDrain);
   if (game.energy <= 0) {
     game.ended = true; game.endReason = 'energy'; return [{ kind: 'end' }];
   }
@@ -443,11 +445,19 @@ export function step(game, dt, holding) {
         : item.kind === 'jelly' ? Math.abs(item.x - p.x) < 35 && p.y > item.y - 35 && p.y < item.y + 20 + item.phase * 65
         : item.kind === 'driftwood' ? Math.abs(item.x - p.x) < 65 && Math.abs(p.y - WORLD.water) < 30
         : hitsBoat(p, item) || netHit;
+      const fatalHit = item.kind === 'shark' || item.kind === 'reef' || item.kind === 'diver' || fisherHit;
       if (hit && item.kind === 'gull' && !p.wet && p.turns) {
         item.kicked = true; item.reaction = 1; item.reactionKind = 'kicked';
         p.kick = .45;
         game.score += 75; events.push({ kind: 'kick', x: item.x, y: item.y, points: 75 });
         continue;
+      }
+      if (hit && fatalHit) {
+        item.hit = true; p.bump = .6; p.turns = 0; p.spin = 0;
+        game.combo = 0; game.comboTime = 0; game.ended = true;
+        game.endReason = fisherHit ? 'fisher' : item.kind;
+        events.push({ kind: 'hurt', x: p.x, y: p.y }, { kind: 'end' });
+        return events;
       }
       if (hit && (!contactDamage[item.kind] || (!item.hit && !p.hurt))) {
         if (contactDamage[item.kind]) {

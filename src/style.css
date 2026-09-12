@@ -41,7 +41,7 @@ h1 em{color:#e78c57;font-style:normal}
 .score-row strong{display:block;font-size:10cqw;line-height:1.1;letter-spacing:-.05em}
 .timer{background:#fff9e7b0;padding:2cqw 3cqw;border-radius:8cqw;font-size:3cqw;font-weight:700;font-variant-numeric:tabular-nums;align-self:flex-start}
 .timer>span:first-child{color:#d99056;font-size:4cqw}
-.status-panel{position:absolute;top:clamp(124px,19%,160px);left:7%;right:7%;padding:2cqw 2.5cqw;border:1px solid #fffdf066;border-radius:3cqw;background:#fff9e7b8;backdrop-filter:blur(5px);transition:box-shadow .15s}
+.status-panel{position:absolute;top:clamp(136px,20%,180px);left:7%;right:7%;padding:2cqw 2.5cqw;border:1px solid #fffdf066;border-radius:3cqw;background:#fff9e7b8;backdrop-filter:blur(5px);transition:box-shadow .15s}
 .vital-row{display:grid;grid-template-columns:minmax(72px,9ch) 1fr minmax(38px,5ch);align-items:center;gap:2cqw;font-size:clamp(10px,1.7cqw,12px);font-weight:800;letter-spacing:.1em}
 .vital-row strong{text-align:right;font-size:clamp(12px,2.3cqw,15px);font-variant-numeric:tabular-nums;letter-spacing:0;white-space:nowrap}
 .energy-track{height:1.8cqw;flex:1;background:#84b7a933;border-radius:2cqw;overflow:hidden}

@@ -21,12 +21,14 @@ Review of `e37e539` at 320×568: computed energy label/value size was 5.44 CSS p
 - [x] AC1: No combo badge or multiplier appears during play. Combo scoring and the end-of-round best-series value remain unchanged.
 - [x] AC2: Energy and air share one compact status panel. Energy remains visible, air appears only while diving or refilling, and urgent air remains unmistakable without merging the two resources.
 - [x] AC3: Labels remain at least 10 CSS px and values at least 12 CSS px. The panel and its contents fit without overlap at 320×568, 390×844, and 430×932 in normal and reduced-motion modes.
+- [x] AC4: The catch score and shared status panel retain at least 8 CSS px of visible separation across the supported mobile sizes.
 
 ## Proof
 
 - AC1: Assert that the in-play combo element is absent while model scoring and result output still report the best series.
 - AC2: Exercise dry, normal-air, and urgent-air states and verify visibility, independent progress values, and pause behavior.
 - AC3: Assert computed sizes and panel/content bounds, then inspect screenshots at all supported sizes in Chromium and WebKit.
+- AC4: Compare the rendered score-row and status-panel bounds at each supported mobile size in Chromium and WebKit.
 
 ## Changed paths
 
@@ -46,3 +48,4 @@ The first readability pass established bounded type sizes and separate non-overl
 - Removed the in-play combo element and its update path. Combo points remain unchanged, and Chromium/WebKit verified that the best series still appears in the result dialog.
 - Replaced the detached energy bar and air card with one shared panel. Its energy row is permanent; its air row appears while diving or refilling and changes to `AUFTAUCHEN` when urgent.
 - At 320×568 the two-row urgent panel remains at most 64 CSS px high. Chromium and WebKit passed label/value minima, internal bounds, dry/dive/urgent states, pause, reduced motion, and screenshots at all three supported mobile sizes.
+- Raised the shared panel's responsive top boundary after Android playtesting exposed an overlap with large score values. Automated bounds checks now preserve at least 8 CSS px between both regions.

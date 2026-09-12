@@ -74,6 +74,8 @@ Für eine Installation auf einem echten iPhone muss in Xcode ein eigenes Signing
 - Hintergrundmusik: **getaway-driver-21-on-the-block-main-version-45640-01-44.mp3**, lokal eingebettet. Sechs Sekunden Fade-out am Ende, 1,5 Sekunden Fade-in beim Neustart. Etappenwechsel startet den Track nicht erneut; Pause hält die Musik an. Getrennte Schalter für Musik, Sounds und Haptik.
 - Offline-Spiel und gespeicherter Fortschritt funktionieren nach der Installation weiter. Das Startmenü bietet Installation und Update-Prüfung; bereitstehende Updates werden erst durch Antippen aktiviert. Die nativen Apps enthalten Spiel und Musik lokal. Pause bei Fokusverlust bleibt erhalten.
 
+Pip verbraucht unter Wasser 3 Energie pro Sekunde und beim Fliegen 8 Energie pro Sekunde. Direkter Kontakt mit einem Hai, Fischer, Riff oder Taucher beendet die Etappe sofort; andere gefährliche Kreaturen ziehen Energie ab.
+
 [Historische Nachweise: Energie und aktive Nahrungssuche](docs/energy.md). [Historische Abnahme zu Ticket #2](docs/adventure.md).
 
 [Abnahme zu früherem Ausweichen, Luftreaktionen und Salto-Kicks](docs/challenge.md).

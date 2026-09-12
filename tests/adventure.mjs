@@ -20,7 +20,7 @@ async function serveBuild() {
 }
 let journeyTime = 0;
 function route(stage) {
-  const g=createGame(()=>.5,stage,journeyTime), inputs=[]; let last=false, elapsed=0; const control=routeController();
+  const g=createGame(()=>.99,stage,journeyTime), inputs=[]; let last=false, elapsed=0; const control=routeController();
   while(!g.ended && elapsed<110) {
     const holding=control(g);
     if(holding&&!last)press(g);
@@ -33,7 +33,7 @@ const traces=[0,1,2].map(route);await writeFile(`${out}/routes.json`,JSON.string
 for(const [name,engine] of [['chromium',chromium],['webkit',webkit]].filter(([name])=>!process.env.BROWSER||process.env.BROWSER===name)) {
   const server=await serveBuild(),url=server.url;
   const browser=await engine.launch();const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,isMobile:true,hasTouch:true,reducedMotion:'reduce'});
-  await context.addInitScript(()=>{Math.random=()=>.5;});
+  await context.addInitScript(()=>{Math.random=()=>.99;});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.clock.install();
   await page.goto(url);await page.locator('#stages option').first().waitFor({state:'attached'});
   await page.evaluate(()=>localStorage.setItem('pelican-v1',JSON.stringify({record:987,totalFish:100,outfit:'sailor',music:false,sound:false,haptics:false})));

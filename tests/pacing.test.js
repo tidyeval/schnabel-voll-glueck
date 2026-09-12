@@ -91,6 +91,17 @@ test('paired sharks progress from staggered to parallel with recovery encounters
   assert.deepEqual(warningTimes, [.85, .7, .58]);
 });
 
+test('the buoy and coral combination keeps its middle passage clear of the fatal shark', () => {
+  for (const seed of [0, .5, .99]) {
+    const g = createGame(() => seed, 1); g.wave = STAGES[1].encounters.indexOf('buoy-coral-shark'); g.items = []; g.distance = g.nextEncounter;
+    step(g, .01, false);
+    const shark = g.items.find(item => item.kind === 'shark');
+    assert.equal(shark.lane, 'upper');
+    assert.equal(hitsTerrain({x:118,y:535},{kind:'buoy',x:118}),false);
+    assert.equal(hitsTerrain({x:118,y:535},{kind:'coral',x:118}),false);
+  }
+});
+
 test('every shark pair leaves a reachable band after a visible reaction delay', () => {
   for (const [key, form] of PAIR_PATTERNS) {
     const [stage, wave] = key.split(':').map(Number), g = createGame(() => .5, stage);
@@ -140,7 +151,7 @@ test('the first shark interrupts the fish route before thirty seconds but leaves
     for (let i = 0; i < 15 * 60 && !g.ended && g.wave < 3; i++) {
       let holding = control(g);
       const shark = g.items.find(item => item.kind === 'shark' && !item.hit && item.x > g.player.x - 90 && item.x < g.player.x + 300);
-      if (avoid && shark) holding = false;
+      if (!avoid && shark) holding = shark.y > g.player.y + g.player.vy * .11;
       const events = step(g, 1 / 60, holding);
       hit ||= events.some(event => event.kind === 'hurt') && g.items.some(item => item.kind === 'shark' && item.hit);
       warned ||= events.some(event => event.kind === 'warning');

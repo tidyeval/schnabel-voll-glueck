@@ -31,7 +31,7 @@ After the first implementation, human playtesting found the journey still too ea
 - Preserve the recognizable passage in paired encounters. Tracking and lunges must not silently collapse it after the player commits; use constrained movement and readable anticipation.
 - Vary complete encounter patterns, including bands and offsets, rather than independently randomizing every actor. Preserve introductions before combinations and avoid identical consecutive pattern/band assignments.
 - Follow demanding pairs with an easier collecting and breathing opportunity. Fish routes should support genuine choices rather than repeatedly placing fish and sharks on the same route.
-- Keep steering, cargo effects, air capacity, and contact damage unchanged initially so the effect of encounter changes can be evaluated separately.
+- Keep steering, cargo effects, and air capacity unchanged. Following Android playtesting, make sustained flight expensive and distinguish fatal obstacles from energy-draining contacts.
 
 ## Starting progression for tuning
 
@@ -55,6 +55,8 @@ These numeric values are tuning seeds. Record the final chosen values and ration
 - [x] AC4: Pair fish routes visibly communicate the changing safe passage while optional golden fish reward risk. Every pair remains escapable from representative entry states with full cargo under actual shark tracking and dash movement.
 - [x] AC5: Multiple complete journeys remain finishable under normal energy and air rules with actual input control after the stronger tuning. Existing damage, tricks, banking, unlocks, and replay remain correct.
 - [ ] AC6: Representative encounters remain readable in Chromium and WebKit at small mobile sizes and with reduced motion. Human playtesting covers the progression and repeated attempts; feedback on repetition, warning clarity, difficulty, and failure causes is recorded and material issues are addressed before declaring the balancing complete.
+- [x] AC7: Flying drains 8 energy per second after the opening grace period, while underwater movement retains its 3-energy drain.
+- [x] AC8: Direct contact with a shark, fisherman, reef, or diver immediately ends the current stage. Other harmful creatures retain one-time energy damage and contact protection.
 
 ## Proof
 
@@ -64,6 +66,8 @@ These numeric values are tuning seeds. Record the final chosen values and ration
 - AC4: Extend the existing model/controller checks with pattern-specific escape inputs, representative entry depths, empty/full cargo, relevant air states, and supported frame intervals. Include an explicit reaction delay before evasion and record the chosen allowance. Verify complete trajectories through moving paired hazards; do not use only static geometry or remove hazards for the proof.
 - AC5: Reuse complete-route model tests and the real-input browser adventure check with representative seeds. Extend the controller only as necessary to react to visible hazards; it must not rewrite game state or rely on future hidden random choices. Run existing relevant rule and progress tests.
 - AC6: Capture and inspect single, staggered, parallel, urgent-air, and recovery scenes at 320×568 and 390×844 in both engines, including reduced motion. Record human attempts across all stages and at least repeated journeys, noting hit timing, death causes, remaining air, perceived repetition, and whether the player understood the escape. Automated completion alone cannot establish this criterion.
+- AC7: Compare dry and submerged exhaustion time from full energy with no pickups and verify that normal routes remain playable.
+- AC8: Exercise each fatal contact and representative nonfatal creatures through the game model, asserting the end reason, end event, and retained energy damage behavior.
 
 ## Implementation order
 
@@ -110,3 +114,7 @@ Keep these steps in this one owning task. Prefer small data descriptions and exi
 - Added real recovery distance after pairs and turtle groups, plus early warning space before blocking terrain. This preserved breathing and full-cargo escapes without removing the tighter hazard sequence.
 - All 45 model tests passed, including 162 complete routes and every authored pair escape. Chromium and WebKit completed all three stages through real key input and passed banking, replay, reload, offline, mobile HUD, and reduced-motion checks.
 - Renewed human playtesting of the second pass remains the only unchecked part of AC6.
+- Android playtesting found sustained flight too safe. Flight now drains 8 energy per second after grace, compared with 3 underwater, limiting a full-energy flight to roughly 14.5 seconds.
+- Shark, fisherman, reef, and diver contact now ends the stage immediately. Gull, jellyfish, pufferfish, surfer, driftwood, harpoon, hull, and net contacts retain their energy-damage behavior.
+- All 47 model tests passed after the fatal-contact change. Eighteen representative safe routes covered every stage, empty/full cargo, and three frame intervals; the constrained buoy-coral-shark combination retains a clear middle passage.
+- Chromium and WebKit each completed the full three-stage journey with real key input, then passed banking, replay, reload, and offline restart. Automated runs collected 94/83/70 fish in Chromium and 95/85/72 in WebKit.

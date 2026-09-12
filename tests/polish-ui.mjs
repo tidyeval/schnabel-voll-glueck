@@ -24,7 +24,8 @@ for (const [name,engine] of [['chromium',chromium],['webkit',webkit]]) {
    await page.locator('#resume').click();await page.keyboard.down('Space');await page.clock.runFor(6500);
    assert.ok(await page.locator('#air').evaluate(e=>e.classList.contains('low-air')));
    assert.equal(await page.locator('#combo').count(),0,'combo badge is absent');
-   const panel=await page.locator('#status-panel').boundingBox();assert.ok(panel.x>=0&&panel.x+panel.width<=width&&panel.height<=64,'shared status panel stays compact');
+   const panel=await page.locator('#status-panel').boundingBox();const score=await page.locator('.score-row').boundingBox();assert.ok(panel.x>=0&&panel.x+panel.width<=width&&panel.height<=64,'shared status panel stays compact');
+   assert.ok(score.y+score.height+8<=panel.y,`score and status panel need breathing room: ${JSON.stringify({score,panel})}`);
    assert.equal(await page.locator('#status-panel').evaluate(panel=>[...panel.querySelectorAll('span,strong,.energy-track,.air-track')].every(child=>{const p=panel.getBoundingClientRect(),c=child.getBoundingClientRect();return c.left>=p.left&&c.right<=p.right&&c.top>=p.top&&c.bottom<=p.bottom;})),true,'status content stays inside its panel');
    assert.equal(await page.locator('#toast').textContent().then(t=>t.includes('Luft wird knapp')),false);
    await page.screenshot({path:`test-results/polish/ui/${name}-low-air-${reducedMotion}.png`});
