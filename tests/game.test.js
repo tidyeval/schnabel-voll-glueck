@@ -104,7 +104,7 @@ test('authored stages introduce individual dangers before combinations and finis
     const g = createGame(() => .5, stage);
     for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
-      const dangers = g.items.filter(i => !['fish', 'bubble', 'turtle'].includes(i.kind));
+      const dangers = g.items.filter(i => !['fish', 'bubble', 'turtle', 'baitball', 'current'].includes(i.kind));
       dangers.forEach(i => seen.add(i.kind));
       if (STAGES[stage].encounters[wave] === 'calm') assert.equal(dangers.length, 0);
       assert.equal(dangers.length, STAGES[stage].encounters[wave].split('-').filter(kind => !['calm', 'turtle'].includes(kind)).length);

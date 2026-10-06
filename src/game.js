@@ -112,6 +112,31 @@ export const PAIR_PATTERNS = new Map([
   ['1:3', 'staggered'], ['1:6', 'parallel'], ['1:9', 'staggered'],
   ['2:1', 'parallel'], ['2:4', 'staggered'], ['2:6', 'parallel'], ['2:9', 'staggered'], ['2:11', 'parallel'],
 ]);
+// Spectacle between the regular encounters. Shows are scenery only; bait balls and currents are optional rewards.
+export const SET_PIECES = new Map([
+  ['0:5', 'baitball'], ['0:8', 'rainbow'],
+  ['1:4', 'current'], ['1:7', 'trawler'], ['1:9', 'squall'],
+  ['2:2', 'baitball'], ['2:5', 'whale'], ['2:7', 'current'], ['2:9', 'storm'],
+]);
+export const FRENZY = { combo: 15, duration: 6, interval: .24 };
+export const JUMP = { from: 430, range: 250, boost: 300, gravity: 700, ceiling: 150 };
+export const NEAR_MISS = { margin: 26, points: 30 };
+export function sardinePositions(ball, time) {
+  return ball.seeds.map((seed, i) => {
+    const angle = seed * 6.283 + time * (1.1 + (i % 5) * .22) * (i % 2 ? 1 : -1);
+    const radius = (16 + (seed * 97 % 1) * 46) * (1 + ball.scatter * 1.1);
+    return { x: ball.x + Math.cos(angle) * radius * 1.25, y: ball.y + Math.sin(angle) * radius * .8, eaten: ball.eaten[i], heading: Math.cos(angle) * (i % 2 ? 1 : -1) };
+  });
+}
+export const currentSpan = item => ({ left: item.x, right: item.x + item.length, top: item.y - 46, bottom: item.y + 46 });
+function hazardGap(item, p) {
+  const dx = Math.abs(item.x - p.x), dy = Math.abs(item.y - p.y);
+  if (item.kind === 'shark') return p.wet ? Math.max(dx - 58, dy - 34) : Infinity;
+  if (item.kind === 'gull') return item.kicked ? Infinity : Math.max(dx - 36, dy - 30);
+  if (item.kind === 'jelly') return Math.max(dx - 35, item.y - 35 - p.y, p.y - (item.y + 20 + item.phase * 65));
+  if (item.kind === 'puffer') return item.phase === 'puffed' ? Math.hypot(dx, dy) - pufferRadius(item) - 18 : Infinity;
+  return Infinity;
+}
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2 };
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
@@ -200,6 +225,19 @@ function encounter(game) {
     });
   }
   game.encounterTrace.push({ stage: game.stage, wave, entry, form: pairPattern, bands });
+  const piece = SET_PIECES.get(`${game.stage}:${wave}`);
+  if (piece === 'baitball') {
+    const seeds = Array.from({ length: 22 }, (_, i) => (i * .618034 + .13) % 1);
+    game.items.push({ kind: 'baitball', x: 1010, y: 560, seeds, eaten: seeds.map(() => false), scatter: 0, left: seeds.length });
+  } else if (piece === 'current') {
+    const taken = bands.length ? bands : [];
+    const band = UNDERWATER_BANDS.find(candidate => !taken.includes(candidate.id)) || UNDERWATER_BANDS[1];
+    game.items.push({ kind: 'current', x: 700, y: band.y, length: 560, entered: false });
+    for (let i = 0; i < 8; i++) game.items.push({ kind: 'fish', x: 760 + i * 62, y: band.y + Math.sin(i * .9) * 14, golden: false, lane: 'alternate', route: wave, bonus: true });
+  } else if (piece) {
+    game.show = { name: piece, start: game.time };
+    game.pendingShow = piece;
+  }
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
   if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: sharkCount > 1 ? UNDERWATER_BANDS[bandVariant].y : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
@@ -230,6 +268,7 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
       { kind: 'shark', x: 780, y: 420, baseY: 420, lane: 'upper', encounterForm: 'single', warningTime: 1.15 },
       ...Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 590 + Math.sin(i * .6) * 18, golden: false })),
     ],
+    frenzy: 0, frenzySpawn: 0, frenzyArmed: true, boost: 0, nearMisses: 0, show: null,
     nextEncounter: 100, wave: 0, boats: 1, lastPairBand: -1, encounterTrace: [], ended: false,
   };
 }
@@ -259,7 +298,9 @@ export function step(game, dt, holding) {
   }
   game.time += dt;
   const waitingNest = game.items.find(item => item.kind === 'nest' && item.final && item.x <= p.x + 55);
-  game.speed = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed;
+  game.speed = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed * (1 + .35 * game.boost);
+  if (game.pendingShow) { events.push({ kind: 'show', name: game.pendingShow }); game.pendingShow = null; }
+  game.frenzy = Math.max(0, game.frenzy - dt);
   game.distance += game.speed * dt;
   p.hurt = Math.max(0, (p.hurt || 0) - dt);
   // Check before encounters/nest arrival: coasting cannot bypass exhaustion.
@@ -277,21 +318,47 @@ export function step(game, dt, holding) {
   }
   const weight = game.cargo / WORLD.capacity;
   const target = holding ? (p.wet ? 240 + weight * 20 : 255) : (p.wet ? -210 + weight * 45 : -100 + weight * 25);
-  p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
-  p.y = clamp(p.y + p.vy * dt, 265, 710);
-  if (p.y === 265 || p.y === 710) p.vy = 0;
+  if (p.jump && !p.wet && !holding) {
+    // A deep dive launches Pip ballistically above his usual gliding height.
+    p.vy += JUMP.gravity * dt;
+    p.y += p.vy * dt;
+    if (p.y < JUMP.ceiling) { p.y = JUMP.ceiling; p.vy = Math.max(0, p.vy); }
+    if (p.y >= 265 && p.vy > 0) { p.y = 265; p.vy = 0; p.jump = false; }
+    else if (p.y > 265 && p.vy >= -100) p.jump = false;
+  } else {
+    p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
+    p.y = clamp(p.y + p.vy * dt, Math.min(265, p.y), 710);
+    if (p.y >= 265) p.jump = false;
+    if (p.y === 265 || p.y === 710) p.vy = 0;
+  }
+  if (p.wet) p.deepest = Math.max(p.deepest || 0, p.y);
   p.relief = Math.max(0, (p.relief || 0) - dt); p.bump = Math.max(0, (p.bump || 0) - dt); p.confused = Math.max(0, (p.confused || 0) - dt); p.kick = Math.max(0, (p.kick || 0) - dt);
   p.gulp = Math.max(0, p.gulp - dt); p.breach = Math.max(0, p.breach - dt);
   const wet = p.y > WORLD.water + 12;
   if (wet !== p.wet) {
-    events.push({ kind: wet ? 'splash' : 'breach', x: p.x, y: WORLD.water });
-    if (wet) { game.diveFish = 0; p.turns = 0; p.spin = 0; p.kick = 0; p.trickUntil = -1; }
-    else { p.relief = previousAir.level ? 1.5 : .65; p.breach = .6; p.vy = -235; p.trickUntil = game.time + 1.2; p.taps = 0; p.tapAt = -10; p.trickUsed = false; }
+    const lift = wet ? 0 : clamp(((p.deepest || 0) - JUMP.from) / JUMP.range, 0, 1);
+    events.push({ kind: wet ? 'splash' : 'breach', x: p.x, y: WORLD.water, power: wet ? clamp(p.vy / 255, .3, 1) : .45 + lift * .55 });
+    if (wet) { game.diveFish = 0; p.turns = 0; p.spin = 0; p.kick = 0; p.trickUntil = -1; p.deepest = p.y; p.jump = false; }
+    else {
+      p.relief = previousAir.level ? 1.5 : .65; p.breach = .6; p.vy = -235 - lift * JUMP.boost; p.jump = lift > .3; p.lift = lift;
+      p.trickUntil = game.time + 1.2 + lift * .5; p.taps = 0; p.tapAt = -10; p.trickUsed = false;
+    }
     p.wet = wet;
   }
   if (p.turns && !p.wet) p.spin = Math.min(p.turns * Math.PI * 2, p.spin + dt * Math.PI * 2 / .65);
   game.comboTime = Math.max(0, game.comboTime - dt);
   if (!game.comboTime) game.combo = 0;
+  if (!game.combo) game.frenzyArmed = true;
+  if (game.frenzy > 0 && game.speed > 0 && game.nextEncounter !== Infinity) {
+    game.frenzySpawn -= dt;
+    if (game.frenzySpawn <= 0) {
+      game.frenzySpawn = FRENZY.interval;
+      const bonus = { kind: 'fish', x: 540, y: clamp((p.wet ? p.y : 450) + Math.sin(game.time * 3.2) * 46, 410, 690), golden: false, lane: 'alternate', bonus: true };
+      const blocked = game.items.some(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind) && Math.abs(item.x - bonus.x) < 150);
+      if (!blocked) game.items.push(bonus);
+    }
+  }
+  let inCurrent = false;
   if (game.distance >= game.nextEncounter) encounter(game);
   const beak = beakPosition(p);
   for (const item of game.items) {
@@ -306,6 +373,27 @@ export function step(game, dt, holding) {
         p.y = 285; p.vy = 0; p.spin = 0; p.turns = 0; p.feedX = item.x - 55;
         return events;
       }
+      continue;
+    }
+    if (item.kind === 'baitball') {
+      const near = Math.hypot(item.x - p.x, item.y - p.y) < 120;
+      item.scatter = clamp(item.scatter + (near ? dt * 2.5 : -dt * .6), 0, 1);
+      sardinePositions(item, game.time).forEach((sardine, i) => {
+        if (sardine.eaten || Math.hypot(sardine.x - beak.x, sardine.y - beak.y) > 26) return;
+        item.eaten[i] = true; item.left--;
+        game.score += 5; game.energy = Math.min(100, game.energy + 1); game.comboTime = Math.max(game.comboTime, 3); p.gulp = .3;
+        events.push({ kind: 'sardine', x: sardine.x, y: sardine.y, points: 5 });
+      });
+      if (!item.left && !item.cleared) { item.cleared = true; item.caught = true; game.score += 100; events.push({ kind: 'feast', x: p.x, y: p.y, points: 100 }); }
+      continue;
+    }
+    if (item.kind === 'current') {
+      const span = currentSpan(item);
+      if (p.wet && p.x > span.left && p.x < span.right && p.y > span.top && p.y < span.bottom) {
+        inCurrent = true;
+        if (!item.entered) { item.entered = true; events.push({ kind: 'current', x: p.x, y: p.y }); }
+      }
+      if (span.right < -40) item.caught = true;
       continue;
     }
     if (item.kind === 'turtle') {
@@ -427,16 +515,30 @@ export function step(game, dt, holding) {
         game.fish++; game.cargo = Math.min(WORLD.capacity, game.cargo + 1); game.combo++; if (p.wet) game.diveFish++;
         game.comboTime = 8.5; p.gulp = .42;
         game.bestCombo = Math.max(game.bestCombo, game.combo);
-        const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5));
+        const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5)) * (game.frenzy > 0 ? 2 : 1);
         game.score += points;
         game.energy = Math.min(100, game.energy + (item.golden ? ENERGY.golden : ENERGY.fish));
-        events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden });
+        events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden, combo: game.combo });
+        if (game.combo >= FRENZY.combo && game.frenzyArmed && !game.frenzy) {
+          game.frenzyArmed = false; game.frenzy = FRENZY.duration; game.frenzySpawn = 0;
+          events.push({ kind: 'frenzy', x: p.x, y: p.y });
+        }
         if (game.diveFish >= 5 && !game.mission) {
           game.mission = true; game.score += 100;
           events.push({ kind: 'mission', x: p.x, y: p.y });
         }
       }
     } else {
+      if (!item.hit && !item.nearDone) {
+        item.near = Math.min(item.near ?? Infinity, hazardGap(item, p));
+        if (item.x < p.x - 70) {
+          item.nearDone = true;
+          if (item.near < NEAR_MISS.margin && !p.hurt) {
+            game.score += NEAR_MISS.points; game.nearMisses++;
+            events.push({ kind: 'nearMiss', x: p.x, y: p.y, points: NEAR_MISS.points });
+          }
+        }
+      }
       const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
       const fisherHit = item.kind === 'boat' && hitsFisher(p, item);
       const hit = item.kind === 'shark'
@@ -481,11 +583,12 @@ export function step(game, dt, holding) {
       }
     }
   }
+  game.boost = clamp(game.boost + (inCurrent ? dt * 3 : -dt * 1.6), 0, 1);
   if (p.turns && p.spin >= p.turns * Math.PI * 2 && game.energy > 0) {
     const points = p.turns === 2 ? 120 : 50;
     game.score += points; events.push({ kind: 'trick', x: p.x, y: p.y, points, turns: p.turns });
     p.turns = 0; p.spin = 0;
   }
-  game.items = game.items.filter(item => !item.caught && item.x > -180);
+  game.items = game.items.filter(item => !item.caught && (item.x > -180 || item.kind === 'current'));
   return events;
 }

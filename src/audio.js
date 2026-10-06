@@ -31,11 +31,12 @@ export function createAudio(settings) {
     }
     context.resume().catch(() => {});
   }
-  function tone(frequency, duration, volume = .12, type = 'sine', delay = 0) {
+  function tone(frequency, duration, volume = .12, type = 'sine', delay = 0, slideTo = 0) {
     if (!context || context.state !== 'running') return;
     const time = context.currentTime + delay;
     const oscillator = context.createOscillator(), gain = context.createGain();
     oscillator.type = type; oscillator.frequency.value = frequency;
+    if (slideTo) { oscillator.frequency.setValueAtTime(frequency, time); oscillator.frequency.exponentialRampToValueAtTime(slideTo, time + duration); }
     gain.gain.setValueAtTime(0, time); gain.gain.linearRampToValueAtTime(volume, time + .015); gain.gain.exponentialRampToValueAtTime(.001, time + duration);
     oscillator.connect(gain); gain.connect(master); oscillator.start(time); oscillator.stop(time + duration + .03);
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
@@ -66,8 +67,17 @@ export function createAudio(settings) {
         track.gain.gain.setTargetAtTime(settings.music && scene === track.name ? envelope * .8 : 0, context.currentTime, .08);
       }
     },
-    effect(kind) {
+    effect(kind, detail) {
       if (settings.sound) {
+        if (kind === 'nearMiss') { tone(520, .22, .09, 'sine', 0, 1320); tone(1320, .16, .05, 'sine', .16); }
+        if (kind === 'sardine') tone(1500, .05, .035);
+        if (kind === 'current') tone(240, .5, .07, 'triangle', 0, 720);
+        if (kind === 'frenzy') [659, 784, 988, 1175, 1568].forEach((f, i) => tone(f, .22, .09, 'triangle', i * .055));
+        if (kind === 'feast') [784, 988, 1175, 1568].forEach((f, i) => tone(f, .3, .08, 'sine', i * .07));
+        if (kind === 'show' && detail === 'trawler') { tone(98, 1.3, .1, 'sawtooth'); tone(147, 1.3, .06, 'sawtooth'); }
+        if (kind === 'show' && detail === 'whale') { tone(180, 1.6, .09, 'sine', 0, 420); tone(420, 1.8, .07, 'sine', 1.4, 150); }
+        if (kind === 'show' && detail === 'storm') { tone(70, 1.4, .12, 'sawtooth', 2.2, 38); tone(64, 1.6, .12, 'sawtooth', 6.5, 36); tone(70, 1.5, .12, 'sawtooth', 10.3, 38); }
+        if (kind === 'show' && detail === 'rainbow') [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(f, .5, .04, 'sine', i * .12));
         if (kind === 'catch') { tone(880, .12, .13); tone(1174, .18, .09, 'sine', .06); }
         if (kind === 'splash' || kind === 'netSplash') tone(190, .2, kind === 'netSplash' ? .09 : .05, 'triangle');
         if (kind === 'breach') { tone(392, .18, .06); tone(587, .25, .04, 'sine', .08); }
@@ -75,7 +85,7 @@ export function createAudio(settings) {
         if (kind === 'hurt') { tone(160, .22, .08, 'triangle'); tone(120, .22, .05, 'triangle', .12); }
         if (kind === 'mission' || kind === 'trick' || kind === 'delivery' || kind === 'end') [523, 659, 784, 1046].forEach((f, i) => tone(f, .4, .08, 'sine', i * .1));
       }
-      if (settings.haptics && ['catch', 'hurt', 'mission'].includes(kind)) {
+      if (settings.haptics && ['catch', 'hurt', 'mission', 'nearMiss', 'frenzy', 'feast'].includes(kind)) {
         if (Capacitor.isNativePlatform()) Haptics.impact({ style: kind === 'hurt' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});
         else if (navigator.vibrate) navigator.vibrate(kind === 'hurt' ? 60 : 10);
       }

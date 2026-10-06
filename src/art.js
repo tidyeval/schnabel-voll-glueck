@@ -1,4 +1,5 @@
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius } from './game.js';
+import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawBaitball, drawCurrent, drawJuice, swellOf } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -301,50 +302,47 @@ function boat(c, item, water, t) {
   }
   c.restore();
 }
-export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false) {
+export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false, fx = null) {
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;
   const d = menu ? (reducedMotion ? 0 : t * 12) : game.distance;
   const motion = reducedMotion ? 0 : t;
   c.clearRect(0, 0, 480, 850);
-  c.fillStyle = gradient(c, 0, water, '#b9dedb', '#f5e8c8'); c.fillRect(0, 0, 480, water);
-  c.fillStyle = gradient(c, water - 150, water, '#f7cfb000', '#efb68a3d'); c.fillRect(0, water - 150, 480, 150);
-  ellipse(c, 397, water - 140, 61, 61, '#fff0bd35'); ellipse(c, 397, water - 140, 43, 43, '#fff4c777'); ellipse(c, 397, water - 140, 29, 29, '#ffe7a6');
-  cloud(c, 68 - d * .025 % 160, 92, .95, .55); cloud(c, 406 - d * .015 % 120, 125, .65, .55); cloud(c, 240 - d * .02 % 100, water - 122, .45, .55);
-  island(c, 24 - d * .055 % 780, water - 6, motion);
-  island(c, 805 - d * .055 % 780, water - 6, motion);
-  c.save(); c.translate(415, water - 1); c.scale(.5, .5); path(c, '#e5d3aa', p => { p.moveTo(-80, 0); p.quadraticCurveTo(-15, -31, 69, 0); }); palm(c, 0, -6, .8, motion); palm(c, -23, -5, .53, motion); c.restore();
-  if (!menu && game.stage === 1) {
-    for (let i = 0; i < 6; i++) {
-      const x = ((i * 115 - d * .12) % 760 + 760) % 760 - 140;
-      path(c, '#89aaa0', p => { p.rect(x, water - 50, 65, 43); p.moveTo(x - 5, water - 50); p.lineTo(x + 30, water - 74); p.lineTo(x + 70, water - 50); });
-      c.fillStyle = '#d9dac0'; c.fillRect(x + 12, water - 38, 13, 17); c.fillRect(x + 42, water - 38, 13, 17);
-      path(c, null, p => { p.moveTo(x, water - 3); p.lineTo(x + 92, water - 3); p.moveTo(x + 8, water - 3); p.lineTo(x + 8, water + 5); }, '#8c8970', 5);
+  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = stage === 2;
+  c.save();
+  if (fx && (fx.shakeX || fx.shakeY)) { c.translate(240 + fx.shakeX, 425 + fx.shakeY); c.scale(1.03, 1.03); c.translate(-240, -425); }
+  drawSky(c, stage, water, d, motion, menu ? null : game, reducedMotion, () => {
+    cloud(c, 68 - d * .025 % 160, 92, .95, .55); cloud(c, 406 - d * .015 % 120, 125, .65, .55); cloud(c, 240 - d * .02 % 100, water - 122, .45, .55);
+    island(c, 24 - d * .055 % 780, water - 6, motion);
+    island(c, 805 - d * .055 % 780, water - 6, motion);
+    c.save(); c.translate(415, water - 1); c.scale(.5, .5); path(c, '#e5d3aa', p => { p.moveTo(-80, 0); p.quadraticCurveTo(-15, -31, 69, 0); }); palm(c, 0, -6, .8, motion); palm(c, -23, -5, .53, motion); c.restore();
+    if (stage === 1) {
+      for (let i = 0; i < 6; i++) {
+        const x = ((i * 115 - d * .12) % 760 + 760) % 760 - 140;
+        path(c, '#89aaa0', p => { p.rect(x, water - 50, 65, 43); p.moveTo(x - 5, water - 50); p.lineTo(x + 30, water - 74); p.lineTo(x + 70, water - 50); });
+        c.fillStyle = '#d9dac0'; c.fillRect(x + 12, water - 38, 13, 17); c.fillRect(x + 42, water - 38, 13, 17);
+        path(c, null, p => { p.moveTo(x, water - 3); p.lineTo(x + 92, water - 3); p.moveTo(x + 8, water - 3); p.lineTo(x + 8, water + 5); }, '#8c8970', 5);
+      }
     }
-  }
-  // Distant seabirds.
-  for (let i = 0; i < 3; i++) { const x = ((320 + i * 47 - d * .08) % 580 + 580) % 580; const y = water - 91 + Math.sin(i * 2) * 22; path(c, null, p => { p.moveTo(x - 7, y); p.quadraticCurveTo(x - 3, y - 5, x, y); p.quadraticCurveTo(x + 4, y - 5, x + 8, y); }, '#799d93', 1.3); }
-  c.fillStyle = gradient(c, water, 850, !menu && game.stage === 2 ? '#78bdbb' : '#69bcae', !menu && game.stage === 2 ? '#386879' : '#285f68'); c.fillRect(0, water, 480, 850 - water);
-  c.fillStyle = gradient(c, water, water + 100, '#f8dfad38', '#f8dfad00'); c.fillRect(0, water, 480, 100);
-  for (let i = 0; i < 5; i++) { const x = i * 130 - 150 + Math.sin(motion * .15) * 18;
-    path(c, gradient(c, water, 840, '#f7f5be15', '#c1e3b200'), p => { p.moveTo(x, water); p.lineTo(x + 45, water); p.lineTo(x + 180, 850); p.lineTo(x + 80, 850); p.closePath(); }); }
-  for (let i = 0; i < 28; i++) {
-    const x = ((i * 83.73 - d * .27) % 520 + 520) % 520 - 20;
-    const y = water + 25 + (i * 41.4) % (820 - water);
-    ellipse(c, x, y + Math.sin(motion + i) * 4, i % 3 === 0 ? 2 : 1, i % 3 === 0 ? 2 : 1, '#e8f3cc35');
-  }
+    // Distant seabirds.
+    for (let i = 0; i < 3; i++) { const x = ((320 + i * 47 - d * .08) % 580 + 580) % 580; const y = water - 91 + Math.sin(i * 2) * 22; path(c, null, p => { p.moveTo(x - 7, y); p.quadraticCurveTo(x - 3, y - 5, x, y); p.quadraticCurveTo(x + 4, y - 5, x + 8, y); }, '#799d93', 1.3); }
+  });
+  drawWater(c, stage, water, d, motion, menu ? null : game, reducedMotion);
+  if (!menu) drawWhale(c, game, motion, reducedMotion);
   if (!menu && game.stage === 2) {
     for (let i = 0; i < 9; i++) {
       const x = ((i * 79 - d * .22) % 650 + 650) % 650 - 80;
       for (let j = -1; j <= 1; j++) path(c, null, p => { p.moveTo(x, 824); p.quadraticCurveTo(x + j * 30, 800, x + j * 24 + Math.sin(motion + i) * 2, 730 + Math.abs(j) * 17); }, i % 2 ? '#c59191' : '#b5a0b9', 8);
       ellipse(c, x + 28, 817, 19, 12, '#b5bb91');
+      if (night) { c.globalCompositeOperation = 'lighter'; ellipse(c, x, 738, 16, 16, '#ff9fd012'); c.globalCompositeOperation = 'source-over'; }
     }
   }
   // Sandy seabed and gently moving sea grass frame the action.
-  path(c, '#578c81', p => { p.moveTo(0, 833); p.bezierCurveTo(120, 807, 172, 852, 282, 832); p.quadraticCurveTo(398, 803, 480, 825); p.lineTo(480, 850); p.lineTo(0, 850); });
+  path(c, theme.seabed, p => { p.moveTo(-30, 833); p.bezierCurveTo(120, 807, 172, 852, 282, 832); p.quadraticCurveTo(398, 803, 510, 825); p.lineTo(510, 880); p.lineTo(-30, 880); });
+  drawCaustics(c, stage, d, motion, reducedMotion);
   for (let side = 0; side < 2; side++) {
     for (let i = 0; i < 8; i++) { const x = side ? 475 - i * 9 : i * 9 - 15; const h = 37 + (i * 31) % 112;
-      path(c, i % 2 ? '#6b9d7b' : '#3f7e6c', p => { p.moveTo(x - 4, 850); p.bezierCurveTo(x - 18, 800, x + Math.sin(motion + i) * 12, 850 - h, x + 12, 840 - h); p.bezierCurveTo(x + 2, 820 - h, x + 20, 805, x + 5, 850); }, '#386f63', .7);
+      path(c, theme.grass[i % 2 ? 0 : 1], p => { p.moveTo(x - 4, 850); p.bezierCurveTo(x - 18, 800, x + Math.sin(motion + i) * 12, 850 - h, x + 12, 840 - h); p.bezierCurveTo(x + 2, 820 - h, x + 20, 805, x + 5, 850); }, '#386f63', .7);
     }
     ellipse(c, side ? 456 : 23, 836, 25, 11, '#96b5a0'); ellipse(c, side ? 426 : 57, 844, 17, 9, '#81a996');
   }
@@ -504,6 +502,9 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         ellipse(c, item.x - 5, item.y - 6, 4, 5, '#ffffffcc');
 
       }
+      if (item.kind === 'current') drawCurrent(c, item, motion, reducedMotion);
+      if (item.kind === 'baitball') drawBaitball(c, item, game.time, night);
+      if (night && (item.kind === 'fish' || item.kind === 'jelly')) { c.globalCompositeOperation = 'lighter'; ellipse(c, item.x, item.y - (item.kind === 'jelly' ? 12 : 0), item.kind === 'jelly' ? 44 : 25, item.kind === 'jelly' ? 40 : 17, item.kind === 'jelly' ? '#ff9ee01c' : item.golden ? '#ffd9701c' : '#ffc9a00e'); c.globalCompositeOperation = 'source-over'; }
       if (item.kind === 'fish') fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion);
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
@@ -517,17 +518,30 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     c.save();
     pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
   }
+  const swell = menu ? 1 : swellOf(game, stage, reducedMotion);
   for (let i = 0; i < 4; i++) {
-    path(c, null, p => { for (let x = -10; x <= 490; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + motion * 1.6 + i * .3) * 3; if (x === -10) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#fff1c8cc', '#dceccf88', '#c3ead455', '#b7e4cc22'][i], i === 0 ? 2 : 1);
+    path(c, null, p => { for (let x = -30; x <= 510; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + motion * 1.6 + i * .3) * 3 * swell + Math.sin(x * .011 - motion * .9) * 2.2 * (swell - 1); if (x === -30) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#fff1c8cc', '#dceccf88', '#c3ead455', '#b7e4cc22'][i], i === 0 ? 2 : 1);
   }
+  if (!reducedMotion) for (let i = 0; i < 7; i++) {
+    const x = ((i * 77 - d * .5) % 540 + 540) % 540 - 30, glint = Math.max(0, Math.sin(motion * 2.4 + i * 1.9));
+    c.globalAlpha = glint * .8; path(c, night ? '#eef3ff' : '#fffbe0', p => p.ellipse(x, water + Math.sin(x * .025 + motion * 1.6) * 3 * swell, 5 + glint * 5, 1.3, 0, 0, TAU)); c.globalAlpha = 1;
+  }
+  if (!menu) drawJuice(c, fx, game, water, motion, reducedMotion);
   for (const e of effects) {
     c.save(); c.globalAlpha = Math.min(1, e.life * 2);
-    if (e.kind === 'catch' || e.kind === 'mission' || e.kind === 'trick' || e.kind === 'outsmart' || e.kind === 'delivery' || e.kind === 'kick') {
+    if (e.label) {
+      const rise = (1 - e.life) * 34, size = e.big ? 21 : 15;
+      c.font = `bold ${size}px 'Trebuchet MS'`; c.textAlign = 'center'; c.lineWidth = 4; c.strokeStyle = '#1f4a4fcc'; c.lineJoin = 'round';
+      const lx = clamp(e.x, 80, 400), ly = e.y - 46 - rise;
+      c.strokeText(e.label, lx, ly); c.fillStyle = e.colour || '#fff2b6'; c.fillText(e.label, lx, ly);
+    }
+    if (['catch', 'mission', 'trick', 'outsmart', 'delivery', 'kick', 'feast', 'nearMiss', 'frenzy'].includes(e.kind)) {
       if (!reducedMotion) for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
       if (e.kind === 'kick') { c.fillStyle = '#fff2b6'; c.font = "bold 15px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText(`KUNG-FU +${e.points}`, e.x, e.y - 42); }
-    } else if (!reducedMotion && ['splash', 'breach', 'netSplash'].includes(e.kind)) {
+    } else if (!fx && !reducedMotion && ['splash', 'breach', 'netSplash'].includes(e.kind)) {
       for (let i = 0; i < 9; i++) { const v = i - 4; const age = 1 - e.life; ellipse(c, e.x + v * age * (e.kind === 'netSplash' ? 31 : 19), e.y - Math.sin(age * Math.PI) * ((e.kind === 'breach' ? 45 : 27) - Math.abs(v) * 3), 2 * e.life, 4 * e.life, '#e8f8de'); }
     }
     c.restore();
   }
+  c.restore();
 }

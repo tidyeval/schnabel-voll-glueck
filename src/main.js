@@ -4,6 +4,7 @@ import { App } from '@capacitor/app';
 import { createGame, step, press, WORLD, STAGES, airState } from './game.js';
 import { drawWorld } from './art.js';
 import { createAudio } from './audio.js';
+import { createJuice } from './juice.js';
 import { readProgress, recordAttempt, attemptFromGame, applyAttempt } from './progress.js';
 import { applyTranslations, currentLocale, formatNumber, setLocale, stageName, t } from './i18n.js';
 
@@ -26,6 +27,8 @@ const prefs = initial;
 try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch { /* A later explicit save will report failure. */ }
 let selectedStage = Math.min(prefs.completed, STAGES.length - 1);
 const audio = createAudio(prefs);
+const juice = createJuice(reducedMotion);
+const labels = { nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'] };
 let game = createGame(), mode = 'menu', holding = false, effects = [], last = 0, animation = 0, toastUntil = 0, needsDraw = true;
 function text(id, value) { if ($(id).textContent !== String(value)) $(id).textContent = value; }
 function syncPrefs(latest) { Object.assign(prefs, latest); }
@@ -74,13 +77,13 @@ document.querySelectorAll('[data-locale]').forEach(button => button.onclick = ()
 
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start(elapsed) {
-  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; mode = 'playing'; holding = false;
+  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
   $('toast').classList.add('hidden'); audio.start(); updateHud(); canvas.focus();
 }
 function home() {
   selectedStage = Math.min(prefs.completed, STAGES.length - 1);
-  closeDialogs(); mode = 'menu'; holding = false; effects = []; audio.start('menu');
+  closeDialogs(); mode = 'menu'; holding = false; effects = []; juice.reset(); audio.start('menu');
   $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); refreshMenu(); $('play').focus();
 }
 function pause(showDialog = true) {
@@ -188,20 +191,22 @@ function frame(now) {
   if (mode === 'playing' || mode === 'menu') animation += dt;
   if (mode === 'playing') {
     const wasFeeding = game.feeding > 0;
-    for (const event of step(game, dt, holding)) {
+    for (const event of step(game, dt * juice.timeScale(dt), holding)) {
       if (event.kind === 'end') { finish(); break; }
-      if (event.x !== undefined && event.kind !== 'warning') effects.push({ ...event, life: 1 });
-      audio.effect(event.kind);
+      juice.onEvent(event, game);
+      const label = labels[event.kind];
+      if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
+      audio.effect(event.kind, event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }
     if (!wasFeeding && game.feeding > 0) audio.start('menu');
     updateHud();
   }
-  if (mode !== 'paused') { for (const effect of effects) effect.life -= dt; effects = effects.filter(e => e.life > 0); }
+  if (mode !== 'paused') { for (const effect of effects) effect.life -= dt; effects = effects.filter(e => e.life > 0); juice.update(dt, game, mode === 'playing'); }
   if (now > toastUntil) $('toast').classList.add('hidden');
   audio.update(animation);
   if (mode !== 'paused' || needsDraw) {
-    drawWorld(ctx, game, mode, reducedMotion && mode === 'menu' ? 0 : animation, prefs.outfit, effects, reducedMotion);
+    drawWorld(ctx, game, mode, reducedMotion && mode === 'menu' ? 0 : animation, prefs.outfit, effects, reducedMotion, juice.view());
     needsDraw = false;
   }
   requestAnimationFrame(frame);
