@@ -82,6 +82,6 @@ test('set pieces sit on harmless or solitary encounters and never add dangers', 
   for (const [key, piece] of SET_PIECES) {
     const [stage, wave] = key.split(':').map(Number);
     assert.ok(STAGES[stage].encounters[wave], key);
-    if (['baitball', 'current'].includes(piece)) assert.equal(STAGES[stage].encounters[wave], 'turtle-turtle-gull', `${piece} needs calm water`);
+    if (['baitball', 'current', 'dolphins'].includes(piece)) assert.equal(STAGES[stage].encounters[wave], 'turtle-turtle-gull', `${piece} needs calm water`);
   }
 });

@@ -10,15 +10,15 @@ export const THEMES = [
     water: ['#6fc4b6', '#256068'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
     seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1,
   },
-  { // Fischerhafen: golden hour.
-    sky: [[0, '#8f7fae'], [.45, '#e79a86'], [.8, '#ffc58a'], [1, '#ffe0a0']], glow: '#ff9a5c66', far: '#9a6f86', tint: 'rgba(124,58,62,.42)',
-    water: ['#77ad8f', '#1f4846'], surface: '#ffc98a66', rays: '#ffd39a', rayAlpha: .11, mote: '#ffe6b03d',
+  { // Fischerhafen: warm, sunny afternoon.
+    sky: [[0, '#8fd0e6'], [.5, '#ffd9a8'], [.85, '#ffe2a0'], [1, '#fff0c0']], glow: '#ffb76a55', far: '#c79a8c', tint: 'rgba(255,176,110,.12)',
+    water: ['#6fc7b0', '#24605c'], surface: '#ffc98a66', rays: '#ffd39a', rayAlpha: .11, mote: '#ffe6b03d',
     seabed: '#4c7a68', grass: ['#6f9668', '#3c6b58'], rocks: '#2f5a55', swell: 1.2,
   },
-  { // Korallenriff: dusk turning into night.
-    sky: [[0, '#151b47'], [.5, '#3a3672'], [.85, '#8b5f8c'], [1, '#e09a86']], glow: '#ff9f8a44', far: '#2b2d5e', tint: 'rgba(24,30,78,.62)',
-    water: ['#3b8fa6', '#10294a'], surface: '#cfe0ff3a', rays: '#bcd8ff', rayAlpha: .07, mote: '#bfe9ff30',
-    seabed: '#2f5f73', grass: ['#3f8a86', '#235a66'], rocks: '#173a56', swell: 1.1,
+  { // Korallenriff: bright candy sunset.
+    sky: [[0, '#7fd3e8'], [.5, '#ffc3d2'], [.85, '#ffd6a0'], [1, '#fff0c4']], glow: '#ff9fb055', far: '#c795a8', tint: 'rgba(255,150,170,.1)',
+    water: ['#4fc6c2', '#1c5f78'], surface: '#fff0d044', rays: '#ffe9c4', rayAlpha: .12, mote: '#fff0c838',
+    seabed: '#3f8a86', grass: ['#58b08c', '#2f7f78'], rocks: '#3a7c88', swell: 1.1,
   },
 ];
 
@@ -41,7 +41,7 @@ export function showState(game, reducedMotion) {
 // Passing ships and storms make the surface line heave; the collision water line is unchanged.
 export function swellOf(game, stage, reducedMotion) {
   const show = showState(game, reducedMotion);
-  return THEMES[stage].swell + (show && ['trawler', 'storm', 'squall'].includes(show.name) ? show.envelope * (show.name === 'squall' ? .7 : 1.5) : 0);
+  return THEMES[stage].swell + (show && show.name === 'trawler' ? show.envelope * 1.5 : 0);
 }
 
 // Scenery is painted first, tinted in place, and the sky is slipped in behind it.
@@ -88,15 +88,9 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
   if (show?.name === 'rainbow') rainbow(c, water, show);
   // Sun or moon.
   if (stage === 2) {
-    fill(c, '#f6f1d6', p => p.arc(392, 118, 25, 0, TAU));
-    fill(c, '#f6f1d622', p => p.arc(392, 118, 44, 0, TAU));
-    fill(c, '#f6f1d612', p => p.arc(392, 118, 70, 0, TAU));
-    for (let i = 0; i < 46; i++) {
-      const twinkle = reducedMotion ? .7 : .55 + Math.sin(motion * (1 + hash(i) * 2) + i) * .45;
-      c.globalAlpha = clamp(twinkle, .1, 1) * (1 - hash(i + 9) * .5);
-      fill(c, '#fff8e0', p => p.arc(hash(i + 1) * 480, hash(i + 2) * (water - 110), hash(i + 3) > .8 ? 1.6 : 1, 0, TAU));
-    }
-    c.globalAlpha = 1;
+    fill(c, '#ffe9b0', p => p.arc(392, water - 110, 30, 0, TAU));
+    fill(c, '#ffd49a66', p => p.arc(392, water - 110, 52, 0, TAU));
+    fill(c, '#ffb7a03d', p => p.arc(392, water - 110, 84, 0, TAU));
   } else if (stage === 1) {
     fill(c, '#fff0b8', p => p.arc(322, water - 30, 44, 0, TAU));
     fill(c, '#ffd48a66', p => p.arc(322, water - 30, 66, 0, TAU));
@@ -109,7 +103,7 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
   c.fillStyle = vertical(c, water - 150, water, [[0, th.glow.slice(0, 7) + '00'], [1, th.glow]]); c.fillRect(-30, water - 150, 540, 150);
   c.fillStyle = vertical(c, 0, water, th.sky); c.fillRect(-30, -30, 540, water + 30);
   c.globalCompositeOperation = 'source-over';
-  if (show && ['squall', 'storm', 'rainbow'].includes(show.name)) weather(c, water, show, motion);
+  if (show?.name === 'goldenHour') goldenHour(c, water, show, motion);
 }
 
 function rainbow(c, water, show) {
@@ -134,27 +128,39 @@ function trawler(c, water, show, motion) {
   fill(c, '#f3faeaaa', p => p.ellipse(140, 6, 46, 6, 0, 0, TAU)); fill(c, '#f3faea77', p => p.ellipse(-20, 8, 150, 5, 0, 0, TAU));
   c.restore();
 }
-function weather(c, water, show, motion) {
-  const sunny = show.name === 'rainbow', e = show.envelope * (sunny ? .55 : 1);
-  if (!sunny) { c.fillStyle = `rgba(52,60,88,${.3 * e})`; c.fillRect(-30, -30, 540, water + 30); }
-  if (show.name === 'storm') {
-    for (const [at, x] of [[2.1, 110], [2.32, 110], [6.4, 330], [10.1, 210], [10.3, 215]]) {
-      const since = show.age - at;
-      if (since < 0 || since > .35) continue;
-      const power = 1 - since / .35;
-      c.fillStyle = `rgba(232,236,255,${.34 * power})`; c.fillRect(-30, -30, 540, water + 30);
-      stroke(c, `rgba(255,252,224,${power})`, 2.5, p => { p.moveTo(x, 40); p.lineTo(x - 16, 120); p.lineTo(x + 6, 150); p.lineTo(x - 22, 240); p.lineTo(x - 4, 262); p.lineTo(x - 18, water - 44); });
-    }
+function goldenHour(c, water, show, motion) {
+  const e = show.envelope;
+  c.fillStyle = `rgba(255,214,130,${.2 * e})`; c.fillRect(-30, -30, 540, water + 30);
+  c.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    c.globalAlpha = (.07 + Math.sin(motion * .8 + i) * .02) * e;
+    fill(c, '#ffe9a8', p => { const x = 90 + i * 85; p.moveTo(x, -10); p.lineTo(x + 60, -10); p.lineTo(x + 170, water); p.lineTo(x + 40, water); p.closePath(); });
   }
-  c.strokeStyle = `rgba(236,244,255,${.42 * e})`; c.lineWidth = 1.2; c.beginPath();
-  for (let i = 0; i < 80; i++) {
-    const x = wrap(i * 53.3 - show.age * 190, 540) - 30, y = wrap(i * 91.7 + show.age * 880, water);
-    c.moveTo(x, y); c.lineTo(x - 5, y + 16);
+  c.globalCompositeOperation = 'source-over'; c.globalAlpha = 1;
+  for (let i = 0; i < 40; i++) {
+    const life = wrap(show.age * .5 + hash(i), 1), x = hash(i + 50) * 480, y = life * water;
+    c.globalAlpha = Math.sin(life * Math.PI) * .8 * e;
+    fill(c, '#fff4c0', p => p.arc(x + Math.sin(show.age + i) * 8, y, 1.4 + hash(i + 9) * 1.6, 0, TAU));
   }
-  c.stroke();
-  for (let i = 0; i < 9; i++) {
-    const life = wrap(show.age * 1.7 + hash(i), 1), x = hash(i + Math.floor(show.age * 1.7 + hash(i))) * 480;
-    stroke(c, `rgba(240,250,240,${(1 - life) * .6 * e})`, 1, p => p.ellipse(x, water + 2, 3 + life * 13, 1 + life * 3, 0, 0, TAU));
+  c.globalAlpha = 1;
+}
+// Two dolphins leap along the sea and show where the bonus fish swim.
+export function drawDolphins(c, game, water, motion, reducedMotion) {
+  const show = showState(game, reducedMotion);
+  if (show?.name !== 'dolphins') return;
+  for (let k = 0; k < 2; k++) {
+    const u = wrap(show.age * .55 - k * .22, 1.6) / 1.6;
+    if (u > 1) continue;
+    const x = 620 - u * 560 - k * 40, lift = Math.sin(u * Math.PI), y = water + 14 - lift * (96 - k * 24);
+    const angle = Math.atan2(-Math.cos(u * Math.PI) * (96 - k * 24) * Math.PI / 560, -1);
+    c.save(); c.translate(x, y); c.rotate(angle + Math.PI); c.scale(k ? .8 : 1, k ? .8 : 1);
+    fill(c, '#7ea9c8', p => { p.moveTo(-44, 0); p.bezierCurveTo(-24, -24, 22, -22, 46, -4); p.bezierCurveTo(24, 12, -20, 14, -44, 0); });
+    fill(c, '#f2f6f8', p => { p.moveTo(-30, 4); p.bezierCurveTo(-8, 14, 22, 12, 40, 0); p.bezierCurveTo(20, 16, -14, 18, -30, 4); });
+    fill(c, '#7ea9c8', p => { p.moveTo(-4, -14); p.lineTo(8, -32); p.lineTo(14, -14); p.closePath(); });
+    fill(c, '#7ea9c8', p => { p.moveTo(-42, 0); p.lineTo(-62, -14); p.lineTo(-58, 0); p.lineTo(-62, 14); p.closePath(); });
+    fill(c, '#1d3b52', p => p.arc(30, -4, 2.2, 0, TAU));
+    c.restore();
+    if (lift < .25) for (let i = 0; i < 5; i++) fill(c, '#ffffffaa', p => p.arc(x + (i - 2) * 8, water - 4 - hash(i + k) * 14 * (1 - lift * 3), 2.2, 0, TAU));
   }
 }
 

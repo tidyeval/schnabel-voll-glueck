@@ -196,6 +196,7 @@ function frame(now) {
       juice.onEvent(event, game);
       const label = labels[event.kind];
       if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
+      if (event.kind === 'show' && { dolphins: 'showDolphins', goldenHour: 'showGoldenHour' }[event.name]) toast(t({ dolphins: 'showDolphins', goldenHour: 'showGoldenHour' }[event.name]));
       audio.effect(event.kind, event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }

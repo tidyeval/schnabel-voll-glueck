@@ -1,5 +1,5 @@
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius } from './game.js';
-import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawBaitball, drawCurrent, drawJuice, swellOf } from './scenery.js';
+import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -308,7 +308,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   const d = menu ? (reducedMotion ? 0 : t * 12) : game.distance;
   const motion = reducedMotion ? 0 : t;
   c.clearRect(0, 0, 480, 850);
-  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = stage === 2;
+  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = false;
   c.save();
   if (fx && (fx.shakeX || fx.shakeY)) { c.translate(240 + fx.shakeX, 425 + fx.shakeY); c.scale(1.03, 1.03); c.translate(-240, -425); }
   drawSky(c, stage, water, d, motion, menu ? null : game, reducedMotion, () => {
@@ -328,7 +328,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     for (let i = 0; i < 3; i++) { const x = ((320 + i * 47 - d * .08) % 580 + 580) % 580; const y = water - 91 + Math.sin(i * 2) * 22; path(c, null, p => { p.moveTo(x - 7, y); p.quadraticCurveTo(x - 3, y - 5, x, y); p.quadraticCurveTo(x + 4, y - 5, x + 8, y); }, '#799d93', 1.3); }
   });
   drawWater(c, stage, water, d, motion, menu ? null : game, reducedMotion);
-  if (!menu) drawWhale(c, game, motion, reducedMotion);
+  if (!menu) { drawWhale(c, game, motion, reducedMotion); drawDolphins(c, game, water, motion, reducedMotion); }
   if (!menu && game.stage === 2) {
     for (let i = 0; i < 9; i++) {
       const x = ((i * 79 - d * .22) % 650 + 650) % 650 - 80;

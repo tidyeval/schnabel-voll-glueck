@@ -115,8 +115,8 @@ export const PAIR_PATTERNS = new Map([
 // Spectacle between the regular encounters. Shows are scenery only; bait balls and currents are optional rewards.
 export const SET_PIECES = new Map([
   ['0:5', 'baitball'], ['0:8', 'rainbow'],
-  ['1:4', 'current'], ['1:7', 'trawler'], ['1:9', 'squall'],
-  ['2:2', 'baitball'], ['2:5', 'whale'], ['2:7', 'current'], ['2:9', 'storm'],
+  ['1:4', 'current'], ['1:7', 'trawler'], ['1:10', 'dolphins'],
+  ['2:2', 'baitball'], ['2:5', 'whale'], ['2:7', 'current'], ['2:9', 'goldenHour'],
 ]);
 export const FRENZY = { combo: 15, duration: 6, interval: .24 };
 export const JUMP = { from: 430, range: 250, boost: 300, gravity: 700, ceiling: 150 };
@@ -237,6 +237,7 @@ function encounter(game) {
   } else if (piece) {
     game.show = { name: piece, start: game.time };
     game.pendingShow = piece;
+    if (piece === 'dolphins') for (let i = 0; i < 10; i++) game.items.push({ kind: 'fish', x: 780 + i * 56, y: 520 - Math.sin(i / 9 * Math.PI) * 70, golden: false, lane: 'alternate', route: wave, bonus: true });
   }
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
   if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: sharkCount > 1 ? UNDERWATER_BANDS[bandVariant].y : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
