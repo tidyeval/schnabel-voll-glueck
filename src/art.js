@@ -1,4 +1,4 @@
-import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius } from './game.js';
+import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
 import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf } from './scenery.js';
 const TAU = Math.PI * 2;
@@ -42,9 +42,9 @@ function island(c, x, water, t) {
   c.fillStyle = '#ffe5a1'; c.fillRect(-44, -126, 6, 8);
   palm(c, 28, -30, .55, t); c.restore();
 }
-export function fish(c, x, y, scale = 1, golden = false, t = 0, scared = 0) {
-  const swim = Math.sin(t * 7) * .16;
-  c.save(); c.translate(x, y); c.scale(scale, scale); c.rotate(Math.sin(t * 3) * .035);
+export function fish(c, x, y, scale = 1, golden = false, t = 0, scared = 0, tilt = 0) {
+  const swim = Math.sin(t * (tilt ? 16 : 7)) * .16;
+  c.save(); c.translate(x, y); c.scale(scale, scale); c.rotate(Math.sin(t * 3) * .035 + tilt);
   const col = golden ? '#f6cd5f' : '#efa98e', edge = golden ? '#b9823e' : '#af6f66';
   c.save(); c.translate(10, 0); c.rotate(swim); c.translate(-10, 0);
   path(c, golden ? '#e6a94c' : '#d68172', p => { p.moveTo(9, 0); p.lineTo(28, -13); p.quadraticCurveTo(23, 0, 28, 13); p.closePath(); }, edge, 1); c.restore();
@@ -90,6 +90,7 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   const headAngle = (lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2) + (expression.look || 0);
   const headPose = () => { c.translate(66, -27); c.rotate(headAngle); c.translate(-66, 27); };
   if (bump) c.transform(1, 0, Math.sin(bump * 22) * .07, 1, 0, 0);
+  if (!reducedMotion && expression.shiver > 0) c.rotate(Math.sin(expression.shiver * 48) * .07 * Math.min(1, expression.shiver * 3));
   const wobble = reducedMotion ? 0 : Math.sin(t * 6) * fullness * 3 + Math.sin(gulp * 22) * gulp * 8;
   const bite = lowAir ? 0 : gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : relief > .8 ? .45 : expression.fish ? .18 : 0;
   // Shared, stable phase: brisk downstroke and slower, folded recovery.
@@ -116,12 +117,21 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   path(c, gradient(c, -57, 21, '#fffdf2', '#ecedd7'), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
   // Pip's tousled crown is his main character mark at every rendered scale.
   path(c, '#fffdf2', p => { p.moveTo(4, -56); p.quadraticCurveTo(-5, -70, 4, -73); p.quadraticCurveTo(10, -70, 12, -61); p.quadraticCurveTo(10, -77, 18, -75); p.quadraticCurveTo(25, -68, 21, -59); }, outline, 1);
-  path(c, gradient(c, -35, 8, '#f3c574', '#dc9758'), p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(72, -15 + bite * 11, 57, 7 + bite * 15 + fullness * 46 + wobble, 40, -7); p.quadraticCurveTo(31, -18, 37, -40); }, '#bd774b', 1.1);
+  const pouch = p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(72, -15 + bite * 11, 57, 7 + bite * 15 + fullness * 46 + wobble, 40, -7); p.quadraticCurveTo(31, -18, 37, -40); };
+  path(c, gradient(c, -35, 8, '#f3c574', '#dc9758'), pouch, '#bd774b', 1.1);
   path(c, '#f8d79055', p => { p.moveTo(42, -31); p.quadraticCurveTo(63, -23, 82, -23); p.quadraticCurveTo(64, -14, 47, -9); p.quadraticCurveTo(39, -18, 42, -31); });
-  if (fullness > .3) for (let i = 0; i < Math.ceil(fullness * 3); i++) {
-    ellipse(c, 49 + i * 7, -13 + fullness * 8 + Math.sin(t * 5 + i) * 2, 5, 2.5, '#b9784d55', -.4);
+  // The catch wriggles inside the pouch; when it is nearly full a tail pokes out of the beak.
+  c.save(); c.beginPath(); pouch(c); c.clip();
+  if (fullness > .2) for (let i = 0; i < Math.ceil(fullness * 3); i++) {
+    const fx = 50 + i * 9, fy = -11 + fullness * 12 + i * 3 + (reducedMotion ? 0 : Math.sin(t * 5 + i * 2) * 1.6), flick = reducedMotion ? 0 : Math.sin(t * 9 + i * 3) * 2;
+    ellipse(c, fx, fy, 5.5, 2.6, '#b0684e77', -.25 + i * .15);
+    path(c, '#b0684e77', p => { p.moveTo(fx + 4, fy); p.lineTo(fx + 9, fy - 3 + flick); p.lineTo(fx + 9, fy + 3 + flick); p.closePath(); });
   }
-  if (fullness > .75) path(c, '#efb595', p => { p.moveTo(73, -26); p.lineTo(83, -41 + Math.sin(t * 8) * 3); p.lineTo(88, -29); p.closePath(); });
+  c.restore();
+  if (fullness > .75) {
+    const flap = reducedMotion ? 0 : Math.sin(t * 8) * 3;
+    path(c, '#d68172', p => { p.moveTo(76, -28); p.lineTo(82, -42 + flap); p.quadraticCurveTo(84, -35, 89, -38 + flap); p.lineTo(83, -27); p.closePath(); }, '#af6f66', .8);
+  }
   c.save(); c.translate(35, -40); c.rotate(-bite * .22); c.translate(-35, 40);
   path(c, gradient(c, -44, -21, '#ffe19a', '#efb75f'), p => { p.moveTo(35, -43); p.quadraticCurveTo(67, -38, 94, -27); p.quadraticCurveTo(101, -22, 87, -22); p.lineTo(35, -30); p.closePath(); }, '#bd774b', 1);
   c.restore();
@@ -526,18 +536,15 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       if (item.kind === 'current') drawCurrent(c, item, motion, reducedMotion);
       if (item.kind === 'baitball') drawBaitball(c, item, game.time, night);
       if (night && (item.kind === 'fish' || item.kind === 'jelly')) { c.globalCompositeOperation = 'lighter'; ellipse(c, item.x, item.y - (item.kind === 'jelly' ? 12 : 0), item.kind === 'jelly' ? 44 : 25, item.kind === 'jelly' ? 40 : 17, item.kind === 'jelly' ? '#ff9ee01c' : item.golden ? '#ffd9701c' : '#ffc9a00e'); c.globalCompositeOperation = 'source-over'; }
-      if (item.kind === 'fish') { const gap = Math.hypot(item.x - game.player.x, item.y - game.player.y); fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion, gap < 120 ? 1 - gap / 120 : 0); }
+      if (item.kind === 'fish') { const gap = Math.hypot(item.x - game.player.x, item.y - game.player.y); fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion, gap < 120 ? 1 - gap / 120 : 0, item.leap > 0 && item.leap < LEAP.duration ? Math.cos(item.leap / LEAP.duration * Math.PI) * .8 : 0); }
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);
       if (item.kind === 'boat') boat(c, item, water, motion, game.decor?.sleepy);
     }
     const p = game.player;
-    if (p.wet && !reducedMotion) {
-      for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(motion * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
-    }
     c.save();
-    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1 || fx?.joy > 0, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1), sparkle: fx?.sparkle, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
+    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1 || fx?.joy > 0, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1), sparkle: fx?.sparkle, shiver: fx?.shiver, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
   }
   const swell = menu ? 1 : swellOf(game, stage, reducedMotion);
   for (let i = 0; i < 4; i++) {

@@ -171,6 +171,8 @@ function hazardGap(item, p) {
   if (item.kind === 'puffer') return item.phase === 'puffed' ? Math.hypot(dx, dy) - pufferRadius(item) - 18 : Infinity;
   return Infinity;
 }
+export const LEAP = { from: WORLD.water + 40, height: 125, duration: 1.1, at: 430 };
+export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 0, 1) * Math.PI) * LEAP.height; }
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2 };
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
@@ -287,6 +289,8 @@ function encounter(game) {
   game.items.push({ kind: 'bubble', x: 1120, y: 540 });
   // End the school below the surface, then leave room to breathe and do a trick.
   [440, 415, 400].forEach((y, i) => addFish(1220 + i * 60, y, 'exit'));
+  // Now and then a fish leaps out of the breathing gap: a bonus for a well-timed breach.
+  if ((variant + wave) % 2 === 0 && kind !== 'island') game.items.push({ kind: 'fish', x: 1460, y: LEAP.from, golden: false, lane: 'alternate', route: wave, bonus: true, leap: 0 });
   const terrain = game.items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind));
   game.items = game.items.filter(item => item.kind !== 'fish' || !terrain.some(block => hitsTerrain(item, block)));
   game.wave++;
@@ -558,6 +562,15 @@ export function step(game, dt, holding) {
       }
     }
     if (item.kind === 'fish') {
+      if (item.leap !== undefined && (item.leap > 0 || item.x < LEAP.at) && item.leap < LEAP.duration) {
+        const clear = !item.leap && game.items.some(other => ['island', 'reef', 'buoy', 'coral'].includes(other.kind) && Math.abs(other.x - item.x) < 260);
+        if (clear) item.leap = undefined;
+        else {
+          if (!item.leap) events.push({ kind: 'fishLeap', x: item.x, y: WORLD.water });
+          item.leap += dt; item.y = leapY(item.leap);
+          if (item.leap >= LEAP.duration) events.push({ kind: 'fishLeap', x: item.x, y: WORLD.water });
+        }
+      }
       if (Math.hypot((item.x - beak.x) / 1.15, item.y - beak.y) < 32) {
         item.caught = true;
         game.fish++; game.cargo = Math.min(WORLD.capacity, game.cargo + 1); game.combo++; if (p.wet) game.diveFish++;

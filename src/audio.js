@@ -71,6 +71,7 @@ export function createAudio(settings) {
       if (settings.sound) {
         if (kind === 'nearMiss') { tone(520, .22, .09, 'sine', 0, 1320); tone(1320, .16, .05, 'sine', .16); }
         if (kind === 'sardine') tone(1500, .05, .035);
+        if (kind === 'fishLeap') tone(1040, .09, .025, 'sine', 0, 1560);
         if (kind === 'current') tone(240, .5, .07, 'triangle', 0, 720);
         if (kind === 'frenzy') [659, 784, 988, 1175, 1568].forEach((f, i) => tone(f, .22, .09, 'triangle', i * .055));
         if (kind === 'feast') [784, 988, 1175, 1568].forEach((f, i) => tone(f, .3, .08, 'sine', i * .07));

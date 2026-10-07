@@ -3,7 +3,7 @@
 import { WORLD } from './game.js';
 
 export function createJuice(reducedMotion) {
-  let particles = [], rings = [], squash = 0, sparkle = 0, joy = 0, shake = 0, shakePower = 0, freeze = 0, slow = 0, flash = 0, flashColour = '#fff', pulse = 0, trail = 0, rush = 0;
+  let particles = [], rings = [], squash = 0, sparkle = 0, joy = 0, shiver = 0, shake = 0, shakePower = 0, freeze = 0, slow = 0, flash = 0, flashColour = '#fff', pulse = 0, trail = 0, rush = 0;
   const rand = (min, max) => min + Math.random() * (max - min);
   const spawn = (kind, x, y, vx, vy, life, size, colour) => {
     if (!reducedMotion && particles.length < 170) particles.push({ kind, x, y, vx, vy, life, max: life, size, colour });
@@ -12,7 +12,7 @@ export function createJuice(reducedMotion) {
     for (let i = 0; i < count; i++) { const a = rand(0, Math.PI * 2), v = rand(.4, 1) * speed; spawn('spark', x, y, Math.cos(a) * v, Math.sin(a) * v, rand(.35, .7), rand(1.6, 3), colour); }
   };
   return {
-    reset() { particles = []; rings = []; squash = sparkle = joy = 0; shake = freeze = slow = flash = pulse = rush = 0; },
+    reset() { particles = []; rings = []; squash = sparkle = joy = shiver = 0; shake = freeze = slow = flash = pulse = rush = 0; },
     // Fraction of real time the simulation advances this frame.
     timeScale(dt) {
       if (reducedMotion) return 1;
@@ -28,7 +28,13 @@ export function createJuice(reducedMotion) {
         for (let i = 0; i < 7 + power * 12; i++) spawn('drop', event.x + rand(-14, 14), water - 2, rand(-110, 110) * (.5 + power) - (up ? 0 : 40), -rand(140, 300) * (.55 + power * (up ? .9 : .6)), rand(.5, .95), rand(1.6, 3.2));
         if (!up) for (let i = 0; i < 6 + power * 8; i++) spawn('bubble', event.x + rand(-18, 18), water + rand(14, 60), rand(-60, 10), -rand(20, 70), rand(.5, 1.1), rand(1.5, 4.5));
         if (up && power > .75) { shake = .16; shakePower = 3; }
+        // Pip shakes the sea off like a wet puppy, a beat after surfacing.
+        if (up) shiver = .55;
         if (!up && Math.abs(event.x - game.player.x) < 60) squash = .45;
+      }
+      if (event.kind === 'fishLeap') {
+        rings.push({ x: event.x, life: .8, power: .35 });
+        for (let i = 0; i < 5; i++) spawn('drop', event.x + rand(-6, 6), water - 2, rand(-70, 50), -rand(110, 200), rand(.4, .7), rand(1.3, 2.2));
       }
       if (event.kind === 'netSplash') rings.push({ x: event.x, life: 1, power: 1.1 });
       if (event.kind === 'hurt') {
@@ -50,7 +56,12 @@ export function createJuice(reducedMotion) {
       if (event.kind === 'current') burst(event.x, event.y, 8, 160, '#dffff6');
     },
     update(dt, game, playing) {
-      shake = Math.max(0, shake - dt); squash = Math.max(0, squash - dt); sparkle = Math.max(0, sparkle - dt); joy = Math.max(0, joy - dt); flash = Math.max(0, flash - dt * 1.4); pulse = Math.max(0, pulse - dt * 2.2);
+      shake = Math.max(0, shake - dt); squash = Math.max(0, squash - dt); sparkle = Math.max(0, sparkle - dt); joy = Math.max(0, joy - dt);
+      const shook = shiver; shiver = Math.max(0, shiver - dt);
+      if (playing && shook > .1 && shook < .4 && Math.floor(shook * 30) !== Math.floor(shiver * 30)) {
+        const p = game.player, side = Math.random() < .5 ? -1 : 1;
+        spawn('drop', p.x - 10 + rand(-22, 22), p.y + rand(-14, 10), side * rand(90, 170) - game.speed * .2, -rand(40, 130), rand(.35, .6), rand(1.2, 2));
+      } flash = Math.max(0, flash - dt * 1.4); pulse = Math.max(0, pulse - dt * 2.2);
       for (const ring of rings) { ring.life -= dt * 1.5; ring.x -= game.speed * dt; }
       rings = rings.filter(ring => ring.life > 0);
       for (const q of particles) {
@@ -76,7 +87,7 @@ export function createJuice(reducedMotion) {
     view() {
       const amount = shake > 0 ? shakePower * Math.min(1, shake / .2) : 0;
       // Squash rings out like jelly: it overshoots into a stretch and settles.
-      return { particles, rings, squash: squash > 0 ? Math.cos((.45 - squash) * 26) * squash / .45 : 0, sparkle, joy, flash, flashColour, pulse, rush, shakeX: amount ? rand(-amount, amount) : 0, shakeY: amount ? rand(-amount, amount) * .7 : 0 };
+      return { particles, rings, shiver: shiver < .42 ? shiver : 0, squash: squash > 0 ? Math.cos((.45 - squash) * 26) * squash / .45 : 0, sparkle, joy, flash, flashColour, pulse, rush, shakeX: amount ? rand(-amount, amount) : 0, shakeY: amount ? rand(-amount, amount) * .7 : 0 };
     },
   };
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS, LEAP } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, and a shark ends the stage', () => {
   const g = createGame(() => .5);
@@ -519,4 +519,31 @@ test('sharks and turtles never swim through rocks, coral or buoys', () => {
         assert.ok(!(s.x + 40 > b.x && s.x - 40 < b.x + b.width && s.y + 20 > b.y && s.y - 20 < b.y + b.height), `${s.kind} inside terrain on stage ${stage}`);
     }
   }
+});
+
+test('now and then a fish leaps out of the water, catchable in the air and never into terrain', () => {
+  let seed = 5; const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  let leaps = 0, waves = 0;
+  for (let run = 0; run < 6; run++) for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(random, stage);
+    for (let t = 0; t < 140; t += 1 / 30) {
+      Object.assign(g.player, { x: -2000, y: 265, breath: WORLD.breath }); g.energy = 100;
+      leaps += step(g, 1 / 30, false).filter(e => e.kind === 'fishLeap').length / 2;
+      for (const f of g.items.filter(i => i.leap > 0)) for (const item of g.items.filter(i => ['island', 'reef', 'buoy', 'coral'].includes(i.kind)))
+        assert.ok(!hitsTerrain(f, item), `leaping fish hits ${item.kind} on stage ${stage}`);
+    }
+    waves += g.wave;
+  }
+  assert.ok(leaps > waves * .2 && leaps < waves * .7, `${leaps} leaps in ${waves} waves`);
+
+  const g = createGame(() => .5);
+  g.items = [{ kind: 'fish', x: LEAP.at - 1, y: LEAP.from, golden: false, lane: 'alternate', leap: 0 }];
+  let top = LEAP.from;
+  for (let i = 0; i < 20; i++) { step(g, 1 / 60, false); top = Math.min(top, g.items[0].y); }
+  assert.ok(top < WORLD.water - 40, 'the fish rises well above the surface');
+  const f = g.items[0];
+  Object.assign(g.player, { y: 300, vy: 0, wet: false });
+  Object.assign(g.player, { x: g.player.x + (f.x - beakPosition(g.player).x), y: g.player.y + (f.y - beakPosition(g.player).y) });
+  step(g, 1 / 60, false);
+  assert.equal(g.fish, 1, 'Pip catches it in mid-air');
 });
