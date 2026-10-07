@@ -189,6 +189,11 @@ audio.start('menu');
 function frame(now) {
   const dt = Math.min(.05, Math.max(0, (now - (last || now)) / 1000)); last = now;
   if (mode === 'playing' || mode === 'menu') animation += dt;
+  // Apply a downloaded update on its own, but only while nobody is mid-round.
+  if (mode === 'menu' && !applyingUpdate && !document.querySelector('dialog[open]')) {
+    if (registration?.waiting) { applyingUpdate = true; registration.waiting.postMessage({ type: 'SKIP_WAITING' }); }
+    else if (reloadReady) { applyingUpdate = true; location.reload(); }
+  }
   if (mode === 'playing') {
     const wasFeeding = game.feeding > 0;
     for (const event of step(game, dt * juice.timeScale(dt), holding)) {
