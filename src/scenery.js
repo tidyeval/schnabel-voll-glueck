@@ -10,15 +10,15 @@ export const THEMES = [
     water: ['#6fc4b6', '#256068'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
     seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1,
   },
-  { // Fischerhafen: warm, sunny afternoon.
-    sky: [[0, '#8fd0e6'], [.5, '#ffd9a8'], [.85, '#ffe2a0'], [1, '#fff0c0']], glow: '#ffb76a55', far: '#c79a8c', tint: 'rgba(255,176,110,.12)',
-    water: ['#6fc7b0', '#24605c'], surface: '#ffc98a66', rays: '#ffd39a', rayAlpha: .11, mote: '#ffe6b03d',
-    seabed: '#4c7a68', grass: ['#6f9668', '#3c6b58'], rocks: '#2f5a55', swell: 1.2,
+  { // Fischerhafen: the same sunny morning as the bay.
+    sky: [[0, '#a9dbe0'], [.6, '#d9ecd9'], [1, '#f7e9c6']], glow: '#efb68a3d', far: '#9cc7bd', tint: null,
+    water: ['#6fc4b6', '#256068'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
+    seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1.2,
   },
-  { // Korallenriff: bright candy sunset.
-    sky: [[0, '#7fd3e8'], [.5, '#ffc3d2'], [.85, '#ffd6a0'], [1, '#fff0c4']], glow: '#ff9fb055', far: '#c795a8', tint: 'rgba(255,150,170,.1)',
-    water: ['#4fc6c2', '#1c5f78'], surface: '#fff0d044', rays: '#ffe9c4', rayAlpha: .12, mote: '#fff0c838',
-    seabed: '#3f8a86', grass: ['#58b08c', '#2f7f78'], rocks: '#3a7c88', swell: 1.1,
+  { // Korallenriff: sunny, with slightly lighter water.
+    sky: [[0, '#a9dbe0'], [.6, '#d9ecd9'], [1, '#f7e9c6']], glow: '#efb68a3d', far: '#9cc7bd', tint: null,
+    water: ['#78bdbb', '#386879'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
+    seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1.1,
   },
 ];
 
@@ -52,16 +52,6 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
   if (show?.name === 'trawler') trawler(c, water, show, motion);
   if (th.tint) { c.globalCompositeOperation = 'source-atop'; c.fillStyle = th.tint; c.fillRect(-30, -30, 540, water + 30); }
   c.globalCompositeOperation = 'source-over';
-  if (stage === 1) {
-    // Lit warehouse windows glow through the dusk tint.
-    for (let i = 0; i < 6; i++) {
-      const x = wrap(i * 115 - d * .12, 760) - 140;
-      for (const dx of [12, 42]) if ((i + dx) % 5) {
-        c.fillStyle = '#ffdf8e'; c.fillRect(x + dx + 2, water - 36, 9, 12);
-        c.fillStyle = '#ffd27a33'; c.fillRect(x + dx - 3, water - 41, 19, 22);
-      }
-    }
-  }
   c.globalCompositeOperation = 'destination-over';
   // Far shoreline: slowest layer.
   for (let layer = 0; layer < 2; layer++) {
@@ -78,28 +68,18 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
   }
   c.globalAlpha = 1;
   if (stage === 1) {
-    // Harbour cranes and masts against the low sun.
+    // Harbour cranes and masts.
     for (let i = 0; i < 4; i++) {
       const x = wrap(i * 190 - d * .045, 760) - 120;
-      stroke(c, '#7a5672', 4, p => { p.moveTo(x, water); p.lineTo(x, water - 96); p.moveTo(x - 14, water - 96); p.lineTo(x + 62, water - 78); p.moveTo(x, water - 110); p.lineTo(x + 30, water - 86); p.moveTo(x, water - 110); p.lineTo(x, water - 96); });
-      stroke(c, '#7a567299', 1.5, p => { p.moveTo(x + 58, water - 79); p.lineTo(x + 58, water - 40); });
+      stroke(c, '#89aaa0', 4, p => { p.moveTo(x, water); p.lineTo(x, water - 96); p.moveTo(x - 14, water - 96); p.lineTo(x + 62, water - 78); p.moveTo(x, water - 110); p.lineTo(x + 30, water - 86); p.moveTo(x, water - 110); p.lineTo(x, water - 96); });
+      stroke(c, '#89aaa099', 1.5, p => { p.moveTo(x + 58, water - 79); p.lineTo(x + 58, water - 40); });
     }
   }
   if (show?.name === 'rainbow') rainbow(c, water, show);
-  // Sun or moon.
-  if (stage === 2) {
-    fill(c, '#ffe9b0', p => p.arc(392, water - 110, 30, 0, TAU));
-    fill(c, '#ffd49a66', p => p.arc(392, water - 110, 52, 0, TAU));
-    fill(c, '#ffb7a03d', p => p.arc(392, water - 110, 84, 0, TAU));
-  } else if (stage === 1) {
-    fill(c, '#fff0b8', p => p.arc(322, water - 30, 44, 0, TAU));
-    fill(c, '#ffd48a66', p => p.arc(322, water - 30, 66, 0, TAU));
-    fill(c, '#ffb9703d', p => p.arc(322, water - 30, 104, 0, TAU));
-  } else {
-    fill(c, '#ffe7a6', p => p.arc(397, water - 140, 29, 0, TAU));
-    fill(c, '#fff4c777', p => p.arc(397, water - 140, 43, 0, TAU));
-    fill(c, '#fff0bd35', p => p.arc(397, water - 140, 61, 0, TAU));
-  }
+  // Sun.
+  fill(c, '#ffe7a6', p => p.arc(397, water - 140, 29, 0, TAU));
+  fill(c, '#fff4c777', p => p.arc(397, water - 140, 43, 0, TAU));
+  fill(c, '#fff0bd35', p => p.arc(397, water - 140, 61, 0, TAU));
   c.fillStyle = vertical(c, water - 150, water, [[0, th.glow.slice(0, 7) + '00'], [1, th.glow]]); c.fillRect(-30, water - 150, 540, 150);
   c.fillStyle = vertical(c, 0, water, th.sky); c.fillRect(-30, -30, 540, water + 30);
   c.globalCompositeOperation = 'source-over';
@@ -168,16 +148,6 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
   const th = THEMES[stage];
   c.fillStyle = vertical(c, water, 850, [[0, th.water[0]], [1, th.water[1]]]); c.fillRect(-30, water, 540, 880 - water);
   c.fillStyle = vertical(c, water, water + 110, [[0, th.surface], [1, th.surface.slice(0, 7) + '00']]); c.fillRect(-30, water, 540, 110);
-  // Reflected sun or moon path just below the surface.
-  if (stage > 0) {
-    const x = stage === 1 ? 322 : 392;
-    for (let k = 0; k < 9; k++) {
-      const width = (stage === 1 ? 44 : 26) - k * 2.4 + Math.sin(motion * 2.6 + k * 1.7) * 7;
-      c.globalAlpha = (.5 - k * .05) * (stage === 1 ? 1 : .7);
-      fill(c, stage === 1 ? '#ffe2a6' : '#eef3ff', p => p.ellipse(x + Math.sin(motion * 1.3 + k) * 5, water + 9 + k * 9, Math.max(3, width), 2.2, 0, 0, TAU));
-    }
-    c.globalAlpha = 1;
-  }
   // Light shafts sway slowly and fade with depth.
   for (let i = 0; i < 6; i++) {
     const x = i * 108 - 150 + Math.sin(motion * .15 + i * .7) * 22, wide = 38 + (i % 3) * 16;
@@ -195,12 +165,11 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
   });
   c.globalAlpha = 1;
   if (stage === 1) {
-    // Pier posts fade into the murk.
+    // Pier posts fade with depth.
     for (let i = 0; i < 5; i++) {
       const x = wrap(i * 173 - d * .16, 760) - 120;
       c.fillStyle = vertical(c, water, water + 300, [[0, '#3d5f5244'], [1, '#3d5f5200']]); c.fillRect(x, water, 11, 300);
     }
-    c.fillStyle = vertical(c, 560, 850, [[0, '#2a4a3e00'], [1, '#2a4a3e55']]); c.fillRect(-30, 560, 540, 290);
   }
   for (let i = 0; i < 30; i++) {
     const x = wrap(i * 83.73 - d * .27, 520) - 20, y = water + 25 + (i * 41.4) % (820 - water);
