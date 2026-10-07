@@ -1,7 +1,7 @@
 import test from 'node:test';
 import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, and a shark ends the stage', () => {
   const g = createGame(() => .5);
@@ -506,4 +506,17 @@ test('low energy keeps steering and air unchanged; a harpoon that hit gives no d
   assert.ok(step(g,.01,false).some(e=>e.kind==='hurt'));
   for(let i=0;i<30;i++)step(g,.01,false);
   assert.equal(g.score,0,'absorbing a shot is not outsmarting it');
+});
+
+test('sharks and turtles never swim through rocks, coral or buoys', () => {
+  let seed = 11; const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  for (let run = 0; run < 6; run++) for (let stage = 0; stage < STAGES.length; stage++) {
+    const g = createGame(random, stage);
+    for (let t = 0; t < 140; t += 1 / 30) {
+      Object.assign(g.player, { x: -2000, y: 265, breath: WORLD.breath }); g.energy = 100; step(g, 1 / 30, false);
+      const blocks = g.items.filter(i => ['reef', 'buoy', 'coral'].includes(i.kind)).flatMap(terrainBlocks);
+      for (const s of g.items.filter(i => i.kind === 'shark' || i.kind === 'turtle')) for (const b of blocks)
+        assert.ok(!(s.x + 40 > b.x && s.x - 40 < b.x + b.width && s.y + 20 > b.y && s.y - 20 < b.y + b.height), `${s.kind} inside terrain on stage ${stage}`);
+    }
+  }
 });

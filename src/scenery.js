@@ -1,6 +1,7 @@
 // Stage atmosphere, set-piece scenery and game-feel overlays. Everything here is
 // presentation only: nothing in this file is used for collisions or scoring.
 import { WORLD, clamp, sardinePositions, currentSpan, FRENZY } from './game.js';
+import { blink, cuteEye } from './cute.js';
 const TAU = Math.PI * 2;
 const SHOW_TIME = 13;
 
@@ -148,23 +149,48 @@ function shootingStars(c, water, show) {
     c.globalAlpha = fade; fill(c, '#fffbe8', p => p.arc(hx, hy, 2.8, 0, TAU)); c.globalAlpha = 1;
   }
 }
-// Two dolphins leap along the sea and show where the bonus fish swim.
+// A dolphin drawn facing left (the way it travels): rostrum, rounded melon, dorsal fin and fluke.
+function dolphin(c, t, seed) {
+  const tail = Math.sin(t * 9 + seed) * .22;
+  c.save(); c.translate(52, -2); c.rotate(tail);
+  fill(c, '#5f8fb6', p => { p.moveTo(-6, 0); p.quadraticCurveTo(10, -4, 22, -18); p.quadraticCurveTo(18, -4, 26, -1); p.quadraticCurveTo(18, 3, 22, 16); p.quadraticCurveTo(10, 4, -6, 2); p.closePath(); });
+  c.restore();
+  fill(c, '#5f8fb6', p => { p.moveTo(-4, -18); p.quadraticCurveTo(4, -40, 20, -42); p.quadraticCurveTo(12, -30, 16, -14); p.closePath(); });
+  const body = c.createLinearGradient(0, -22, 0, 18);
+  body.addColorStop(0, '#7fb0d6'); body.addColorStop(.55, '#6a9cc4'); body.addColorStop(1, '#5f8fb6');
+  fill(c, body, p => {
+    p.moveTo(-66, 3); p.quadraticCurveTo(-64, -2, -52, -4);
+    p.bezierCurveTo(-50, -20, -30, -24, -8, -21);
+    p.bezierCurveTo(22, -17, 44, -8, 58, -3);
+    p.lineTo(58, 2);
+    p.bezierCurveTo(40, 10, 10, 19, -18, 18);
+    p.bezierCurveTo(-38, 17, -50, 11, -56, 7);
+    p.quadraticCurveTo(-64, 7, -66, 3); p.closePath();
+  });
+  fill(c, '#eef5f7', p => { p.moveTo(-60, 6); p.bezierCurveTo(-46, 12, -26, 17, -4, 15); p.bezierCurveTo(16, 13, 34, 8, 46, 3); p.bezierCurveTo(28, 14, 2, 20, -20, 19); p.bezierCurveTo(-40, 18, -54, 12, -60, 6); });
+  fill(c, '#5a88ad', p => { p.moveTo(-22, 10); p.quadraticCurveTo(-18, 26, -4, 30); p.quadraticCurveTo(-8, 18, -8, 10); p.closePath(); });
+  fill(c, '#ffffff55', p => p.ellipse(-24, -15, 14, 3.2, -.12, 0, TAU));
+  stroke(c, '#3f6a8c', 1.4, p => { p.moveTo(-64, 4); p.quadraticCurveTo(-58, 7, -50, 5); });
+  cuteEye(c, -38, -6, 4.8, blink(t, seed), '#1d3b52');
+  fill(c, '#ff9fae77', p => p.ellipse(-33, 3, 4.2, 2.4, 0, 0, TAU));
+}
+// A mother dolphin and her calf leap along the sea and show where the bonus fish swim.
 export function drawDolphins(c, game, water, motion, reducedMotion) {
   const show = showState(game, reducedMotion);
   if (show?.name !== 'dolphins') return;
   for (let k = 0; k < 2; k++) {
-    const u = wrap(show.age * .55 - k * .22, 1.6) / 1.6;
+    const u = wrap(show.age * .5 - k * .16, 1.7) / 1.7;
     if (u > 1) continue;
-    const x = 620 - u * 560 - k * 40, lift = Math.sin(u * Math.PI), y = water + 14 - lift * (96 - k * 24);
-    const angle = Math.atan2(-Math.cos(u * Math.PI) * (96 - k * 24) * Math.PI / 560, -1);
-    c.save(); c.translate(x, y); c.rotate(angle + Math.PI); c.scale(k ? .8 : 1, k ? .8 : 1);
-    fill(c, '#7ea9c8', p => { p.moveTo(-44, 0); p.bezierCurveTo(-24, -24, 22, -22, 46, -4); p.bezierCurveTo(24, 12, -20, 14, -44, 0); });
-    fill(c, '#f2f6f8', p => { p.moveTo(-30, 4); p.bezierCurveTo(-8, 14, 22, 12, 40, 0); p.bezierCurveTo(20, 16, -14, 18, -30, 4); });
-    fill(c, '#7ea9c8', p => { p.moveTo(-4, -14); p.lineTo(8, -32); p.lineTo(14, -14); p.closePath(); });
-    fill(c, '#7ea9c8', p => { p.moveTo(-42, 0); p.lineTo(-62, -14); p.lineTo(-58, 0); p.lineTo(-62, 14); p.closePath(); });
-    fill(c, '#1d3b52', p => p.arc(30, -4, 2.2, 0, TAU));
-    c.restore();
-    if (lift < .25) for (let i = 0; i < 5; i++) fill(c, '#ffffffaa', p => p.arc(x + (i - 2) * 8, water - 4 - hash(i + k) * 14 * (1 - lift * 3), 2.2, 0, TAU));
+    const height = k ? 66 : 92, size = k ? .58 : .9;
+    const x = 640 - u * 600 - k * 30, lift = Math.sin(u * Math.PI), y = water + 22 - lift * height;
+    // Face the direction of travel: the curve's slope tilts the nose up, then down.
+    const angle = Math.atan2(-Math.cos(u * Math.PI) * height * Math.PI, -600) - Math.PI;
+    c.save(); c.translate(x, y); c.rotate(angle); c.scale(size, size); dolphin(c, motion, k * 3); c.restore();
+    if (lift < .3) for (let i = 0; i < 6; i++) {
+      const spray = 1 - lift / .3;
+      c.globalAlpha = spray * .85; fill(c, '#ffffff', p => p.arc(x + (i - 2.5) * 9 * size, water - 3 - hash(i + k * 7) * 18 * spray, 2.4 * size + 1, 0, TAU));
+    }
+    c.globalAlpha = 1;
   }
 }
 

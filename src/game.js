@@ -82,6 +82,19 @@ export function terrainBlocks(item) {
       return { x, y, width, height, points };
     });
 }
+// Swimmers overtake the scrolling world, so they must find a gap around rocks, coral and buoys.
+// Returns the closest height to y that keeps a body of halfHeight clear of terrain ahead.
+export function terrainSafeY(items, x, y, halfHeight = 32, ahead = 150) {
+  let free = [[WORLD.water + 40, 790]];
+  for (const block of items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind)).flatMap(terrainBlocks)) {
+    if (block.x > x + 70 || block.x + block.width < x - ahead) continue;
+    const top = block.y - halfHeight - 6, bottom = block.y + block.height + halfHeight + 6;
+    free = free.flatMap(([a, b]) => [[a, Math.min(b, top)], [Math.max(a, bottom), b]]).filter(([a, b]) => b > a);
+  }
+  if (!free.length) return y;
+  const [a, b] = free.reduce((best, gap) => Math.abs(clamp(y, ...gap) - y) < Math.abs(clamp(y, ...best) - y) ? gap : best);
+  return clamp(y, a, b);
+}
 export function hitsTerrain(player, item) {
   return terrainBlocks(item).some(b => hitsPolygon(player.x, player.y, b.points));
 }
@@ -261,6 +274,12 @@ function encounter(game) {
     if (piece === 'dolphins') for (let i = 0; i < 10; i++) game.items.push({ kind: 'fish', x: 780 + i * 56, y: 520 - Math.sin(i / 9 * Math.PI) * 70, golden: false, lane: 'alternate', route: wave, bonus: true });
   }
   if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
+  // A swimmer whose band crosses this wave's rock starts ahead of it, so it swims away instead of through.
+  const rocks = game.items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind) && item.x >= 800).flatMap(terrainBlocks);
+  for (const swimmer of game.items.filter(item => ['shark', 'turtle'].includes(item.kind) && item.x >= 850)) {
+    const blocking = rocks.filter(block => swimmer.baseY + 42 > block.y && swimmer.baseY - 42 < block.y + block.height);
+    if (blocking.length) swimmer.x = Math.min(...blocking.map(block => block.x)) - 120;
+  }
   if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: sharkCount > 1 ? UNDERWATER_BANDS[bandVariant].y : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
   if (kind === 'diver') game.items.push({ kind, x: 890, y: 620, phase: 'idle', timer: 0 });
@@ -422,6 +441,8 @@ export function step(game, dt, holding) {
     }
     if (item.kind === 'turtle') {
       item.x -= (18 + Math.min(15, game.time * .1)) * dt;
+      const turtleSafe = terrainSafeY(game.items, item.x, item.baseY, 42);
+      item.baseY = item.x > 520 ? turtleSafe : item.baseY + clamp(turtleSafe - item.baseY, -200 * dt, 200 * dt);
       item.y = item.baseY + Math.sin(game.time * 1.8) * 10;
       item.reaction = Math.max(0, (item.reaction || 0) - dt);
       if (!item.touched && Math.hypot((item.x - p.x) / 1.6, item.y - p.y) < 36) {
@@ -461,7 +482,10 @@ export function step(game, dt, holding) {
         }
       }
       const lane = UNDERWATER_BANDS.find(candidate => candidate.id === item.lane);
-      item.y = lane ? clamp(item.y, lane.y - 38, lane.y + 38) : clamp(item.y, WORLD.water + 70, 720);
+      const laneY = lane ? clamp(item.y, lane.y - 38, lane.y + 38) : clamp(item.y, WORLD.water + 70, 720);
+      // Terrain wins over the lane: off screen the shark simply starts in the gap, on screen it steers there.
+      const safeY = terrainSafeY(game.items, item.x, laneY);
+      item.y = safeY === laneY ? laneY : item.x > 520 ? safeY : item.y + clamp(safeY - item.y, -260 * dt, 260 * dt);
       if (item.x < p.x - 90) { item.caught = true; continue; }
     }
     if (item.kind === 'diver') {

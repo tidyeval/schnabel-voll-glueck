@@ -46,12 +46,23 @@ function crab(c, x, y, t, seed) {
   c.restore();
 }
 function starfish(c, x, y, t, seed) {
-  c.save(); c.translate(x, y); c.rotate(Math.sin(t * .8 + seed) * .08);
-  path(c, '#f4a76a', p => { for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, r = i % 2 ? 7 : 16; i ? p.lineTo(Math.cos(a) * r, Math.sin(a) * r) : p.moveTo(Math.cos(a) * r, Math.sin(a) * r); } p.closePath(); }, '#d9824f', 1.4);
-  for (let i = 0; i < 5; i++) { const a = i * TAU / 5 - Math.PI / 2; ellipse(c, Math.cos(a) * 10, Math.sin(a) * 10, 1.2, 1.2, '#ffd0a0'); }
-  cuteEye(c, -3.5, -1, 2.6, blink(t, seed), '#5a3524'); cuteEye(c, 3.5, -1, 2.6, blink(t, seed), '#5a3524');
-  blush(c, -6, 3, 2); blush(c, 6, 3, 2);
-  path(c, null, p => { p.moveTo(-1.5, 3); p.quadraticCurveTo(0, 4.5, 1.5, 3); }, '#9c5636', 1);
+  // A thick round stroke over a pointed star gives plump, rounded arms; the top arm waves.
+  const wave = Math.sin(t * 3 + seed) > .4 ? Math.sin(t * 12) * 3 : 0;
+  const tips = Array.from({ length: 5 }, (_, i) => { const a = i * TAU / 5 - Math.PI / 2; return [Math.cos(a) * 15 + (i ? 0 : wave), Math.sin(a) * 15]; });
+  const shape = p => { tips.forEach(([tx, ty], i) => { const a = (i + .5) * TAU / 5 - Math.PI / 2; i ? p.lineTo(tx, ty) : p.moveTo(tx, ty); p.lineTo(Math.cos(a) * 6.5, Math.sin(a) * 6.5); }); p.closePath(); };
+  c.save(); c.translate(x, y); c.rotate(Math.sin(t * .8 + seed) * .06);
+  ellipse(c, 1, 12, 17, 3.5, '#1a3a4022');
+  const body = c.createRadialGradient(-2, -3, 2, 0, 0, 20);
+  body.addColorStop(0, '#ffc98e'); body.addColorStop(1, '#f2905e');
+  c.lineJoin = 'round';
+  c.beginPath(); shape(c); c.strokeStyle = '#e07c4c'; c.lineWidth = 9; c.stroke();
+  c.beginPath(); shape(c); c.strokeStyle = body; c.lineWidth = 7; c.stroke(); c.fillStyle = body; c.fill();
+  c.lineJoin = 'miter';
+  tips.forEach(([tx, ty]) => { for (const f of [.45, .72]) ellipse(c, tx * f, ty * f, 1.3, 1.3, '#ffe2bd'); });
+  ellipse(c, -4, -6, 4, 2, '#ffffff55', -.5);
+  cuteEye(c, -3.6, -.5, 3, blink(t, seed), '#5a3524'); cuteEye(c, 3.6, -.5, 3, blink(t, seed), '#5a3524');
+  blush(c, -7, 4, 2.2); blush(c, 7, 4, 2.2);
+  path(c, '#b8584a', p => { p.moveTo(-1.8, 3.5); p.quadraticCurveTo(0, 6.5, 1.8, 3.5); p.closePath(); });
   c.restore();
 }
 function octopus(c, x, y, t, seed, night) {
