@@ -76,7 +76,7 @@ export function createAudio(settings) {
         if (kind === 'feast') [784, 988, 1175, 1568].forEach((f, i) => tone(f, .3, .08, 'sine', i * .07));
         if (kind === 'show' && detail === 'trawler') { tone(98, 1.3, .1, 'sawtooth'); tone(147, 1.3, .06, 'sawtooth'); }
         if (kind === 'show' && detail === 'whale') { tone(180, 1.6, .09, 'sine', 0, 420); tone(420, 1.8, .07, 'sine', 1.4, 150); }
-        if (kind === 'show' && (detail === 'goldenHour' || detail === 'dolphins')) [659, 880, 1175, 1568].forEach((f, i) => tone(f, .4, .05, 'sine', i * .1));
+        if (kind === 'show' && ['goldenHour', 'dolphins', 'shootingStars'].includes(detail)) [659, 880, 1175, 1568].forEach((f, i) => tone(f, .4, .05, 'sine', i * .1));
         if (kind === 'show' && detail === 'rainbow') [784, 988, 1175, 1568, 1976].forEach((f, i) => tone(f, .5, .04, 'sine', i * .12));
         if (kind === 'catch') { tone(880, .12, .13); tone(1174, .18, .09, 'sine', .06); }
         if (kind === 'splash' || kind === 'netSplash') tone(190, .2, kind === 'netSplash' ? .09 : .05, 'triangle');

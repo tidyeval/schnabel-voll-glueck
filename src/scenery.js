@@ -10,15 +10,15 @@ export const THEMES = [
     water: ['#6fc4b6', '#256068'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
     seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1,
   },
-  { // Fischerhafen: the same sunny morning as the bay.
-    sky: [[0, '#a9dbe0'], [.6, '#d9ecd9'], [1, '#f7e9c6']], glow: '#efb68a3d', far: '#9cc7bd', tint: null,
-    water: ['#6fc4b6', '#256068'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
+  { // Fischerhafen: bright, warm afternoon.
+    sky: [[0, '#acdbe0'], [.6, '#f1e7c8'], [1, '#fbdcae']], glow: '#f7b77a55', far: '#a9c4b2', tint: null,
+    water: ['#6fc4b6', '#256068'], surface: '#f8dfad4a', rays: '#fbf2c0', rayAlpha: .13, mote: '#f3eccc35',
     seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1.2,
   },
-  { // Korallenriff: sunny, with slightly lighter water.
-    sky: [[0, '#a9dbe0'], [.6, '#d9ecd9'], [1, '#f7e9c6']], glow: '#efb68a3d', far: '#9cc7bd', tint: null,
-    water: ['#78bdbb', '#386879'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',
-    seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1.1,
+  { // Korallenriff: dusk turning into night, the finale.
+    sky: [[0, '#151b47'], [.5, '#3a3672'], [.85, '#8b5f8c'], [1, '#e09a86']], glow: '#ff9f8a44', far: '#2b2d5e', tint: 'rgba(24,30,78,.62)',
+    water: ['#3b8fa6', '#10294a'], surface: '#cfe0ff3a', rays: '#bcd8ff', rayAlpha: .07, mote: '#bfe9ff30',
+    seabed: '#2f5f73', grass: ['#3f8a86', '#235a66'], rocks: '#173a56', swell: 1.1,
   },
 ];
 
@@ -76,14 +76,27 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
     }
   }
   if (show?.name === 'rainbow') rainbow(c, water, show);
-  // Sun.
-  fill(c, '#ffe7a6', p => p.arc(397, water - 140, 29, 0, TAU));
-  fill(c, '#fff4c777', p => p.arc(397, water - 140, 43, 0, TAU));
-  fill(c, '#fff0bd35', p => p.arc(397, water - 140, 61, 0, TAU));
+  // Sun, or moon and stars over the night reef.
+  if (stage === 2) {
+    fill(c, '#f6f1d6', p => p.arc(392, 118, 25, 0, TAU));
+    fill(c, '#f6f1d622', p => p.arc(392, 118, 44, 0, TAU));
+    fill(c, '#f6f1d612', p => p.arc(392, 118, 70, 0, TAU));
+    for (let i = 0; i < 46; i++) {
+      const twinkle = reducedMotion ? .7 : .55 + Math.sin(motion * (1 + hash(i) * 2) + i) * .45;
+      c.globalAlpha = clamp(twinkle, .1, 1) * (1 - hash(i + 9) * .5);
+      fill(c, '#fff8e0', p => p.arc(hash(i + 1) * 480, hash(i + 2) * (water - 110), hash(i + 3) > .8 ? 1.6 : 1, 0, TAU));
+    }
+    c.globalAlpha = 1;
+  } else {
+    fill(c, '#ffe7a6', p => p.arc(397, water - 140, 29, 0, TAU));
+    fill(c, '#fff4c777', p => p.arc(397, water - 140, 43, 0, TAU));
+    fill(c, '#fff0bd35', p => p.arc(397, water - 140, 61, 0, TAU));
+  }
   c.fillStyle = vertical(c, water - 150, water, [[0, th.glow.slice(0, 7) + '00'], [1, th.glow]]); c.fillRect(-30, water - 150, 540, 150);
   c.fillStyle = vertical(c, 0, water, th.sky); c.fillRect(-30, -30, 540, water + 30);
   c.globalCompositeOperation = 'source-over';
   if (show?.name === 'goldenHour') goldenHour(c, water, show, motion);
+  if (show?.name === 'shootingStars') shootingStars(c, water, show);
 }
 
 function rainbow(c, water, show) {
@@ -124,6 +137,17 @@ function goldenHour(c, water, show, motion) {
   }
   c.globalAlpha = 1;
 }
+function shootingStars(c, water, show) {
+  for (const [at, x, y] of [[1.2, 420, 40], [3.6, 300, 70], [5.9, 470, 110], [8.1, 360, 30], [9.4, 250, 90]]) {
+    const u = (show.age - at) / .9;
+    if (u < 0 || u > 1) continue;
+    const hx = x - u * 220, hy = y + u * 120, fade = Math.sin(u * Math.PI);
+    const g = c.createLinearGradient(hx, hy, hx + 90, hy - 49);
+    g.addColorStop(0, `rgba(255,248,214,${fade})`); g.addColorStop(1, 'rgba(255,248,214,0)');
+    stroke(c, g, 2.4, p => { p.moveTo(hx, hy); p.lineTo(hx + 90, hy - 49); });
+    c.globalAlpha = fade; fill(c, '#fffbe8', p => p.arc(hx, hy, 2.8, 0, TAU)); c.globalAlpha = 1;
+  }
+}
 // Two dolphins leap along the sea and show where the bonus fish swim.
 export function drawDolphins(c, game, water, motion, reducedMotion) {
   const show = showState(game, reducedMotion);
@@ -148,6 +172,15 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
   const th = THEMES[stage];
   c.fillStyle = vertical(c, water, 850, [[0, th.water[0]], [1, th.water[1]]]); c.fillRect(-30, water, 540, 880 - water);
   c.fillStyle = vertical(c, water, water + 110, [[0, th.surface], [1, th.surface.slice(0, 7) + '00']]); c.fillRect(-30, water, 540, 110);
+  // Moon path just below the surface.
+  if (stage === 2) {
+    for (let k = 0; k < 9; k++) {
+      const width = 26 - k * 2.4 + Math.sin(motion * 2.6 + k * 1.7) * 7;
+      c.globalAlpha = (.5 - k * .05) * .7;
+      fill(c, '#eef3ff', p => p.ellipse(392 + Math.sin(motion * 1.3 + k) * 5, water + 9 + k * 9, Math.max(3, width), 2.2, 0, 0, TAU));
+    }
+    c.globalAlpha = 1;
+  }
   // Light shafts sway slowly and fade with depth.
   for (let i = 0; i < 6; i++) {
     const x = i * 108 - 150 + Math.sin(motion * .15 + i * .7) * 22, wide = 38 + (i % 3) * 16;

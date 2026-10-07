@@ -115,8 +115,8 @@ export const PAIR_PATTERNS = new Map([
 // Spectacle between the regular encounters. Shows are scenery only; bait balls and currents are optional rewards.
 export const SET_PIECES = new Map([
   ['0:5', 'baitball'], ['0:8', 'rainbow'],
-  ['1:4', 'current'], ['1:7', 'trawler'], ['1:10', 'dolphins'],
-  ['2:2', 'baitball'], ['2:5', 'whale'], ['2:7', 'current'], ['2:9', 'goldenHour'],
+  ['1:2', 'goldenHour'], ['1:4', 'current'], ['1:7', 'trawler'], ['1:10', 'dolphins'],
+  ['2:2', 'baitball'], ['2:5', 'whale'], ['2:7', 'current'], ['2:9', 'shootingStars'],
 ]);
 export const FRENZY = { combo: 15, duration: 6, interval: .24 };
 export const JUMP = { from: 430, range: 250, boost: 300, gravity: 700, ceiling: 150 };

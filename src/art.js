@@ -326,7 +326,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   const d = menu ? (reducedMotion ? 0 : t * 12) : game.distance;
   const motion = reducedMotion ? 0 : t;
   c.clearRect(0, 0, 480, 850);
-  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = false;
+  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = stage === 2;
   c.save();
   if (fx && (fx.shakeX || fx.shakeY)) { c.translate(240 + fx.shakeX, 425 + fx.shakeY); c.scale(1.03, 1.03); c.translate(-240, -425); }
   drawSky(c, stage, water, d, motion, menu ? null : game, reducedMotion, () => {

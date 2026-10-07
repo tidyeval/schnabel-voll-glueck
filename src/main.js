@@ -28,6 +28,7 @@ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch { /* A l
 let selectedStage = Math.min(prefs.completed, STAGES.length - 1);
 const audio = createAudio(prefs);
 const juice = createJuice(reducedMotion);
+const showLabels = { dolphins: 'showDolphins', goldenHour: 'showGoldenHour', shootingStars: 'showShootingStars' };
 const labels = { nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'] };
 let game = createGame(), mode = 'menu', holding = false, effects = [], last = 0, animation = 0, toastUntil = 0, needsDraw = true;
 function text(id, value) { if ($(id).textContent !== String(value)) $(id).textContent = value; }
@@ -77,7 +78,7 @@ document.querySelectorAll('[data-locale]').forEach(button => button.onclick = ()
 
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start(elapsed) {
-  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
+  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); document.body.classList.toggle('night', game.stage === 2); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
   $('toast').classList.add('hidden'); audio.start(); updateHud(); canvas.focus();
 }
@@ -201,7 +202,7 @@ function frame(now) {
       juice.onEvent(event, game);
       const label = labels[event.kind];
       if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
-      if (event.kind === 'show' && { dolphins: 'showDolphins', goldenHour: 'showGoldenHour' }[event.name]) toast(t({ dolphins: 'showDolphins', goldenHour: 'showGoldenHour' }[event.name]));
+      if (event.kind === 'show' && showLabels[event.name]) toast(t(showLabels[event.name]));
       audio.effect(event.kind, event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }
