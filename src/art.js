@@ -8,6 +8,18 @@ function path(c, fill, draw, stroke, width = 1) {
   c.beginPath(); draw(c); if (fill) { c.fillStyle = fill; c.fill(); }
   if (stroke) { c.strokeStyle = stroke; c.lineWidth = width; c.stroke(); }
 }
+// Every creature blinks on its own rhythm; returns how open the eye is.
+function blink(t, seed) { const k = ((t + seed * 2.37) % 3.4 + 3.4) % 3.4; return k < .16 ? Math.abs(k - .08) / .08 : 1; }
+// Big glossy eyes with two highlights carry most of the cuteness.
+function cuteEye(c, x, y, r, open = 1, colour = '#294b49') {
+  if (open < .3) { path(c, null, p => { p.moveTo(x - r * .9, y); p.quadraticCurveTo(x, y + r * .55, x + r * .9, y); }, colour, Math.max(1, r * .38)); return; }
+  ellipse(c, x, y, r * .88, r * open, colour);
+  ellipse(c, x - r * .3, y - r * .36 * open, r * .34, r * .34 * open, '#fffdf1');
+  ellipse(c, x + r * .28, y + r * .34 * open, r * .15, r * .15 * open, '#fffdf1cc');
+}
+function star(c, x, y, r, colour, rotation = 0) {
+  path(c, colour, p => { for (let i = 0; i < 10; i++) { const a = rotation + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .45 : r; i ? p.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : p.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } p.closePath(); });
+}
 function gradient(c, y1, y2, a, b) {
   const g = c.createLinearGradient(0, y1, 0, y2); g.addColorStop(0, a); g.addColorStop(1, b); return g;
 }
@@ -41,7 +53,7 @@ function island(c, x, water, t) {
   c.fillStyle = '#ffe5a1'; c.fillRect(-44, -126, 6, 8);
   palm(c, 28, -30, .55, t); c.restore();
 }
-export function fish(c, x, y, scale = 1, golden = false, t = 0) {
+export function fish(c, x, y, scale = 1, golden = false, t = 0, scared = 0) {
   const swim = Math.sin(t * 7) * .16;
   c.save(); c.translate(x, y); c.scale(scale, scale); c.rotate(Math.sin(t * 3) * .035);
   const col = golden ? '#f6cd5f' : '#efa98e', edge = golden ? '#b9823e' : '#af6f66';
@@ -51,8 +63,10 @@ export function fish(c, x, y, scale = 1, golden = false, t = 0) {
   ellipse(c, -5, 3, 10, 5, golden ? '#ffe9a1' : '#ffd3b9');
   path(c, golden ? '#e3a448' : '#d47d70', p => { p.moveTo(-1, -8); p.lineTo(8, -16); p.lineTo(12, -5); p.closePath(); }, edge, .8);
   path(c, null, p => { p.moveTo(-2, -7); p.quadraticCurveTo(5, -2, 12, -1); }, '#fff0c477', 1.2);
-  ellipse(c, -10, -2, 2.6, 3.2, '#315653'); ellipse(c, -10.7, -3.2, .8, 1, '#fff9e7');
-  path(c, null, p => { p.moveTo(-15, 3); p.quadraticCurveTo(-11, 6, -7, 4); }, edge, 1);
+  cuteEye(c, -9.5, -2.5, 4.2 + scared * 1.2, scared ? 1 : blink(t, y * .013), '#315653');
+  ellipse(c, -6.5, 3.6, 3, 1.7, '#f3868a55');
+  if (scared) ellipse(c, -14, 4, 1.6, 2.2 * scared, edge);
+  else path(c, null, p => { p.moveTo(-15, 3); p.quadraticCurveTo(-12.5, 5.5, -10, 4); }, edge, 1);
   if (golden) { c.strokeStyle = '#fff0bd'; c.lineWidth = 1.7; c.beginPath(); c.moveTo(-4, -19); c.lineTo(-4, -27); c.moveTo(-8, -23); c.lineTo(0, -23); c.stroke(); }
   c.restore();
 }
@@ -75,6 +89,8 @@ function pelicanWing(c, lift, fold, back) {
 export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = false, happy = false, gulp = 0, breach = 0, cargo = 0, breath = WORLD.breath, reducedMotion = false, expression = {}) {
   const confused = expression.confused || 0;
   c.save(); c.translate(x, y); c.rotate(tilt + (reducedMotion ? 0 : Math.sin(confused * 18) * .28 * Math.min(1, confused))); c.scale(scale, scale);
+  // Squash on splashdown, stretch along the flight path when moving fast.
+  if (!reducedMotion) { const sq = expression.squash || 0, st = expression.stretch || 0; c.scale(1 + st + sq * .17, 1 - st * .7 - sq * .17); }
   const fullness = cargo / WORLD.capacity;
   const state = airState({ y, wet, breath }, cargo);
   const lowAir = state.level > 0, urgency = state.urgency;
@@ -111,7 +127,7 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   path(c, gradient(c, -57, 21, '#fffdf2', '#ecedd7'), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
   // Pip's tousled crown is his main character mark at every rendered scale.
   path(c, '#fffdf2', p => { p.moveTo(4, -56); p.quadraticCurveTo(-5, -70, 4, -73); p.quadraticCurveTo(10, -70, 12, -61); p.quadraticCurveTo(10, -77, 18, -75); p.quadraticCurveTo(25, -68, 21, -59); }, outline, 1);
-  path(c, gradient(c, -35, 8, '#f3c574', '#dc9758'), p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(72, -15 + bite * 11, 57, 7 + bite * 15 + fullness * 36 + wobble, 40, -7); p.quadraticCurveTo(31, -18, 37, -40); }, '#bd774b', 1.1);
+  path(c, gradient(c, -35, 8, '#f3c574', '#dc9758'), p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(72, -15 + bite * 11, 57, 7 + bite * 15 + fullness * 46 + wobble, 40, -7); p.quadraticCurveTo(31, -18, 37, -40); }, '#bd774b', 1.1);
   path(c, '#f8d79055', p => { p.moveTo(42, -31); p.quadraticCurveTo(63, -23, 82, -23); p.quadraticCurveTo(64, -14, 47, -9); p.quadraticCurveTo(39, -18, 42, -31); });
   if (fullness > .3) for (let i = 0; i < Math.ceil(fullness * 3); i++) {
     ellipse(c, 49 + i * 7, -13 + fullness * 8 + Math.sin(t * 5 + i) * 2, 5, 2.5, '#b9784d55', -.4);
@@ -132,9 +148,12 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
     ellipse(c, 25, -45, 4.4, 5.4 - tired * 3.5, '#294b49');
     path(c, null, p => { p.moveTo(18, -48 + tired * 2); p.quadraticCurveTo(25, -51 + tired * 4, 32, -48 + tired * 2); }, '#8f765f', 2);
   } else if (happy || relief > 0) path(c, null, p => { p.moveTo(20, -43); p.quadraticCurveTo(26, -50, 32, -43); }, '#31524f', 2.8);
-  else { const gaze = expression.fish ? clamp((expression.fish.y - y) * .03, -2, 2) : 0; ellipse(c, 25 + (expression.fish ? 1 : 0), -46 + gaze, 4.4, 5.4, '#294b49'); ellipse(c, 26.4, -48.2 + gaze, 1.3, 1.5, '#fffdf1'); }
+  else if (expression.sparkle > 0) { star(c, 25.5, -46, 7.5, '#f2b640', reducedMotion ? 0 : t * 3); star(c, 25.5, -46, 3.6, '#fff4c4', reducedMotion ? 0 : t * 3); }
+  else { const gaze = expression.fish ? clamp((expression.fish.y - y) * .03, -2, 2) : 0; cuteEye(c, 25.5 + (expression.fish ? 1 : 0), -46 + gaze, 6.2, expression.fish || reducedMotion ? 1 : blink(t, .5)); }
   if (!lowAir) path(c, null, p => { p.moveTo(18, -53); p.quadraticCurveTo(25, -57, 32, -52); }, '#aa9271', 1.1);
   ellipse(c, 21, -35, 5.6, 3.3, '#e8aa94');
+  // Dizzy little stars instead of a harsh red flash after a bump.
+  if (hurt && !reducedMotion) for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; star(c, 20 + Math.cos(a) * 22, -72 + Math.sin(a) * 7, 4.5, i % 2 ? '#ffd66e' : '#fff0b0', a); }
   c.restore();
   if (wet) {
   c.save(); c.translate(-12, 5); c.scale(.8, .6);
@@ -170,7 +189,7 @@ function shark(c, item, t) {
   ellipse(c, 0, 0, 55, 26, gradient(c, -26, 25, '#83abb0', '#527d89'));
   path(c, '#bad0c8', p => { p.moveTo(-50, 8); p.quadraticCurveTo(-12, 28, 46, 12); p.quadraticCurveTo(14, 29, -24, 22); p.closePath(); });
   path(c, '#648d96', p => { p.moveTo(3, 8); p.lineTo(24, 34); p.quadraticCurveTo(20, 17, 25, 9); p.closePath(); }, '#426974', 1);
-  ellipse(c, -33, -4, 4.3, item.reaction > 0 ? 1.5 : 4.8, '#294e55'); ellipse(c, -34.2, -5.4, 1.2, 1.4, '#fff8e8');
+  cuteEye(c, -33, -4, 5.4, item.reaction > 0 ? 0 : blink(t, item.baseY * .01), '#294e55');
   path(c, null, p => { p.moveTo(-43, 8); p.quadraticCurveTo(-29, 18, -13, 7); }, '#3d6670', 2.1);
   ellipse(c, -38, 3, 5, 2.8, '#d89e9999');
   path(c, null, p => { p.moveTo(-40, -13); p.quadraticCurveTo(-32, -18, -23, -13); }, '#527783', 1.2);
@@ -190,7 +209,7 @@ function turtle(c, item, t) {
   for (const [x, y, ex, ey] of [[-11,-17,-18,-25],[9,-20,17,-25],[21,-3,35,-3],[9,12,17,20],[-10,9,-20,16],[-19,-4,-31,-7]]) path(c, null, p => { p.moveTo(x,y); p.lineTo(ex,ey); }, '#d3dfa6', 1.5);
   c.save(); c.translate(tuck * 16, 0);
   ellipse(c, -37, -3, 19, 15, gradient(c, -17, 14, '#acd0a5', '#7fac8d'), -.1);
-  ellipse(c, -43, -7, 4, 5, '#2b5050'); ellipse(c, -44, -9, 1.4, 1.6, '#fff8dc');
+  cuteEye(c, -43, -7, 5.6, tuck > .5 ? 0 : blink(t, item.baseY * .02 + 1), '#2b5050');
   ellipse(c, -44, 3, 5, 3, '#eab6a0');
   path(c, null, p => { p.moveTo(-54, 1); p.quadraticCurveTo(-50, 6, -46, 3); }, '#557e6d', 1.4);
   path(c, null, p => { p.moveTo(-51, -13); p.quadraticCurveTo(-43, -17, -35, -13); }, '#69947d', 1);
@@ -210,8 +229,7 @@ function puffer(c, item, t) {
     path(c, '#c48f58', p => { p.moveTo(Math.cos(a - .09) * (r - 7), Math.sin(a - .09) * (r - 7)); p.lineTo(Math.cos(a) * r, Math.sin(a) * r); p.lineTo(Math.cos(a + .09) * (r - 7), Math.sin(a + .09) * (r - 7)); p.closePath(); });
   }
   for (const dx of [-10, 4]) {
-    ellipse(c, dx, -7, startled ? 5 : 3.5, startled ? 7 : item.phase === 'rest' ? 1.5 : 4.5, '#4a6158');
-    if (item.phase !== 'rest') ellipse(c, dx - 1, -9, 1, 1.5, '#fff8df');
+    cuteEye(c, dx, -7, startled ? 7 : 5, item.phase === 'rest' ? 0 : startled ? 1 : blink(t, item.x * .001 + 2), '#4a6158');
   }
   ellipse(c, -18, 3, 5, 3, '#e7ab91');
   if (startled) ellipse(c, -5, 5, 3, 5, '#956e51');
@@ -472,7 +490,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         ellipse(c, 0, 0, 18, 10, '#eee8d4'); ellipse(c, -13, -7, 9, 9, '#fff9e8');
         path(c, '#e6a953', p => { p.moveTo(-19, -9); p.lineTo(-34, -4); p.lineTo(-19, -1); p.closePath(); }, '#ad7043', .8);
         if (item.reactionKind === 'confused') path(c, null, p => { p.moveTo(-20, -13); p.lineTo(-12, -6); p.moveTo(-12, -13); p.lineTo(-20, -6); }, '#315852', 1.7);
-        else { ellipse(c, -16, -10, 2.3, 2.5, '#315852'); ellipse(c, -16.8, -10.8, .7, .8, '#fff'); }
+        else { cuteEye(c, -15.5, -10, 3.4, blink(motion, item.baseY * .01 + 3), '#315852'); ellipse(c, -11, -5, 2.6, 1.5, '#f3a0a066'); }
         path(c, null, p => { p.moveTo(9, 5); p.lineTo(21, 9); }, '#b8ad91', 2); c.restore();
       }
       if (item.kind === 'jelly') {
@@ -480,7 +498,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         for (let i = -2; i <= 2; i++) path(c, null, p => { p.moveTo(item.x + i * 9, item.y); p.bezierCurveTo(item.x + i * 9 - 12, item.y + depth / 2, item.x + i * 9 + 12, item.y + depth / 2, item.x + i * 9, item.y + depth); }, i % 2 ? '#df9dcecc' : '#efb7dbcc', 3);
         path(c, gradient(c, item.y - 31, item.y + 11, '#f0c8e1', '#cf8fc4'), p => { p.moveTo(item.x - 27 - pulse, item.y); p.quadraticCurveTo(item.x - 25, item.y - 31, item.x, item.y - 31 - pulse); p.quadraticCurveTo(item.x + 25, item.y - 31, item.x + 27 + pulse, item.y); p.quadraticCurveTo(item.x + 18, item.y + 8, item.x + 10, item.y); p.quadraticCurveTo(item.x, item.y + 10, item.x - 10, item.y); p.quadraticCurveTo(item.x - 19, item.y + 8, item.x - 27 - pulse, item.y); }, '#8e6d96', 1);
         ellipse(c, item.x - 9, item.y - 17, 7, 4, '#fff3ed77');
-        for (const dx of [-8, 8]) ellipse(c, item.x + dx, item.y - 7, 2.2, 3, '#655879');
+        for (const dx of [-8, 8]) { cuteEye(c, item.x + dx, item.y - 8, 3.6, blink(motion, item.x * .002 + 4), '#655879'); ellipse(c, item.x + dx * 1.6, item.y - 3, 3, 1.6, '#ff8fb066'); }
         path(c, null, p => { p.moveTo(item.x - 5, item.y); p.quadraticCurveTo(item.x, item.y + 4, item.x + 5, item.y); }, '#755e83', 1.2);
       }
       if (item.kind === 'driftwood') {
@@ -505,7 +523,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       if (item.kind === 'current') drawCurrent(c, item, motion, reducedMotion);
       if (item.kind === 'baitball') drawBaitball(c, item, game.time, night);
       if (night && (item.kind === 'fish' || item.kind === 'jelly')) { c.globalCompositeOperation = 'lighter'; ellipse(c, item.x, item.y - (item.kind === 'jelly' ? 12 : 0), item.kind === 'jelly' ? 44 : 25, item.kind === 'jelly' ? 40 : 17, item.kind === 'jelly' ? '#ff9ee01c' : item.golden ? '#ffd9701c' : '#ffc9a00e'); c.globalCompositeOperation = 'source-over'; }
-      if (item.kind === 'fish') fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion);
+      if (item.kind === 'fish') { const gap = Math.hypot(item.x - game.player.x, item.y - game.player.y); fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion, gap < 120 ? 1 - gap / 120 : 0); }
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);
@@ -516,7 +534,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(motion * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
     }
     c.save();
-    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
+    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1), sparkle: fx?.sparkle, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
   }
   const swell = menu ? 1 : swellOf(game, stage, reducedMotion);
   for (let i = 0; i < 4; i++) {

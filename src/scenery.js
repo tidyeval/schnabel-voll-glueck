@@ -273,6 +273,15 @@ export function drawJuice(c, fx, game, water, motion, reducedMotion) {
   for (const q of fx.particles || []) {
     const life = clamp(q.life / q.max, 0, 1);
     if (q.kind === 'bubble') stroke(c, `rgba(222,250,240,${life * .75})`, 1, p => p.arc(q.x, q.y, q.size, 0, TAU));
+    else if (q.kind === 'heart') {
+      const r = q.size * (1 + (1 - life) * .3); c.globalAlpha = Math.min(1, life * 2);
+      fill(c, q.colour, p => { p.moveTo(q.x, q.y + r * .9); p.bezierCurveTo(q.x - r * 1.6, q.y - r * .2, q.x - r * .7, q.y - r * 1.4, q.x, q.y - r * .5); p.bezierCurveTo(q.x + r * .7, q.y - r * 1.4, q.x + r * 1.6, q.y - r * .2, q.x, q.y + r * .9); });
+      fill(c, '#ffffffaa', p => p.ellipse(q.x - r * .5, q.y - r * .55, r * .25, r * .17, -.6, 0, TAU)); c.globalAlpha = 1;
+    } else if (q.kind === 'star') {
+      c.globalAlpha = Math.min(1, life * 2);
+      fill(c, q.colour, p => { for (let i = 0; i < 10; i++) { const a = q.life * 5 + i * Math.PI / 5, rr = i % 2 ? q.size * .45 : q.size; i ? p.lineTo(q.x + Math.cos(a) * rr, q.y + Math.sin(a) * rr) : p.moveTo(q.x + Math.cos(a) * rr, q.y + Math.sin(a) * rr); } p.closePath(); });
+      c.globalAlpha = 1;
+    }
     else if (q.kind === 'spark') { c.globalAlpha = life; fill(c, q.colour || '#fff2b6', p => { p.moveTo(q.x, q.y - q.size * 2); p.lineTo(q.x + q.size * .6, q.y); p.lineTo(q.x, q.y + q.size * 2); p.lineTo(q.x - q.size * .6, q.y); p.closePath(); }); c.globalAlpha = 1; }
     else { c.globalAlpha = life * (q.kind === 'mist' ? .5 : .95); fill(c, '#f1fbe9', p => p.ellipse(q.x, q.y, q.size, q.size * (q.kind === 'mist' ? 1 : 1.7), Math.atan2(q.vy, q.vx) + Math.PI / 2, 0, TAU)); c.globalAlpha = 1; }
   }
