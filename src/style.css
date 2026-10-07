@@ -42,6 +42,10 @@ h1 em{color:#e78c57;font-style:normal}
 .score-row{position:absolute;top:12%;left:7%;right:7%;display:flex;justify-content:space-between;align-items:center}
 .score-row .eyebrow{color:#658a80;font-size:1.9cqw}
 .score-row strong{display:block;font-size:10cqw;line-height:1.1;letter-spacing:-.05em}
+.score-row strong{transform-origin:left 70%}
+.score-row strong.pop{animation:score-pop .32s cubic-bezier(.3,1.8,.5,1)}
+@keyframes score-pop{0%{transform:scale(1)}35%{transform:scale(1.28) rotate(-3deg)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.score-row strong.pop{animation:none}}
 .night .score-row strong{color:#fff4dc;text-shadow:0 .3cqw 1.2cqw #10294a88}
 .night .score-row .eyebrow{color:#c9d6f0}
 .timer{background:#fff9e7b0;padding:2cqw 3cqw;border-radius:8cqw;font-size:3cqw;font-weight:700;font-variant-numeric:tabular-nums;align-self:flex-start}

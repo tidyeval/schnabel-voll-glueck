@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, FRENZY, NEAR_MISS, SET_PIECES, STAGES, sardinePositions, beakPosition, paceAt, hitsTerrain } from '../src/game.js';
+import { createGame, step, WORLD, FRENZY, NEAR_MISS, SET_PIECE_POOLS, rollSetPieces, rollDecor, STAGES, sardinePositions, beakPosition, paceAt, hitsTerrain } from '../src/game.js';
 
 const quiet = stage => { const g = createGame(() => .5, stage); g.items = []; g.nextEncounter = Infinity; return g; };
 const run = (g, seconds, holding, each) => { const events = []; for (let t = 0; t < seconds && !g.ended; t += 1 / 60) { events.push(...step(g, 1 / 60, typeof holding === 'function' ? holding(g) : holding)); each?.(g); } return events; };
@@ -78,10 +78,26 @@ test('a current speeds the journey only while Pip swims inside it', () => {
   assert.ok(Math.abs(g.speed - paceAt(g.elapsed + g.time).speed) < .5);
 });
 
-test('set pieces sit on harmless or solitary encounters and never add dangers', () => {
-  for (const [key, piece] of SET_PIECES) {
-    const [stage, wave] = key.split(':').map(Number);
-    assert.ok(STAGES[stage].encounters[wave], key);
-    if (['baitball', 'current', 'dolphins'].includes(piece)) assert.equal(STAGES[stage].encounters[wave], 'turtle-turtle-gull', `${piece} needs calm water`);
+test('every run rolls its own set pieces, always on safe waves and never overlapping', () => {
+  let seed = 7;
+  const random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    const layouts = new Set();
+    for (let run = 0; run < 200; run++) {
+      const pieces = rollSetPieces(stage, random), pool = SET_PIECE_POOLS[stage];
+      layouts.add(JSON.stringify([...pieces].sort()));
+      for (const [wave, piece] of pieces) {
+        assert.ok(STAGES[stage].encounters[wave], `${stage}:${wave}`);
+        if (pool.calm.includes(piece)) assert.equal(STAGES[stage].encounters[wave], 'turtle-turtle-gull', `${piece} needs calm water`);
+        else assert.ok(pool.shows.includes(piece), piece);
+      }
+      const waves = [...pieces.keys()].sort((a, b) => a - b);
+      waves.slice(1).forEach((wave, i) => assert.ok(wave - waves[i] > 1, `pieces ${waves} overlap`));
+      assert.equal(new Set(pieces.values()).size, pieces.size, 'no piece twice in one run');
+    }
+    assert.ok(layouts.size > 5, `stage ${stage} should vary between runs, got ${layouts.size} layouts`);
+    const decor = rollDecor(stage, random);
+    assert.equal(decor.residents.length, decor.offsets.length);
   }
 });
+

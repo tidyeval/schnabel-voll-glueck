@@ -110,7 +110,10 @@ function finish() {
   text('result-mission', `${resultMessage} ${saved ? t('saved') : t('saveFailed')}`);
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.start('menu'); audio.effect('end');
 }
+let shownScore = 0;
 function updateHud() {
+  if (game.score > shownScore) { const score = $('score'); score.classList.remove('pop'); void score.offsetWidth; score.classList.add('pop'); }
+  shownScore = game.score;
   text('score', formatNumber(game.score)); text('time', clock(Math.floor(game.time)));
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);

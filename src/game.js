@@ -1,3 +1,4 @@
+import { RESIDENTS } from './cute.js';
 export const WORLD = { capacity: 20, width: 480, height: 850, water: 360, duration: 75, breath: 8 };
 export const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
 export const playerTilt = player => clamp(player.vy / 340, -.5, .78) - (player.spin || 0);
@@ -112,12 +113,32 @@ export const PAIR_PATTERNS = new Map([
   ['1:3', 'staggered'], ['1:6', 'parallel'], ['1:9', 'staggered'],
   ['2:1', 'parallel'], ['2:4', 'staggered'], ['2:6', 'parallel'], ['2:9', 'staggered'], ['2:11', 'parallel'],
 ]);
-// Spectacle between the regular encounters. Shows are scenery only; bait balls and currents are optional rewards.
-export const SET_PIECES = new Map([
-  ['0:5', 'baitball'], ['0:8', 'rainbow'],
-  ['1:2', 'goldenHour'], ['1:4', 'current'], ['1:7', 'trawler'], ['1:10', 'dolphins'],
-  ['2:2', 'baitball'], ['2:5', 'whale'], ['2:7', 'current'], ['2:9', 'shootingStars'],
-]);
+// Spectacle between the regular encounters, rolled anew for every run. Calm waves get an
+// optional reward (bait ball, current or dolphins); shows are scenery only.
+export const SET_PIECE_POOLS = [
+  { calm: ['baitball', 'current', 'dolphins'], shows: ['rainbow', 'whale'], count: 1 },
+  { calm: ['baitball', 'current', 'dolphins'], shows: ['goldenHour', 'trawler', 'rainbow', 'whale'], count: 2 },
+  { calm: ['baitball', 'current', 'dolphins'], shows: ['shootingStars', 'whale'], count: 2 },
+];
+const pick = (list, random) => list.splice(Math.floor(random() * list.length), 1)[0];
+export function rollSetPieces(stage, random) {
+  const pieces = new Map(), pool = SET_PIECE_POOLS[stage], encounters = STAGES[stage].encounters, calm = [...pool.calm], shows = [...pool.shows];
+  encounters.forEach((entry, wave) => { if (entry === 'turtle-turtle-gull') pieces.set(wave, pick(calm, random)); });
+  // Keep shows apart from each other and from calm pieces so no two overlap on screen.
+  let open = encounters.map((_, wave) => wave).filter(wave => wave >= 2 && ![...pieces.keys()].some(taken => Math.abs(taken - wave) <= 1));
+  for (let i = 0; i < pool.count && open.length; i++) {
+    const wave = open[Math.floor(random() * open.length)];
+    pieces.set(wave, pick(shows, random));
+    open = open.filter(other => Math.abs(other - wave) > 1);
+  }
+  return pieces;
+}
+// Background residents and small character moments, scattered differently every run.
+export function rollDecor(stage, random) {
+  const residents = [...RESIDENTS[stage]];
+  pick(residents, random);
+  return { residents, offsets: residents.map(() => 200 + random() * 1300), sleepy: random() < .5, catHouse: Math.floor(random() * 6) };
+}
 export const FRENZY = { combo: 15, duration: 6, interval: .24 };
 export const JUMP = { from: 430, range: 250, boost: 300, gravity: 700, ceiling: 150 };
 export const NEAR_MISS = { margin: 26, points: 30 };
@@ -225,7 +246,7 @@ function encounter(game) {
     });
   }
   game.encounterTrace.push({ stage: game.stage, wave, entry, form: pairPattern, bands });
-  const piece = SET_PIECES.get(`${game.stage}:${wave}`);
+  const piece = game.pieces.get(wave);
   if (piece === 'baitball') {
     const seeds = Array.from({ length: 22 }, (_, i) => (i * .618034 + .13) % 1);
     game.items.push({ kind: 'baitball', x: 1010, y: 560, seeds, eaten: seeds.map(() => false), scatter: 0, left: seeds.length });
@@ -259,7 +280,9 @@ function encounter(game) {
 export function createGame(random = Math.random, stage = 0, elapsed) {
   stage = Number.isInteger(stage) ? clamp(stage, 0, STAGES.length - 1) : 0;
   elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : [0, 55, 100][stage];
+  const pieces = rollSetPieces(stage, random), decor = rollDecor(stage, random);
   return {
+    pieces, decor,
     elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },

@@ -1,4 +1,5 @@
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius } from './game.js';
+import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
 import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
@@ -7,18 +8,6 @@ function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
 function path(c, fill, draw, stroke, width = 1) {
   c.beginPath(); draw(c); if (fill) { c.fillStyle = fill; c.fill(); }
   if (stroke) { c.strokeStyle = stroke; c.lineWidth = width; c.stroke(); }
-}
-// Every creature blinks on its own rhythm; returns how open the eye is.
-function blink(t, seed) { const k = ((t + seed * 2.37) % 3.4 + 3.4) % 3.4; return k < .16 ? Math.abs(k - .08) / .08 : 1; }
-// Big glossy eyes with two highlights carry most of the cuteness.
-function cuteEye(c, x, y, r, open = 1, colour = '#294b49') {
-  if (open < .3) { path(c, null, p => { p.moveTo(x - r * .9, y); p.quadraticCurveTo(x, y + r * .55, x + r * .9, y); }, colour, Math.max(1, r * .38)); return; }
-  ellipse(c, x, y, r * .88, r * open, colour);
-  ellipse(c, x - r * .3, y - r * .36 * open, r * .34, r * .34 * open, '#fffdf1');
-  ellipse(c, x + r * .28, y + r * .34 * open, r * .15, r * .15 * open, '#fffdf1cc');
-}
-function star(c, x, y, r, colour, rotation = 0) {
-  path(c, colour, p => { for (let i = 0; i < 10; i++) { const a = rotation + i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .45 : r; i ? p.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : p.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } p.closePath(); });
 }
 function gradient(c, y1, y2, a, b) {
   const g = c.createLinearGradient(0, y1, 0, y2); g.addColorStop(0, a); g.addColorStop(1, b); return g;
@@ -98,7 +87,7 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   const shake = reducedMotion ? 0 : Math.sin(relief * 25) * .07 * Math.min(1, relief);
   const tired = happy || relief > 0 ? 0 : clamp((35 - (expression.energy ?? 100)) / 35, 0, 1);
   const hurt = (expression.hurt || 0) > 0;
-  const headAngle = lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2;
+  const headAngle = (lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2) + (expression.look || 0);
   const headPose = () => { c.translate(66, -27); c.rotate(headAngle); c.translate(-66, 27); };
   if (bump) c.transform(1, 0, Math.sin(bump * 22) * .07, 1, 0, 0);
   const wobble = reducedMotion ? 0 : Math.sin(t * 6) * fullness * 3 + Math.sin(gulp * 22) * gulp * 8;
@@ -237,7 +226,7 @@ function puffer(c, item, t) {
   c.restore();
 }
 
-function boat(c, item, water, t) {
+function boat(c, item, water, t, sleepy = false) {
   const [coat, shade, hull, hullShade] = [
     ['#efd08a','#dca956','#d48b64','#aa674e'],
     ['#a6c9bd','#6a9e94','#91b8cb','#567f99'],
@@ -306,7 +295,8 @@ function boat(c, item, water, t) {
   path(c, null, p => { p.moveTo(-26, -63); p.quadraticCurveTo(-2, -57, 23, -63); }, coat, 6);
   const annoyed = age >= 0 || angry;
   path(c, null, p => { p.moveTo(-15, -57 - (annoyed ? 2 : 0)); p.lineTo(-8, -55); p.moveTo(0, -55); p.lineTo(7, -57 - (annoyed ? 2 : 0)); }, '#725c48', 2.3);
-  ellipse(c, -11, -52, 1.6, 2, '#3e514a'); ellipse(c, 3, -52, 1.6, 2, '#3e514a');
+  const dozing = sleepy && age < 0 && !(item.reaction > 0);
+  for (const ex of [-11, 3]) dozing ? happyEye(c, ex, -51, 2.6, '#3e514a') : cuteEye(c, ex, -52, 3.2, annoyed ? 1 : blink(t, item.x * .003 + ex), '#3e514a');
   ellipse(c, -5, -45, 6, 4.5, '#dfaa89');
   path(c, '#fff1d8', p => { p.moveTo(-5, -43); p.quadraticCurveTo(-16, -47, -22, -37); p.quadraticCurveTo(-13, -31, -5, -39); p.quadraticCurveTo(6, -31, 15, -39); p.quadraticCurveTo(4, -47, -5, -43); });
   ellipse(c, -4, -32, hauling ? 4 : 2, hauling ? 3 : 1, '#9b7157'); c.restore();
@@ -318,6 +308,11 @@ function boat(c, item, water, t) {
   if (!net && !angry) {
     for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(hand.x + 2, hand.y + 8 + i * 3, 10 + i, 4, -.2, 0, TAU); c.strokeStyle = '#dfc38f'; c.lineWidth = 1.5; c.stroke(); }
   }
+  if (dozing) for (let i = 0; i < 3; i++) {
+    const z = (t * .45 + i / 3) % 1;
+    c.globalAlpha = Math.sin(z * Math.PI); c.fillStyle = '#5f7a8c'; c.font = `bold ${7 + z * 7}px sans-serif`; c.fillText('z', 14 + z * 16 + Math.sin(z * 6) * 3, -90 - z * 30);
+  }
+  c.globalAlpha = 1;
   c.restore();
 }
 export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false, fx = null) {
@@ -340,6 +335,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         path(c, '#89aaa0', p => { p.rect(x, water - 50, 65, 43); p.moveTo(x - 5, water - 50); p.lineTo(x + 30, water - 74); p.lineTo(x + 70, water - 50); });
         c.fillStyle = '#d9dac0'; c.fillRect(x + 12, water - 38, 13, 17); c.fillRect(x + 42, water - 38, 13, 17);
         path(c, null, p => { p.moveTo(x, water - 3); p.lineTo(x + 92, water - 3); p.moveTo(x + 8, water - 3); p.lineTo(x + 8, water + 5); }, '#8c8970', 5);
+        if (!menu && game.decor?.residents.includes('cat') && i === game.decor.catHouse) roofCat(c, x + 50, water - 54, motion);
       }
     }
     // Distant seabirds.
@@ -364,11 +360,18 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     }
     ellipse(c, side ? 456 : 23, 836, 25, 11, '#96b5a0'); ellipse(c, side ? 426 : 57, 844, 17, 9, '#81a996');
   }
+  if (!menu) {
+    drawResidents(c, game, stage, water, d, t, reducedMotion);
+    const p = game.player, depth = clamp((p.y - water) / (830 - water), 0, 1);
+    ellipse(c, p.x + 4, 838, 22 + depth * 22, 4 + depth * 3, `rgba(20,50,60,${p.wet ? .07 + depth * .16 : .05})`);
+  }
   if (menu) {
     fish(c, 95 + Math.sin(motion * .6) * 18, 558, .8, false, motion); fish(c, 371 - Math.sin(motion * .5) * 12, 594, .65, true, motion);
     fish(c, 340 + Math.sin(motion * .5) * 12, 785, .65, false, motion); fish(c, 367 + Math.sin(motion * .5) * 12, 766, .45, false, motion);
     ellipse(c, 229, water + 4, 80, 10, '#306e7120');
-    pelican(c, 217, 378 + Math.sin(motion * 1.6) * 5, 1.55, motion, -.06, outfit);
+    const idle = motion % 7, hop = idle > 6.2 ? -Math.abs(Math.sin((idle - 6.2) / .8 * Math.PI * 2)) * 16 : 0;
+    const look = idle > 2.4 && idle < 4.4 ? Math.sin((idle - 2.4) / 2 * Math.PI) * -.22 : 0;
+    pelican(c, 217, 378 + Math.sin(motion * 1.6) * 5 + hop, 1.55, motion, -.06, outfit, false, hop < 0, 0, 0, 0, WORLD.breath, reducedMotion, { look });
   } else {
     for (const item of game.items) {
       if (item.kind === 'buoy') {
@@ -527,14 +530,14 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);
-      if (item.kind === 'boat') boat(c, item, water, motion);
+      if (item.kind === 'boat') boat(c, item, water, motion, game.decor?.sleepy);
     }
     const p = game.player;
     if (p.wet && !reducedMotion) {
       for (let i = 0; i < 5; i++) { c.strokeStyle = '#cff1df66'; c.lineWidth = 1; c.beginPath(); c.arc(p.x - 38 - i * 11, p.y - 5 + Math.sin(motion * 4 + i) * 10, 2 + i % 3, 0, TAU); c.stroke(); }
     }
     c.save();
-    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1), sparkle: fx?.sparkle, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
+    pelican(c, p.feedX ?? p.x, p.y, .76, motion, game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p), outfit, p.wet, game.feeding > 0 || p.gulp > .1 || fx?.joy > 0, game.feeding ? .2 : p.gulp, p.breach, game.cargo, p.breath, reducedMotion, { energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick, squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1), sparkle: fx?.sparkle, fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140), nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260) }); c.restore();
   }
   const swell = menu ? 1 : swellOf(game, stage, reducedMotion);
   for (let i = 0; i < 4; i++) {

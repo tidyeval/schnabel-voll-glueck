@@ -3,7 +3,7 @@
 import { WORLD } from './game.js';
 
 export function createJuice(reducedMotion) {
-  let particles = [], rings = [], squash = 0, sparkle = 0, shake = 0, shakePower = 0, freeze = 0, slow = 0, flash = 0, flashColour = '#fff', pulse = 0, trail = 0, rush = 0;
+  let particles = [], rings = [], squash = 0, sparkle = 0, joy = 0, shake = 0, shakePower = 0, freeze = 0, slow = 0, flash = 0, flashColour = '#fff', pulse = 0, trail = 0, rush = 0;
   const rand = (min, max) => min + Math.random() * (max - min);
   const spawn = (kind, x, y, vx, vy, life, size, colour) => {
     if (!reducedMotion && particles.length < 170) particles.push({ kind, x, y, vx, vy, life, max: life, size, colour });
@@ -12,7 +12,7 @@ export function createJuice(reducedMotion) {
     for (let i = 0; i < count; i++) { const a = rand(0, Math.PI * 2), v = rand(.4, 1) * speed; spawn('spark', x, y, Math.cos(a) * v, Math.sin(a) * v, rand(.35, .7), rand(1.6, 3), colour); }
   };
   return {
-    reset() { particles = []; rings = []; squash = sparkle = 0; shake = freeze = slow = flash = pulse = rush = 0; },
+    reset() { particles = []; rings = []; squash = sparkle = joy = 0; shake = freeze = slow = flash = pulse = rush = 0; },
     // Fraction of real time the simulation advances this frame.
     timeScale(dt) {
       if (reducedMotion) return 1;
@@ -42,6 +42,7 @@ export function createJuice(reducedMotion) {
         const count = event.golden ? 5 : event.combo % 5 === 0 ? 3 : 1;
         for (let i = 0; i < count; i++) spawn(event.golden ? 'star' : 'heart', event.x + rand(-10, 14), event.y - 10, rand(-50, 30), -rand(60, 120), rand(.8, 1.2), event.golden ? rand(5, 7.5) : rand(5, 7), event.golden ? '#ffd66e' : ['#ff8fa3', '#ffa8b8', '#ff7a96'][i % 3]);
         if (event.golden) sparkle = .9;
+        if (event.combo % 10 === 0) { joy = .8; squash = .45; burst(event.x, event.y - 20, 10, 150, '#ffd3e0'); }
       }
       if (event.kind === 'sardine') burst(event.x, event.y, 2, 80, '#e3f6ff');
       if (event.kind === 'feast' || event.kind === 'trick' || event.kind === 'kick' || event.kind === 'mission') burst(event.x, event.y, 16, 220, '#fff2b6');
@@ -49,7 +50,7 @@ export function createJuice(reducedMotion) {
       if (event.kind === 'current') burst(event.x, event.y, 8, 160, '#dffff6');
     },
     update(dt, game, playing) {
-      shake = Math.max(0, shake - dt); squash = Math.max(0, squash - dt); sparkle = Math.max(0, sparkle - dt); flash = Math.max(0, flash - dt * 1.4); pulse = Math.max(0, pulse - dt * 2.2);
+      shake = Math.max(0, shake - dt); squash = Math.max(0, squash - dt); sparkle = Math.max(0, sparkle - dt); joy = Math.max(0, joy - dt); flash = Math.max(0, flash - dt * 1.4); pulse = Math.max(0, pulse - dt * 2.2);
       for (const ring of rings) { ring.life -= dt * 1.5; ring.x -= game.speed * dt; }
       rings = rings.filter(ring => ring.life > 0);
       for (const q of particles) {
@@ -75,7 +76,7 @@ export function createJuice(reducedMotion) {
     view() {
       const amount = shake > 0 ? shakePower * Math.min(1, shake / .2) : 0;
       // Squash rings out like jelly: it overshoots into a stretch and settles.
-      return { particles, rings, squash: squash > 0 ? Math.cos((.45 - squash) * 26) * squash / .45 : 0, sparkle, flash, flashColour, pulse, rush, shakeX: amount ? rand(-amount, amount) : 0, shakeY: amount ? rand(-amount, amount) * .7 : 0 };
+      return { particles, rings, squash: squash > 0 ? Math.cos((.45 - squash) * 26) * squash / .45 : 0, sparkle, joy, flash, flashColour, pulse, rush, shakeX: amount ? rand(-amount, amount) : 0, shakeY: amount ? rand(-amount, amount) * .7 : 0 };
     },
   };
 }
