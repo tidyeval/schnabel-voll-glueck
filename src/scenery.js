@@ -246,18 +246,12 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
   }
   if (stage === 3) plankton(c, water, d, motion, game, reducedMotion);
   if (stage === 2) {
-    // Sun path and drifting lily pads on the calm lagoon.
+    // Sun path on the calm lagoon.
     for (let k = 0; k < 7; k++) {
       c.globalAlpha = .35 - k * .04;
       fill(c, '#ffe2b0', p => p.ellipse(370 + Math.sin(motion * 1.3 + k) * 5, water + 8 + k * 9, Math.max(3, 24 - k * 2.6 + Math.sin(motion * 2.6 + k * 1.7) * 6), 2.2, 0, 0, TAU));
     }
     c.globalAlpha = 1;
-    for (let i = 0; i < 4; i++) {
-      const x = wrap(i * 149 - d * .55, 600) - 60, y = water + 2 + Math.sin(motion * 1.4 + i) * 1.2;
-      fill(c, '#5e9a5c', p => { p.ellipse(x, y, 17, 4.5, 0, .25, TAU - .1); p.lineTo(x, y); p.closePath(); });
-      fill(c, '#86bb72', p => p.ellipse(x - 2, y - 1, 12, 2.6, 0, 0, TAU));
-      if (i % 2) { fill(c, '#f6b3c4', p => p.ellipse(x + 4, y - 4, 4, 3, 0, 0, TAU)); fill(c, '#ffe9a8', p => p.arc(x + 4, y - 5, 1.4, 0, TAU)); }
-    }
   }
 }
 // Bioluminescence: dim everywhere, bright where Pip disturbs the water.

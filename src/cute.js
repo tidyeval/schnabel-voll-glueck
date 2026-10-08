@@ -27,7 +27,7 @@ export function star(c, x, y, r, colour, rotation = 0) {
 const blush = (c, x, y, r) => ellipse(c, x, y, r, r * .6, '#ff8f9a66');
 
 // Which residents live in each stage. A run picks a few and scatters them (see game.decor).
-export const RESIDENTS = [['crab', 'starfish', 'bottle'], ['crab', 'cat', 'bottle'], ['flamingo', 'frog', 'crab'], ['octopus', 'seahorse', 'starfish']];
+export const RESIDENTS = [['crab', 'starfish', 'bottle'], ['crab', 'cat', 'bottle'], ['flamingo', 'mudskipper', 'fiddler', 'manatee'], ['octopus', 'seahorse', 'starfish']];
 
 function crab(c, x, y, t, seed) {
   const step = Math.sin(t * 9), wave = Math.sin(t * 2.2 + seed) > .6 ? Math.sin(t * 14) * .5 : 0;
@@ -115,16 +115,53 @@ function flamingo(c, x, water, t, seed) {
   c.restore();
   ellipse(c, x, water + 3, 12, 2, '#fff4dc88');
 }
-// A frog on its lily pad, puffing its throat.
-function frog(c, x, water, t, seed) {
-  const puff = Math.max(0, Math.sin(t * 2 + seed)) ** 6, bob = Math.sin(t * 1.4 + seed) * 1.2;
-  c.save(); c.translate(x, water + bob);
-  ellipse(c, 0, 2, 22, 5.5, '#5e9a5c'); ellipse(c, -2, 1, 17, 3.5, '#86bb72');
-  ellipse(c, 0, -6, 12, 8, '#8cc66a'); ellipse(c, 0, -2 + puff, 7 + puff * 2, 3 + puff * 3, '#f1f5c4');
-  for (const side of [-1, 1]) { ellipse(c, side * 11, -1, 5, 3, '#7ab55c'); ellipse(c, side * 6, -13, 5.2, 5.2, '#8cc66a'); cuteEye(c, side * 6, -13.5, 3.4, blink(t, seed + side), '#2b3a24'); }
-  blush(c, -9, -5, 2.2); blush(c, 9, -5, 2.2);
-  path(c, null, p => { p.moveTo(-4, -6); p.quadraticCurveTo(0, -3.5, 4, -6); }, '#4c7a3a', 1.2);
+// A mudskipper on a mangrove knee: goggle eyes on top, and now and then a happy hop.
+function mudskipper(c, x, water, t, seed) {
+  const k = ((t * .45 + seed) % 1 + 1) % 1, hop = k > .85 ? Math.sin((k - .85) / .15 * Math.PI) * 9 : 0;
+  path(c, '#7a6450', p => { p.moveTo(x - 20, water + 4); p.quadraticCurveTo(x - 14, water - 12, x, water - 13); p.quadraticCurveTo(x + 15, water - 12, x + 21, water + 4); p.closePath(); });
+  ellipse(c, x - 4, water - 11, 9, 2, '#9a8268');
+  c.save(); c.translate(x, water - 18 - hop); c.rotate(hop ? -.2 : 0);
+  path(c, '#a8b28a', p => { p.moveTo(10, 0); p.quadraticCurveTo(16, -5, 21, -3); p.lineTo(21, 4); p.quadraticCurveTo(16, 4, 10, 3); p.closePath(); }, '#7d8a66', .8);
+  ellipse(c, 0, 0, 13, 6.5, '#b8c294'); ellipse(c, -2, 2.5, 9, 3, '#e6e2c0');
+  path(c, '#8fa0c8', p => { p.moveTo(-1, -5); p.quadraticCurveTo(4, -12, 9, -5); p.closePath(); }, '#6f7fa6', .8);
+  for (let i = 0; i < 4; i++) ellipse(c, -6 + i * 4, -2, 1, 1, '#7aa0d0');
+  path(c, null, p => { p.moveTo(-4, 5); p.lineTo(-8, 8 + (hop ? -2 : 0)); }, '#8d9a70', 2);
+  for (const dx of [-9, -4]) { ellipse(c, dx, -7, 3.6, 3.6, '#b8c294'); cuteEye(c, dx, -7.5, 2.8, blink(t, seed + dx), '#2b3424'); }
+  ellipse(c, -11, 1, 2, 1.2, '#ff8f9a66');
+  path(c, null, p => { p.moveTo(-13, 1.5); p.quadraticCurveTo(-11, 3.5, -9, 2); }, '#5e6a48', 1);
   c.restore();
+}
+// A fiddler crab waves its one giant claw.
+function fiddler(c, x, y, t, seed) {
+  const wave = Math.sin(t * 3 + seed) > .2 ? Math.sin(t * 7) * .35 : 0, step = Math.sin(t * 8);
+  c.save(); c.translate(x, y);
+  for (const side of [-1, 1]) for (let i = 0; i < 3; i++) path(c, null, p => { p.moveTo(side * 7, 2 + i * 2); p.quadraticCurveTo(side * 14, -1 + i * 3 + step * (i % 2 ? 1.5 : -1.5), side * 17, 7 + i * 2); }, '#5f6f8a', 1.8);
+  c.save(); c.translate(11, -4); c.rotate(-.5 - wave);
+  path(c, null, p => { p.moveTo(0, 4); p.lineTo(2, -2); }, '#e0a050', 2.6);
+  path(c, '#f6c35e', p => { p.moveTo(-2, -2); p.quadraticCurveTo(4, -16, 14, -12); p.quadraticCurveTo(10, -6, 4, -6); p.quadraticCurveTo(8, -2, 6, 1); p.closePath(); }, '#d29a42', 1);
+  c.restore();
+  path(c, null, p => { p.moveTo(-10, -2); p.lineTo(-14, -6); }, '#5f6f8a', 2);
+  ellipse(c, 0, 0, 12, 8, '#7f93b8'); ellipse(c, -3, -3, 6, 3, '#a9bad8');
+  for (const side of [-1, 1]) { path(c, null, p => { p.moveTo(side * 3, -6); p.lineTo(side * 4, -12); }, '#5f6f8a', 1.4); cuteEye(c, side * 4, -13.5, 3, blink(t, seed + side), '#22283a'); }
+  ellipse(c, -7, 1, 2.2, 1.3, '#ff8f9a66'); ellipse(c, 7, 1, 2.2, 1.3, '#ff8f9a66');
+  path(c, null, p => { p.moveTo(-2, 2); p.quadraticCurveTo(0, 4, 2, 2); }, '#3a4560', 1.1);
+  c.restore();
+}
+// A sleepy manatee drifts through the green water, nibbling now and then.
+function manatee(c, x, y, t, seed) {
+  c.save(); c.translate(x, y + Math.sin(t * .8 + seed) * 5); c.rotate(Math.sin(t * .6 + seed) * .04); c.scale(.8, .8);
+  path(c, '#8e9c98', p => { p.moveTo(30, -2); p.quadraticCurveTo(52, -16, 56, 0); p.quadraticCurveTo(52, 16, 30, 4); p.closePath(); }, '#6f7d7a', 1);
+  const body = c.createLinearGradient(0, -18, 0, 18); body.addColorStop(0, '#a9b6b1'); body.addColorStop(1, '#8a9894');
+  path(c, body, p => { p.ellipse(4, 0, 34, 17, 0, 0, TAU); }, '#6f7d7a', 1);
+  ellipse(c, -28, 3, 13, 11, '#a3b0ab');
+  ellipse(c, -36, 7, 8, 6, '#c2ccc6');
+  for (const dy of [5, 8]) for (const dx of [-38, -34]) ellipse(c, dx, dy, .8, .8, '#6f7d7a');
+  path(c, '#98a6a1', p => { p.moveTo(-14, 10); p.quadraticCurveTo(-8, 24, 0, 22); p.quadraticCurveTo(-4, 16, -6, 10); p.closePath(); }, '#6f7d7a', .8);
+  ellipse(c, 0, -8, 16, 5, '#ffffff22');
+  happyEye(c, -29, -2, 2.6, '#3a4644');
+  ellipse(c, -27, 4, 3, 1.8, '#ff9aa266');
+  c.restore();
+  if (Math.sin(t * 1.3 + seed) > .5) ellipse(c, x - 34 + 0, y - 18 - ((t * 20) % 30), 2, 2, '#e6f6ee88');
 }
 // The harbour cat naps on a roof; drawn with the houses so it scrolls with them.
 export function roofCat(c, x, y, t) {
@@ -152,7 +189,7 @@ export function drawResidents(c, game, stage, water, d, t, reducedMotion) {
     if (x < -90 || x > 570) return;
     const seed = decor.offsets[i] * .01, motion = reducedMotion ? 0 : t;
     // Drawn a third larger so the faces stay readable on a phone.
-    const anchor = { crab: 826, starfish: 832, octopus: 806, seahorse: 690, bottle: water, flamingo: water, frog: water }[kind];
+    const anchor = { crab: 826, starfish: 832, octopus: 806, seahorse: 690, bottle: water, flamingo: water, mudskipper: water, fiddler: 826, manatee: 700 }[kind];
     c.save(); c.translate(x, anchor); c.scale(1.35, 1.35); c.translate(-x, -anchor);
     if (kind === 'crab') crab(c, x + (reducedMotion ? 0 : Math.sin(t * .6 + seed) * 22), 826, motion, seed);
     if (kind === 'starfish') starfish(c, x, 832, motion, seed);
@@ -160,7 +197,9 @@ export function drawResidents(c, game, stage, water, d, t, reducedMotion) {
     if (kind === 'seahorse') seahorse(c, x, 690, motion, seed, night);
     if (kind === 'bottle') bottle(c, x, water, motion);
     if (kind === 'flamingo') flamingo(c, x, water, motion, seed);
-    if (kind === 'frog') frog(c, x, water, motion, seed);
+    if (kind === 'mudskipper') mudskipper(c, x, water, motion, seed);
+    if (kind === 'fiddler') fiddler(c, x + (reducedMotion ? 0 : Math.sin(t * .5 + seed) * 16), 826, motion, seed);
+    if (kind === 'manatee') manatee(c, x, 700, motion, seed);
     c.restore();
   });
 }
