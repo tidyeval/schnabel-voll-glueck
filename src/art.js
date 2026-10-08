@@ -1,6 +1,6 @@
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
-import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf } from './scenery.js';
+import { THEMES, drawSky, drawWater, drawCaustics, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -370,6 +370,30 @@ function mangrove(c, item, water, t, night) {
   cuteEye(c, -5, -7, 2.3, blink(t, x * .01), '#1d2a30'); ellipse(c, -2, -3, 1.8, 1.1, '#ff8f9a66');
   c.restore();
 }
+// Every stage has its own spot for the nest: a grassy islet, a harbour piling,
+// a mangrove crown (where real brown pelicans nest) or a moonlit rock.
+function nestBase(c, x, water, stage, t) {
+  if (stage === 1) {
+    for (const [dx, h] of [[-38, 30], [-6, 40], [26, 34]]) {
+      path(c, gradient(c, water - h, water + 60, '#a8805c', '#5e4a3a'), p => p.roundRect(x + dx, water - h, 18, h + 60, 4), '#5a4434', 1.2);
+      ellipse(c, x + dx + 9, water - h, 9, 3, '#c49a72');
+      path(c, null, p => { p.moveTo(x + dx, water - h + 10); p.lineTo(x + dx + 18, water - h + 14); }, '#e8d9b0', 2);
+    }
+    path(c, null, p => { p.moveTo(x - 30, water - 18); p.quadraticCurveTo(x - 10, water - 8, x + 34, water - 16); }, '#e8d9b0', 2.2);
+    ellipse(c, x + 52, water - 2, 10, 4, '#e9f5df66');
+  } else if (stage === 2) {
+    for (let i = 0; i < 5; i++) { const u = i / 4, foot = x - 58 + u * 116; path(c, null, p => { p.moveTo(x + (u - .5) * 20, water - 20); p.quadraticCurveTo(foot, water - 18, foot, water + 6); }, '#8b6b52', 4); }
+    for (const [dx, dy, r] of [[-48, -22, 22], [-22, -34, 26], [10, -36, 28], [40, -26, 23], [-4, -18, 26]]) ellipse(c, x + dx, water + dy, r, r * .62, '#4f8a5a');
+    for (const [dx, dy, r] of [[-46, -26, 18], [-20, -38, 22], [12, -40, 23], [42, -30, 19]]) ellipse(c, x + dx, water + dy, r, r * .55, '#69a764');
+    for (const [dx, dy] of [[-28, -46], [16, -48], [44, -36]]) ellipse(c, x + dx, water + dy, 8, 3, '#f3d08a88');
+  } else if (stage === 3) {
+    path(c, gradient(c, water - 40, water + 10, '#4a6a8c', '#22405e'), p => { p.moveTo(x - 64, water + 8); p.quadraticCurveTo(x - 58, water - 30, x - 26, water - 38); p.quadraticCurveTo(x + 6, water - 50, x + 36, water - 36); p.quadraticCurveTo(x + 60, water - 24, x + 66, water + 8); p.closePath(); }, '#1b3450', 1.2);
+    ellipse(c, x - 20, water - 40, 18, 4, '#9fb8e044');
+    for (const [dx, col] of [[-50, '#e48aa8'], [48, '#f2b06a']]) for (let k = -1; k <= 1; k++) path(c, null, p => { p.moveTo(x + dx, water - 2); p.quadraticCurveTo(x + dx + k * 8, water - 12, x + dx + k * 6, water - 20 + Math.abs(k) * 4); }, col, 3);
+  } else {
+    path(c, '#829c83', p => { p.moveTo(x - 62, water + 7); p.quadraticCurveTo(x - 53, water - 22, x - 33, water - 34); p.quadraticCurveTo(x, water - 48, x + 32, water - 36); p.quadraticCurveTo(x + 53, water - 20, x + 65, water + 7); p.closePath(); }, '#607a69', 1.2);
+  }
+}
 export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false, fx = null) {
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;
@@ -405,7 +429,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     for (let i = 0; i < 3; i++) { const x = ((320 + i * 47 - d * .08) % 580 + 580) % 580; const y = water - 91 + Math.sin(i * 2) * 22; path(c, null, p => { p.moveTo(x - 7, y); p.quadraticCurveTo(x - 3, y - 5, x, y); p.quadraticCurveTo(x + 4, y - 5, x + 8, y); }, '#799d93', 1.3); }
   });
   drawWater(c, stage, water, d, motion, menu ? null : game, reducedMotion);
-  if (!menu) { drawWhale(c, game, motion, reducedMotion); drawDolphins(c, game, water, motion, reducedMotion); }
+  if (!menu) { drawWhale(c, game, motion, reducedMotion); drawDolphins(c, game, water, motion, reducedMotion); drawRare(c, game, water, motion, reducedMotion); }
   if (!menu && game.stage === 3) {
     for (let i = 0; i < 9; i++) {
       const x = ((i * 79 - d * .22) % 650 + 650) % 650 - 80;
@@ -481,7 +505,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         }
       }
       if (item.kind === 'nest') {
-        path(c, '#829c83', p => { p.moveTo(item.x - 62, water + 7); p.quadraticCurveTo(item.x - 53, water - 22, item.x - 33, water - 34); p.quadraticCurveTo(item.x, water - 48, item.x + 32, water - 36); p.quadraticCurveTo(item.x + 53, water - 20, item.x + 65, water + 7); p.closePath(); }, '#607a69', 1.2);
+        nestBase(c, item.x, water, stage, motion);
         ellipse(c, item.x, water - 26, 54, 14, '#8b6548');
         ellipse(c, item.x, water - 29, 47, 10, '#bb8d5c');
         for (let j = 0; j < 2; j++) {

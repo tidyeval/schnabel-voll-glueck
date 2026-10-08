@@ -1,7 +1,7 @@
 import test from 'node:test';
 import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS, LEAP } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, STAGES, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS, LEAP, RARE, rollRare } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, and a shark ends the stage', () => {
   const g = createGame(() => .5);
@@ -556,4 +556,35 @@ test('mangroves block the sky lane, so Pip dives under the root curtain', () => 
   Object.assign(g.player, { y: 300, wet: false });
   step(g, .01, false);
   assert.equal(g.endReason, 'mangrove');
+});
+
+test('rare moments come only now and then, once, in the middle of a run', () => {
+  let seed = 3; const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  for (let stage = 0; stage < STAGES.length; stage++) {
+    let hits = 0;
+    for (let run = 0; run < 3000; run++) {
+      const rare = rollRare(stage, random);
+      if (!rare) continue;
+      hits++; assert.equal(rare.name, RARE.moments[stage]);
+      assert.ok(rare.wave >= 2 && rare.wave < STAGES[stage].encounters.length - 2);
+    }
+    assert.ok(hits > 3000 / 25 && hits < 3000 / 10, `stage ${stage}: ${hits} rare runs`);
+  }
+  const g = createGame(() => .5, 2); g.rare = { name: 'manateeCalf', wave: 3 };
+  let events = [];
+  for (let t = 0; t < 60 && !g.ended; t += 1 / 30) { Object.assign(g.player, { x: -2000, y: 265, breath: WORLD.breath }); g.energy = 100; events.push(...step(g, 1 / 30, false)); }
+  assert.deepEqual(events.filter(e => e.kind === 'rare').map(e => e.name), ['manateeCalf']);
+});
+
+test('a fish snapped out of the air scores double', () => {
+  const g = createGame(() => .5); g.nextEncounter = Infinity;
+  Object.assign(g.player, { y: 300, vy: 0, wet: false });
+  const beak = beakPosition(g.player);
+  g.items = [{ kind: 'fish', x: beak.x, y: beak.y, golden: false, leap: .5 }];
+  const events = step(g, 1 / 60, false);
+  assert.equal(g.score, 20);
+  assert.equal(events.filter(e => e.kind === 'airCatch').length, 1);
+  g.items = [{ kind: 'fish', ...beakPosition(g.player), golden: false }];
+  step(g, 1 / 60, false);
+  assert.equal(g.score, 30, 'a plain catch in the air is not doubled');
 });

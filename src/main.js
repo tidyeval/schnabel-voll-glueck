@@ -29,7 +29,8 @@ let selectedStage = Math.min(prefs.completed, STAGES.length - 1);
 const audio = createAudio(prefs);
 const juice = createJuice(reducedMotion);
 const showLabels = { dolphins: 'showDolphins', goldenHour: 'showGoldenHour', shootingStars: 'showShootingStars' };
-const labels = { nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'] };
+const rareLabels = { hatchlings: 'rareHatchlings', otters: 'rareOtters', manateeCalf: 'rareManateeCalf', manta: 'rareManta' };
+const labels = { airCatch: ['fxAirCatch', '#fff2b6', true], nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'] };
 let game = createGame(), mode = 'menu', holding = false, effects = [], last = 0, animation = 0, toastUntil = 0, needsDraw = true;
 function text(id, value) { if ($(id).textContent !== String(value)) $(id).textContent = value; }
 function syncPrefs(latest) { Object.assign(prefs, latest); }
@@ -206,6 +207,7 @@ function frame(now) {
       const label = labels[event.kind];
       if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
       if (event.kind === 'show' && showLabels[event.name]) toast(t(showLabels[event.name]));
+      if (event.kind === 'rare' && rareLabels[event.name]) toast(t(rareLabels[event.name]));
       audio.effect(event.kind, event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }

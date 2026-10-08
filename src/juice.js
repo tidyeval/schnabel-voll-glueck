@@ -50,6 +50,8 @@ export function createJuice(reducedMotion) {
         if (event.golden) sparkle = .9;
         if (event.combo % 10 === 0) { joy = .8; squash = .45; burst(event.x, event.y - 20, 10, 150, '#ffd3e0'); }
       }
+      if (event.kind === 'airCatch') { sparkle = .7; burst(event.x, event.y, 12, 190, '#fff2b6'); }
+      if (event.kind === 'rare') joy = 1.2;
       if (event.kind === 'sardine') burst(event.x, event.y, 2, 80, '#e3f6ff');
       if (event.kind === 'feast' || event.kind === 'trick' || event.kind === 'kick' || event.kind === 'mission') burst(event.x, event.y, 16, 220, '#fff2b6');
       if (event.kind === 'frenzy') { if (!reducedMotion) { flash = .35; flashColour = '#ffd66e'; shake = .2; shakePower = 4; } burst(event.x, event.y, 22, 260, '#ffd66e'); }

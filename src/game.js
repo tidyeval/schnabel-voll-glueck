@@ -152,6 +152,12 @@ export function rollSetPieces(stage, random) {
   }
   return pieces;
 }
+// Once in a while a run holds a rare moment, a little wonder that fits each stage.
+export const RARE = { chance: 1 / 15, moments: ['hatchlings', 'otters', 'manateeCalf', 'manta'] };
+export function rollRare(stage, random) {
+  if (random() >= RARE.chance) return null;
+  return { name: RARE.moments[stage], wave: 2 + Math.floor(random() * (STAGES[stage].encounters.length - 4)) };
+}
 // Background residents and small character moments, scattered differently every run.
 export function rollDecor(stage, random) {
   const residents = [...RESIDENTS[stage]];
@@ -268,6 +274,7 @@ function encounter(game) {
     });
   }
   game.encounterTrace.push({ stage: game.stage, wave, entry, form: pairPattern, bands });
+  if (game.rare?.wave === wave) { game.rareShow = { name: game.rare.name, start: game.time }; game.pendingRare = game.rare.name; }
   const piece = game.pieces.get(wave);
   if (piece === 'baitball') {
     const seeds = Array.from({ length: 22 }, (_, i) => (i * .618034 + .13) % 1);
@@ -310,9 +317,9 @@ function encounter(game) {
 export function createGame(random = Math.random, stage = 0, elapsed) {
   stage = Number.isInteger(stage) ? clamp(stage, 0, STAGES.length - 1) : 0;
   elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : [0, 50, 95, 140][stage];
-  const pieces = rollSetPieces(stage, random), decor = rollDecor(stage, random);
+  const pieces = rollSetPieces(stage, random), decor = rollDecor(stage, random), rare = rollRare(stage, random);
   return {
-    pieces, decor,
+    pieces, decor, rare, rareShow: null,
     elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
@@ -353,6 +360,7 @@ export function step(game, dt, holding) {
   game.time += dt;
   const waitingNest = game.items.find(item => item.kind === 'nest' && item.final && item.x <= p.x + 55);
   game.speed = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed * (1 + .35 * game.boost);
+  if (game.pendingRare) { events.push({ kind: 'rare', name: game.pendingRare }); game.pendingRare = null; }
   if (game.pendingShow) { events.push({ kind: 'show', name: game.pendingShow }); game.pendingShow = null; }
   game.frenzy = Math.max(0, game.frenzy - dt);
   game.distance += game.speed * dt;
@@ -587,6 +595,8 @@ export function step(game, dt, holding) {
         game.score += points;
         game.energy = Math.min(100, game.energy + (item.golden ? ENERGY.golden : ENERGY.fish));
         events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden, combo: game.combo });
+        // Snapping a leaping fish out of the air doubles its points.
+        if (!p.wet && item.leap > 0) { game.score += points; events.push({ kind: 'airCatch', x: item.x, y: item.y, points: points * 2 }); }
         if (game.combo >= FRENZY.combo && game.frenzyArmed && !game.frenzy) {
           game.frenzyArmed = false; game.frenzy = FRENZY.duration; game.frenzySpawn = 0;
           events.push({ kind: 'frenzy', x: p.x, y: p.y });

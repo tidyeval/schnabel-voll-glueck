@@ -1,7 +1,7 @@
 // Stage atmosphere, set-piece scenery and game-feel overlays. Everything here is
 // presentation only: nothing in this file is used for collisions or scoring.
 import { WORLD, clamp, sardinePositions, currentSpan, FRENZY } from './game.js';
-import { blink, cuteEye } from './cute.js';
+import { blink, cuteEye, happyEye, manatee } from './cute.js';
 const TAU = Math.PI * 2;
 const SHOW_TIME = 13;
 
@@ -285,6 +285,71 @@ export function drawCaustics(c, stage, d, motion, reducedMotion) {
     });
   }
   c.globalCompositeOperation = 'source-over';
+}
+// Rare moments: a small wonder that crosses the screen once in a lucky run.
+const RARE_TIME = 15;
+export function drawRare(c, game, water, motion, reducedMotion) {
+  if (!game.rareShow || reducedMotion) return;
+  const age = game.time - game.rareShow.start;
+  if (age < 0 || age > RARE_TIME) return;
+  const name = game.rareShow.name;
+  if (name === 'hatchlings') for (let i = 0; i < 5; i++) hatchling(c, 560 - age * 46 + i * 34, water + 22 + Math.sin(motion * 2 + i) * 3 + (i % 2) * 6, motion + i * .4, i);
+  if (name === 'otters') { const ox = 580 - age * 42; c.save(); c.translate(ox, water); c.scale(1.5, 1.5); c.translate(-ox, -water); otters(c, ox, water, motion); c.restore(); }
+  if (name === 'manateeCalf') {
+    const x = 620 - age * 44;
+    manatee(c, x, 640, motion, 1, 1.05);
+    manatee(c, x + 34 + Math.sin(motion * .9) * 6, 668, motion + .7, 2, .55);
+    if (Math.sin(motion * 1.7) > .3) fill(c, '#ff9fb0aa', p => { const hx = x + 52, hy = 640 - 26 - wrap(motion * 14, 20); p.moveTo(hx, hy + 3); p.bezierCurveTo(hx - 5, hy - 1, hx - 2, hy - 5, hx, hy - 2); p.bezierCurveTo(hx + 2, hy - 5, hx + 5, hy - 1, hx, hy + 3); });
+  }
+  if (name === 'manta') manta(c, 640 - age * 52, 560 + Math.sin(age * .8) * 30, motion);
+}
+function hatchling(c, x, y, t, seed) {
+  const paddle = Math.sin(t * 9) * .6;
+  c.save(); c.translate(x, y); c.scale(1.3, 1.3);
+  for (const [fx, side] of [[-5, 1], [5, -1]]) { c.save(); c.translate(fx, 3); c.rotate(side * paddle); fill(c, '#5f8f6a', p => p.ellipse(side * -3, 4, 3, 7, side * .5, 0, TAU)); c.restore(); }
+  fill(c, '#7aa57a', p => p.ellipse(-11, -1, 5, 4.5, 0, 0, TAU));
+  fill(c, '#5a7a52', p => p.ellipse(0, 0, 10, 7, 0, 0, TAU));
+  fill(c, '#86a86a', p => p.ellipse(-1, -1.5, 7, 4.5, 0, 0, TAU));
+  cuteEye(c, -12.5, -2, 1.9, blink(t, seed), '#1d2b20');
+  c.restore();
+}
+function otters(c, x, water, t) {
+  const bob = Math.sin(t * 1.6) * 2;
+  for (const [dx, phase, shell] of [[0, 0, true], [46, 1.4, false]]) {
+    const ox = x + dx, oy = water - 2 + bob + Math.sin(t * 1.6 + phase) * 1.5;
+    c.save(); c.translate(ox, oy);
+    fill(c, '#7a5638', p => { p.moveTo(14, -2); p.quadraticCurveTo(26, -10, 30, -4); p.quadraticCurveTo(24, 0, 14, 2); p.closePath(); });
+    fill(c, '#8b6444', p => p.ellipse(0, 0, 18, 8, 0, 0, TAU));
+    fill(c, '#b08b66', p => p.ellipse(-2, -3, 12, 4, 0, 0, TAU));
+    fill(c, '#8b6444', p => p.ellipse(-19, -5, 9, 8, 0, 0, TAU));
+    fill(c, '#f1e2c8', p => p.ellipse(-21, -4, 6.5, 5.5, 0, 0, TAU));
+    fill(c, '#8b6444', p => p.arc(-14, -12, 2.6, 0, TAU));
+    fill(c, '#3a2a20', p => p.ellipse(-26, -5, 1.8, 1.3, 0, 0, TAU));
+    happyEye(c, -21, -7, 1.8, '#3a2a20');
+    fill(c, '#ff9aa266', p => p.ellipse(-19, -2, 2, 1.2, 0, 0, TAU));
+    if (shell) { fill(c, '#f5c6b6', p => p.ellipse(-4, -7, 5, 3.5, 0, 0, TAU)); stroke(c, '#d99a8a', .8, p => { p.moveTo(-8, -7); p.lineTo(0, -7); p.moveTo(-4, -10); p.lineTo(-4, -4); }); }
+    c.restore();
+  }
+  // Holding paws, so they never drift apart.
+  stroke(c, '#7a5638', 3, p => { p.moveTo(x + 6, water - 8 + bob); p.quadraticCurveTo(x + 18, water - 16 + bob, x + 30, water - 10 + bob); });
+  fill(c, '#7a5638', p => p.arc(x + 18, water - 14 + bob, 3, 0, TAU));
+}
+// Seen from above, a manta glides head first with its wings flapping slowly.
+function manta(c, x, y, t) {
+  const flap = Math.sin(t * 1.6), reach = 66 + flap * 10, sweep = flap * 10;
+  c.save(); c.translate(x, y);
+  c.globalCompositeOperation = 'lighter';
+  const glow = c.createRadialGradient(0, 0, 10, 0, 0, 100); glow.addColorStop(0, '#9fd8ff26'); glow.addColorStop(1, '#9fd8ff00');
+  fill(c, glow, p => p.arc(0, 0, 100, 0, TAU)); c.globalCompositeOperation = 'source-over';
+  stroke(c, '#2c4f78', 2.2, p => { p.moveTo(30, 0); p.quadraticCurveTo(60, Math.sin(t * 3) * 5, 88, 2); });
+  const wing = side => p => { p.moveTo(-30, 0); p.bezierCurveTo(-28, side * 30, -6 + sweep, side * reach, 6 + sweep, side * reach); p.bezierCurveTo(14 + sweep, side * reach * .7, 22, side * 22, 34, 0); p.closePath(); };
+  for (const side of [-1, 1]) fill(c, '#2f5a88', wing(side));
+  for (const side of [-1, 1]) fill(c, '#3f6f9e88', p => p.ellipse(-2 + sweep * .4, side * reach * .45, 10, 18, side * .3, 0, TAU));
+  fill(c, '#3d6a98', p => p.ellipse(0, 0, 30, 13, 0, 0, TAU));
+  for (const side of [-1, 1]) fill(c, '#3d6a98', p => p.ellipse(-33, side * 8, 7, 3, side * .45, 0, TAU));
+  fill(c, '#a8cae866', p => p.ellipse(-4, -3, 16, 4, 0, 0, TAU));
+  for (const side of [-1, 1]) cuteEye(c, -24, side * 10, 2.8, blink(t, side + 5), '#0e1f33');
+  c.restore();
 }
 export function drawWhale(c, game, motion, reducedMotion) {
   const show = showState(game, reducedMotion);

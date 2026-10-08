@@ -148,8 +148,8 @@ function fiddler(c, x, y, t, seed) {
   c.restore();
 }
 // A sleepy manatee drifts through the green water, nibbling now and then.
-function manatee(c, x, y, t, seed) {
-  c.save(); c.translate(x, y + Math.sin(t * .8 + seed) * 5); c.rotate(Math.sin(t * .6 + seed) * .04); c.scale(.8, .8);
+export function manatee(c, x, y, t, seed, size = .8) {
+  c.save(); c.translate(x, y + Math.sin(t * .8 + seed) * 5); c.rotate(Math.sin(t * .6 + seed) * .04); c.scale(size, size);
   path(c, '#8e9c98', p => { p.moveTo(30, -2); p.quadraticCurveTo(52, -16, 56, 0); p.quadraticCurveTo(52, 16, 30, 4); p.closePath(); }, '#6f7d7a', 1);
   const body = c.createLinearGradient(0, -18, 0, 18); body.addColorStop(0, '#a9b6b1'); body.addColorStop(1, '#8a9894');
   path(c, body, p => { p.ellipse(4, 0, 34, 17, 0, 0, TAU); }, '#6f7d7a', 1);
@@ -161,7 +161,7 @@ function manatee(c, x, y, t, seed) {
   happyEye(c, -29, -2, 2.6, '#3a4644');
   ellipse(c, -27, 4, 3, 1.8, '#ff9aa266');
   c.restore();
-  if (Math.sin(t * 1.3 + seed) > .5) ellipse(c, x - 34 + 0, y - 18 - ((t * 20) % 30), 2, 2, '#e6f6ee88');
+  if (size > .6 && Math.sin(t * 1.3 + seed) > .5) ellipse(c, x - 34 + 0, y - 18 - ((t * 20) % 30), 2, 2, '#e6f6ee88');
 }
 // The harbour cat naps on a roof; drawn with the houses so it scrolls with them.
 export function roofCat(c, x, y, t) {
