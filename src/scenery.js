@@ -286,7 +286,7 @@ export function drawCaustics(c, stage, d, motion, reducedMotion) {
   }
   c.globalCompositeOperation = 'source-over';
 }
-// Rare moments: a small wonder that crosses the screen once in a lucky run.
+// Special moments: a small wonder that crosses the screen once per run.
 const RARE_TIME = 15;
 export function drawRare(c, game, water, motion, reducedMotion) {
   if (!game.rareShow || reducedMotion) return;

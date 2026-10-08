@@ -85,14 +85,15 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   const lowAir = state.level > 0, urgency = state.urgency;
   const relief = expression.relief || 0, bump = reducedMotion ? 0 : expression.bump || 0;
   const shake = reducedMotion ? 0 : Math.sin(relief * 25) * .07 * Math.min(1, relief);
-  const tired = happy || relief > 0 ? 0 : clamp((35 - (expression.energy ?? 100)) / 35, 0, 1);
+  const yawn = reducedMotion ? 0 : expression.yawn || 0;
+  const tired = Math.max(yawn * .8, happy || relief > 0 ? 0 : clamp((35 - (expression.energy ?? 100)) / 35, 0, 1));
   const hurt = (expression.hurt || 0) > 0;
   const headAngle = (lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2) + (expression.look || 0);
   const headPose = () => { c.translate(66, -27); c.rotate(headAngle); c.translate(-66, 27); };
   if (bump) c.transform(1, 0, Math.sin(bump * 22) * .07, 1, 0, 0);
   if (!reducedMotion && expression.shiver > 0) c.rotate(Math.sin(expression.shiver * 48) * .07 * Math.min(1, expression.shiver * 3));
   const wobble = reducedMotion ? 0 : Math.sin(t * 6) * fullness * 3 + Math.sin(gulp * 22) * gulp * 8;
-  const bite = lowAir ? 0 : gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : relief > .8 ? .45 : expression.fish ? .18 : 0;
+  const bite = Math.max(yawn * 1.3, lowAir ? 0 : gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : relief > .8 ? .45 : expression.fish ? .18 : 0);
   // Shared, stable phase: brisk downstroke and slower, folded recovery.
   const cycle = (t * 1.3) % 1, down = cycle < .42;
   const progress = down ? cycle / .42 : (cycle - .42) / .58;
@@ -146,6 +147,9 @@ export function pelican(c, x, y, scale, t, tilt = 0, outfit = 'classic', wet = f
   else if (tired > 0) {
     ellipse(c, 25, -45, 4.4, 5.4 - tired * 3.5, '#294b49');
     path(c, null, p => { p.moveTo(18, -48 + tired * 2); p.quadraticCurveTo(25, -51 + tired * 4, 32, -48 + tired * 2); }, '#8f765f', 2);
+  } else if (expression.wink > 0 && !reducedMotion) {
+    path(c, null, p => { p.moveTo(19, -45); p.quadraticCurveTo(26, -51, 32, -45); }, '#31524f', 2.8);
+    star(c, 40, -60, 3 + expression.wink * 4, '#ffd66e', t * 4); ellipse(c, 21, -35, 7, 4, '#ff9fae77');
   } else if (happy || relief > 0) path(c, null, p => { p.moveTo(20, -43); p.quadraticCurveTo(26, -50, 32, -43); }, '#31524f', 2.8);
   else if (expression.sparkle > 0) { star(c, 25.5, -46, 7.5, '#f2b640', reducedMotion ? 0 : t * 3); star(c, 25.5, -46, 3.6, '#fff4c4', reducedMotion ? 0 : t * 3); }
   else { const gaze = expression.fish ? clamp((expression.fish.y - y) * .03, -2, 2) : 0; cuteEye(c, 25.5 + (expression.fish ? 1 : 0), -46 + gaze, 6.2, expression.fish || reducedMotion ? 1 : blink(t, .5)); }
@@ -456,9 +460,34 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     fish(c, 95 + Math.sin(motion * .6) * 18, 558, .8, false, motion); fish(c, 371 - Math.sin(motion * .5) * 12, 594, .65, true, motion);
     fish(c, 340 + Math.sin(motion * .5) * 12, 785, .65, false, motion); fish(c, 367 + Math.sin(motion * .5) * 12, 766, .45, false, motion);
     ellipse(c, 229, water + 4, 80, 10, '#306e7120');
-    const idle = motion % 7, hop = idle > 6.2 ? -Math.abs(Math.sin((idle - 6.2) / .8 * Math.PI * 2)) * 16 : 0;
-    const look = idle > 2.4 && idle < 4.4 ? Math.sin((idle - 2.4) / 2 * Math.PI) * -.22 : 0;
-    pelican(c, 217, 378 + Math.sin(motion * 1.6) * 5 + hop, 1.55, motion, -.06, outfit, false, hop < 0, 0, 0, 0, WORLD.breath, reducedMotion, { look });
+    // Pip's little show on the start screen: look around, wink at you, snack on a
+    // leaping fish, yawn, ruffle the feathers and hop. One loop every 20 seconds.
+    const k = motion % 20, bob = Math.sin(motion * 1.6) * 5;
+    const phase = (from, to) => k > from && k < to ? (k - from) / (to - from) : 0;
+    const hop = phase(17.2, 18) ? -Math.abs(Math.sin(phase(17.2, 18) * Math.PI * 2)) * 16 : 0;
+    const look = phase(1, 3) ? Math.sin(phase(1, 3) * Math.PI) * -.22 : phase(4, 5.6) ? Math.sin(phase(4, 5.6) * Math.PI) * .14 : 0;
+    const wink = phase(4.3, 5.4) ? Math.sin(phase(4.3, 5.4) * Math.PI) : 0;
+    const yawn = phase(11, 12.8) ? Math.sin(phase(11, 12.8) * Math.PI) : 0;
+    const shiver = phase(14, 14.8) ? (1 - phase(14, 14.8)) * .5 : 0;
+    const leap = phase(7, 8.1), gulp = phase(8.1, 8.52) ? (1 - phase(8.1, 8.52)) * .42 : 0, hearts = phase(8.1, 9.8);
+    const y = 378 + bob + hop;
+    if (leap) {
+      const fx = 452 - leap * 100, fy = water + 12 + (y - 46 - water - 12) * leap - Math.sin(leap * Math.PI) * 80;
+      if (leap < .12) ellipse(c, 452, water + 2, 14 + leap * 80, 3, '#f1fbe9aa');
+      fish(c, fx, fy, .7, false, motion, 0, .5 + Math.cos(leap * Math.PI) * .6);
+    }
+    if (hearts) for (let i = 0; i < 3; i++) {
+      const hx = 352 + i * 12 + Math.sin(motion * 6 + i) * 4, hy = y - 60 - hearts * 46 - i * 10, r = 5;
+      c.globalAlpha = 1 - hearts;
+      path(c, '#ff8fa3', p => { p.moveTo(hx, hy + r * .9); p.bezierCurveTo(hx - r * 1.6, hy - r * .2, hx - r * .7, hy - r * 1.4, hx, hy - r * .5); p.bezierCurveTo(hx + r * .7, hy - r * 1.4, hx + r * 1.6, hy - r * .2, hx, hy + r * .9); });
+      c.globalAlpha = 1;
+    }
+    if (phase(14, 16.5)) for (let i = 0; i < 3; i++) {
+      const u = phase(14, 16.5), fx = 190 + i * 30 + Math.sin(u * 9 + i) * 10, fy = y - 10 + u * 70 + i * 6;
+      c.globalAlpha = 1 - u; ellipse(c, fx, fy, 5, 2, '#fffaf0', Math.sin(u * 7 + i)); c.globalAlpha = 1;
+    }
+    if (yawn > .5) { c.globalAlpha = (yawn - .5) * 2; c.fillStyle = '#7a8a9a'; c.font = "bold 14px 'Trebuchet MS'"; c.fillText('z', 300 + yawn * 6, y - 96 - yawn * 10); c.globalAlpha = 1; }
+    pelican(c, 217, y, 1.55, motion, -.06, outfit, false, hop < 0 || (hearts > 0 && hearts < .7), gulp, 0, 0, WORLD.breath, reducedMotion, { look, wink, yawn, shiver });
   } else {
     for (const item of game.items) {
       if (item.kind === 'buoy') {

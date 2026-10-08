@@ -152,8 +152,8 @@ export function rollSetPieces(stage, random) {
   }
   return pieces;
 }
-// Once in a while a run holds a rare moment, a little wonder that fits each stage.
-export const RARE = { chance: 1 / 15, moments: ['hatchlings', 'otters', 'manateeCalf', 'manta'] };
+// Every run holds one special moment per stage, a little wonder at a random point.
+export const RARE = { chance: 1, moments: ['hatchlings', 'otters', 'manateeCalf', 'manta'] };
 export function rollRare(stage, random) {
   if (random() >= RARE.chance) return null;
   return { name: RARE.moments[stage], wave: 2 + Math.floor(random() * (STAGES[stage].encounters.length - 4)) };

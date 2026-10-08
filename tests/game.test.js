@@ -558,7 +558,7 @@ test('mangroves block the sky lane, so Pip dives under the root curtain', () => 
   assert.equal(g.endReason, 'mangrove');
 });
 
-test('rare moments come only now and then, once, in the middle of a run', () => {
+test('every run meets its stage\'s special moment once, at a random wave in the middle', () => {
   let seed = 3; const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
   for (let stage = 0; stage < STAGES.length; stage++) {
     let hits = 0;
@@ -568,7 +568,7 @@ test('rare moments come only now and then, once, in the middle of a run', () => 
       hits++; assert.equal(rare.name, RARE.moments[stage]);
       assert.ok(rare.wave >= 2 && rare.wave < STAGES[stage].encounters.length - 2);
     }
-    assert.ok(hits > 3000 / 25 && hits < 3000 / 10, `stage ${stage}: ${hits} rare runs`);
+    assert.equal(hits, 3000, `stage ${stage}: ${hits} runs with a moment`);
   }
   const g = createGame(() => .5, 2); g.rare = { name: 'manateeCalf', wave: 3 };
   let events = [];
