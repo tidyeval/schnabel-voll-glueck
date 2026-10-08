@@ -78,7 +78,7 @@ document.querySelectorAll('[data-locale]').forEach(button => button.onclick = ()
 
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start(elapsed) {
-  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); document.body.classList.toggle('night', game.stage === 2); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
+  closeDialogs(); game = createGame(Math.random, selectedStage, elapsed); document.body.classList.toggle('night', game.stage === 3); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
   $('toast').classList.add('hidden'); audio.start(); updateHud(); canvas.focus();
 }

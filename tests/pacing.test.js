@@ -26,7 +26,7 @@ test('every authored fish stays underwater and outside terrain, including island
     const g = createGame(() => seed, stage);
     for (let wave = 0; wave <= STAGES[stage].encounters.length; wave++) {
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
-      const terrain = g.items.filter(i => ['island', 'reef', 'coral', 'buoy'].includes(i.kind));
+      const terrain = g.items.filter(i => ['island', 'reef', 'coral', 'buoy', 'mangrove'].includes(i.kind));
       for (const f of g.items.filter(i => i.kind === 'fish')) {
         assert.ok(f.y >= WORLD.water + 35 && f.y <= 710, `${stage}/${wave}: fish at ${f.y}`);
         assert.equal(f.flying, undefined);
@@ -40,7 +40,7 @@ test('every authored fish stays underwater and outside terrain, including island
 
 test('removing difficulty preserves possessions, unlocks and the best previous stage scores', () => {
   const prefs = readProgress(JSON.stringify({ difficulty: 'hard', bests: [900, 0, 100], difficultyBests: {easy: [50, 800, 0], medium: [400, 700, 0], hard: [1000, 0, 200]}, completed: 2, totalFish: 42, outfit: 'flower', music: false }));
-  assert.deepEqual(prefs.bests, [1000, 800, 200]);
+  assert.deepEqual(prefs.bests, [1000, 800, 0, 200]);
   assert.equal(prefs.totalFish, 42); assert.equal(prefs.completed, 2); assert.equal(prefs.outfit, 'flower'); assert.equal(prefs.music, false);
   assert.equal('difficulty' in prefs, false); assert.equal('difficultyBests' in prefs, false);
   assert.deepEqual(readProgress(JSON.stringify(prefs)), prefs);
@@ -59,7 +59,7 @@ test('the journey reaches full pace during the final stage and adds sharks in ev
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
       sharks += g.items.filter(item => item.kind === 'shark').length;
     }
-    assert.ok(sharks === [6, 8, 13][stage], `stage ${stage}: ${sharks} sharks`);
+    assert.ok(sharks === [6, 8, 7, 13][stage], `stage ${stage}: ${sharks} sharks`);
   }
 });
 
@@ -87,8 +87,8 @@ test('paired sharks progress from staggered to parallel with recovery encounters
   assert.ok(forms.includes('parallel'));
   assert.deepEqual([...PAIR_PATTERNS.values()].sort(), forms.sort());
   assert.ok(PAIR_PATTERNS.has('0:4'), 'paired decisions begin by the middle of the bay');
-  assert.deepEqual([0, 1, 2].map(stage => [...PAIR_PATTERNS.keys()].filter(key => key.startsWith(`${stage}:`)).length), [2, 3, 5]);
-  assert.deepEqual(warningTimes, [.95, .8, .68]);
+  assert.deepEqual([0, 1, 2, 3].map(stage => [...PAIR_PATTERNS.keys()].filter(key => key.startsWith(`${stage}:`)).length), [2, 3, 3, 5]);
+  assert.deepEqual(warningTimes, [.95, .8, .74, .68]);
 });
 
 test('the buoy and coral combination keeps its middle passage clear of the fatal shark', () => {

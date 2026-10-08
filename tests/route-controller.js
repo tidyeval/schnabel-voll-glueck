@@ -11,12 +11,13 @@ export function routeController() {
     if (reef) target = p.wet && (!refill || reef.x < p.x + 170) ? 530 : 265;
     if (game.items.some(i => i.kind === 'buoy' && i.x > p.x - 60 && i.x < (i.warned ? 900 : p.x + 300))) target = 530;
     if (game.items.some(i => i.kind === 'coral' && i.x > p.x - 110 && i.x < (i.warned ? 900 : p.x + 250))) target = Math.min(target, 555);
+    if (game.items.some(i => i.kind === 'mangrove' && i.x > p.x - 100 && i.x < (i.warned ? 900 : p.x + 380))) target = 640;
     if (game.items.some(i => i.kind === 'island' && i.x > p.x - 100 && i.x < (i.warned ? 900 : p.x + 420))) target = 265;
     if (game.items.some(i => i.kind === 'boat' && i.x > p.x - 100 && i.x < 480)) target = 620;
     if (game.items.some(i => i.kind === 'diver' && i.x > p.x - 80 && i.x < 470)) target = 430;
     const sharks = game.items.filter(i => i.kind === 'shark' && !i.caught && i.x > p.x - 90 && i.x < 500);
     if (sharks.length) {
-      const terrain = game.items.filter(item => ['island','reef','buoy','coral'].includes(item.kind) && item.x > p.x - 120 && item.x < 500);
+      const terrain = game.items.filter(item => ['island','reef','buoy','coral','mangrove'].includes(item.kind) && item.x > p.x - 120 && item.x < 500);
       const boatAhead = game.items.some(item => item.kind === 'boat' && item.x > p.x - 100 && item.x < 500);
       const candidates = [265, 420, 480, 500, 535, 570, 590, 650].filter(y => (!boatAhead || y >= 480) && !terrain.some(item => [-20,0,20].some(margin => hitsTerrain({x:p.x,y:y+margin}, {...item,x:p.x}))));
       const clearance = y => Math.min(...sharks.map(shark=>Math.abs(y-shark.y)));

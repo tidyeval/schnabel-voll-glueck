@@ -69,8 +69,11 @@ export function hitsFisher(player, boat) {
   return Math.hypot(x - clamp(x, boat.x - 30, boat.x + 25), y - clamp(y, WORLD.water - 100, WORLD.water - 17)) < radius;
 }
 
+// Solid scenery. A mangrove's canopy and root curtain block the sky lane, so Pip dives under it.
+export const TERRAIN = ['island', 'reef', 'buoy', 'coral', 'mangrove'];
 export function terrainBlocks(item) {
   return (item.kind === 'buoy' ? [[-32, 245, 64, 220]]
+    : item.kind === 'mangrove' ? [[-72, 232, 144, 293]]
     : item.kind === 'coral' ? [[-85, 610, 170, 240]]
     : item.kind === 'island' ? [[-70, 330, 140, 520]] : [[-60, 382, 120, 68], [-85, 610, 170, 240]])
     .map(([x, y, width, height]) => {
@@ -86,7 +89,7 @@ export function terrainBlocks(item) {
 // Returns the closest height to y that keeps a body of halfHeight clear of terrain ahead.
 export function terrainSafeY(items, x, y, halfHeight = 32, ahead = 150) {
   let free = [[WORLD.water + 40, 790]];
-  for (const block of items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind)).flatMap(terrainBlocks)) {
+  for (const block of items.filter(item => TERRAIN.includes(item.kind)).flatMap(terrainBlocks)) {
     if (block.x > x + 70 || block.x + block.width < x - ahead) continue;
     const top = block.y - halfHeight - 6, bottom = block.y + block.height + halfHeight + 6;
     free = free.flatMap(([a, b]) => [[a, Math.min(b, top)], [Math.max(a, bottom), b]]).filter(([a, b]) => b > a);
@@ -114,6 +117,7 @@ export function paceAt(seconds) {
 export const STAGES = [
   { name: 'Geschützte Bucht', encounters: ['turtle', 'shark', 'gull', 'boat', 'shark-shark', 'turtle-turtle-gull', 'jelly', 'buoy', 'shark-shark', 'boat-jelly', 'shark-turtle', 'island'] },
   { name: 'Fischerhafen', encounters: ['coral', 'shark', 'driftwood', 'shark-shark', 'turtle-turtle-gull', 'surfer', 'shark-shark', 'diver', 'reef', 'shark-shark', 'turtle-turtle-gull', 'buoy-coral-shark'] },
+  { name: 'Mangroven-Lagune', encounters: ['mangrove', 'shark', 'turtle-turtle-gull', 'driftwood', 'shark-shark', 'mangrove', 'jelly', 'shark-shark', 'turtle-turtle-gull', 'whirlpool', 'shark-shark', 'mangrove'] },
   { name: 'Korallenriff', encounters: ['puffer', 'shark-shark', 'turtle-turtle-gull', 'whirlpool', 'shark-shark', 'reef-puffer-shark', 'shark-shark', 'turtle-turtle-gull', 'buoy-coral-shark', 'shark-shark', 'boat-jelly-shark', 'shark-shark'] },
 ];
 export const UNDERWATER_BANDS = [
@@ -124,13 +128,15 @@ export const UNDERWATER_BANDS = [
 export const PAIR_PATTERNS = new Map([
   ['0:4', 'staggered'], ['0:8', 'staggered'],
   ['1:3', 'staggered'], ['1:6', 'parallel'], ['1:9', 'staggered'],
-  ['2:1', 'parallel'], ['2:4', 'staggered'], ['2:6', 'parallel'], ['2:9', 'staggered'], ['2:11', 'parallel'],
+  ['2:4', 'staggered'], ['2:7', 'staggered'], ['2:10', 'parallel'],
+  ['3:1', 'parallel'], ['3:4', 'staggered'], ['3:6', 'parallel'], ['3:9', 'staggered'], ['3:11', 'parallel'],
 ]);
 // Spectacle between the regular encounters, rolled anew for every run. Calm waves get an
 // optional reward (bait ball, current or dolphins); shows are scenery only.
 export const SET_PIECE_POOLS = [
   { calm: ['baitball', 'current', 'dolphins'], shows: ['rainbow', 'whale'], count: 1 },
   { calm: ['baitball', 'current', 'dolphins'], shows: ['goldenHour', 'trawler', 'rainbow', 'whale'], count: 2 },
+  { calm: ['baitball', 'current', 'dolphins'], shows: ['rainbow', 'whale'], count: 1 },
   { calm: ['baitball', 'current', 'dolphins'], shows: ['shootingStars', 'whale'], count: 2 },
 ];
 const pick = (list, random) => list.splice(Math.floor(random() * list.length), 1)[0];
@@ -219,6 +225,7 @@ function encounter(game) {
     : ['reef', 'buoy'].includes(kind) ? [440,470,490,510,520,530,530,510,470,435,405]
     : kind === 'shark' ? arc([410, 475, 540][variant], 30)
     : kind === 'island' ? arc(410, 30)
+    : kind === 'mangrove' ? arc(430, 200)
     : kind === 'turtle' ? arc([410,475,565][variant], 40)
     : kind === 'coral' ? arc(410, 35)
     : arc(440, 65);
@@ -237,7 +244,7 @@ function encounter(game) {
   const bands = [];
   if (kind === 'shark' || kind === 'turtle') {
     const band = animalPosition(); bands.push(band.id);
-    game.items.push({ kind, x: kind === 'shark' ? 880 : 890, y: band.y, baseY: band.y, lane: band.id, encounterForm: pairPattern, warningTime: game.stage === 0 && wave === 1 ? 1.15 : [.95, .8, .68][game.stage] });
+    game.items.push({ kind, x: kind === 'shark' ? 880 : 890, y: band.y, baseY: band.y, lane: band.id, encounterForm: pairPattern, warningTime: game.stage === 0 && wave === 1 ? 1.15 : [.95, .8, .74, .68][game.stage] });
   }
   if (kind === 'puffer') game.items.push({ kind, x: 890, y: 665, phase: 'idle', timer: 0 });
   companions.forEach((companion, index) => {
@@ -247,7 +254,7 @@ function encounter(game) {
     const y = companion === 'gull' ? 285 : band?.y ?? 665;
     const pairX = pairPattern === 'parallel' ? 900 + index * 30 : pairPattern === 'staggered' ? 1010 + index * 120 : 960 + index * 120;
     game.items.push({ kind: companion, x: companion === 'coral' ? 890 : pairX,
-      y, baseY: y, lane: band?.id, encounterForm: pairPattern, warningTime: companion === 'shark' ? [.95, .8, .68][game.stage] : undefined,
+      y, baseY: y, lane: band?.id, encounterForm: pairPattern, warningTime: companion === 'shark' ? [.95, .8, .74, .68][game.stage] : undefined,
       phase: companion === 'puffer' ? 'idle' : 0, timer: 0 });
   });
   if (sharkCount > 1) {
@@ -275,14 +282,14 @@ function encounter(game) {
     game.pendingShow = piece;
     if (piece === 'dolphins') for (let i = 0; i < 10; i++) game.items.push({ kind: 'fish', x: 780 + i * 56, y: 520 - Math.sin(i / 9 * Math.PI) * 70, golden: false, lane: 'alternate', route: wave, bonus: true });
   }
-  if (['island', 'reef', 'buoy', 'coral'].includes(kind)) game.items.push({ kind, x: 890 });
+  if (TERRAIN.includes(kind)) game.items.push({ kind, x: 890 });
   // A swimmer whose band crosses this wave's rock starts ahead of it, so it swims away instead of through.
-  const rocks = game.items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind) && item.x >= 800).flatMap(terrainBlocks);
+  const rocks = game.items.filter(item => TERRAIN.includes(item.kind) && item.x >= 800).flatMap(terrainBlocks);
   for (const swimmer of game.items.filter(item => ['shark', 'turtle'].includes(item.kind) && item.x >= 850)) {
     const blocking = rocks.filter(block => swimmer.baseY + 42 > block.y && swimmer.baseY - 42 < block.y + block.height);
     if (blocking.length) swimmer.x = Math.min(...blocking.map(block => block.x)) - 120;
   }
-  if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: sharkCount > 1 ? UNDERWATER_BANDS[bandVariant].y : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
+  if (kind !== 'island') game.items.push({ kind: 'fish', x: kind === 'shark' ? 1050 : 860, y: sharkCount > 1 ? UNDERWATER_BANDS[bandVariant].y : ['reef', 'buoy', 'coral'].includes(kind) ? 530 : kind === 'mangrove' ? 680 : kind === 'boat' ? 710 : kind === 'shark' ? 555 : 650, golden: true });
   if (['gull', 'jelly', 'driftwood', 'whirlpool'].includes(kind)) game.items.push({ kind, x: 890, y: kind === 'gull' ? 285 : kind === 'driftwood' ? WORLD.water : 640, phase: 0 });
   if (kind === 'diver') game.items.push({ kind, x: 890, y: 620, phase: 'idle', timer: 0 });
   if (kind === 'surfer') game.items.push({ kind, x: 890, y: WORLD.water, escaping: false });
@@ -291,18 +298,18 @@ function encounter(game) {
   [440, 415, 400].forEach((y, i) => addFish(1220 + i * 60, y, 'exit'));
   // Now and then a fish leaps out of the breathing gap: a bonus for a well-timed breach.
   if ((variant + wave) % 2 === 0 && kind !== 'island') game.items.push({ kind: 'fish', x: 1460, y: LEAP.from, golden: false, lane: 'alternate', route: wave, bonus: true, leap: 0 });
-  const terrain = game.items.filter(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind));
+  const terrain = game.items.filter(item => TERRAIN.includes(item.kind));
   game.items = game.items.filter(item => item.kind !== 'fish' || !terrain.some(block => hitsTerrain(item, block)));
   game.wave++;
   const nextEntry = STAGES[game.stage].encounters[game.wave] || '';
-  const approachSpace = ['island', 'reef', 'buoy', 'coral'].some(obstacle => nextEntry.split('-').includes(obstacle)) ? 180 : 0;
+  const approachSpace = TERRAIN.some(obstacle => nextEntry.split('-').includes(obstacle)) ? 180 : 0;
   const recoverySpace = sharkCount > 1 || entry === 'turtle-turtle-gull' ? 90 : entry === 'buoy-coral-shark' ? 120 : 0;
   game.nextEncounter += paceAt(game.elapsed + game.time).spacing + approachSpace + recoverySpace + (kind === 'island' ? 180 : 0);
 }
 
 export function createGame(random = Math.random, stage = 0, elapsed) {
   stage = Number.isInteger(stage) ? clamp(stage, 0, STAGES.length - 1) : 0;
-  elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : [0, 55, 100][stage];
+  elapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : [0, 50, 95, 140][stage];
   const pieces = rollSetPieces(stage, random), decor = rollDecor(stage, random);
   return {
     pieces, decor,
@@ -401,7 +408,7 @@ export function step(game, dt, holding) {
     if (game.frenzySpawn <= 0) {
       game.frenzySpawn = FRENZY.interval;
       const bonus = { kind: 'fish', x: 540, y: clamp((p.wet ? p.y : 450) + Math.sin(game.time * 3.2) * 46, 410, 690), golden: false, lane: 'alternate', bonus: true };
-      const blocked = game.items.some(item => ['island', 'reef', 'buoy', 'coral'].includes(item.kind) && Math.abs(item.x - bonus.x) < 150);
+      const blocked = game.items.some(item => TERRAIN.includes(item.kind) && Math.abs(item.x - bonus.x) < 150);
       if (!blocked) game.items.push(bonus);
     }
   }
@@ -410,7 +417,7 @@ export function step(game, dt, holding) {
   const beak = beakPosition(p);
   for (const item of game.items) {
     item.x -= game.speed * dt;
-    if (['island', 'reef', 'buoy', 'coral'].includes(item.kind) && !item.warned && item.x < Math.max(760, p.x + 90 + game.speed * 3)) {
+    if (TERRAIN.includes(item.kind) && !item.warned && item.x < Math.max(760, p.x + 90 + game.speed * 3)) {
       item.warned = true; events.push({ kind: item.kind === 'island' ? 'islandWarning' : 'reefWarning' });
     }
     if (item.kind === 'nest') {
@@ -563,7 +570,7 @@ export function step(game, dt, holding) {
     }
     if (item.kind === 'fish') {
       if (item.leap !== undefined && (item.leap > 0 || item.x < LEAP.at) && item.leap < LEAP.duration) {
-        const clear = !item.leap && game.items.some(other => ['island', 'reef', 'buoy', 'coral'].includes(other.kind) && Math.abs(other.x - item.x) < 260);
+        const clear = !item.leap && game.items.some(other => TERRAIN.includes(other.kind) && Math.abs(other.x - item.x) < 260);
         if (clear) item.leap = undefined;
         else {
           if (!item.leap) events.push({ kind: 'fishLeap', x: item.x, y: WORLD.water });
@@ -604,7 +611,7 @@ export function step(game, dt, holding) {
       const fisherHit = item.kind === 'boat' && hitsFisher(p, item);
       const hit = item.kind === 'shark'
         ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
-        : ['island', 'reef', 'buoy', 'coral'].includes(item.kind) ? hitsTerrain(p, item)
+        : TERRAIN.includes(item.kind) ? hitsTerrain(p, item)
         : item.kind === 'puffer' ? hitsPuffer(p, item)
         : item.kind === 'diver' ? Math.abs(item.x - p.x) < 45 && Math.abs(item.y - p.y) < 30
         : item.kind === 'harpoon' ? Math.hypot(item.x - p.x, item.y - p.y) < 25

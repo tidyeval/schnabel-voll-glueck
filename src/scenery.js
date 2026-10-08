@@ -16,6 +16,11 @@ export const THEMES = [
     water: ['#6fc4b6', '#256068'], surface: '#f8dfad4a', rays: '#fbf2c0', rayAlpha: .13, mote: '#f3eccc35',
     seabed: '#578c81', grass: ['#6b9d7b', '#3f7e6c'], rocks: '#3f7c78', swell: 1.2,
   },
+  { // Mangroven-Lagune: warm evening glow over calm, green-gold water.
+    sky: [[0, '#9cc4d4'], [.45, '#f1c9b4'], [.8, '#f7ab8c'], [1, '#ffd29a']], glow: '#ff9e6a66', far: '#7f9e86', tint: 'rgba(255,160,110,.1)',
+    water: ['#79bc9c', '#285c52'], surface: '#ffd09a55', rays: '#ffdcaa', rayAlpha: .12, mote: '#f8e4b035',
+    seabed: '#6b8a64', grass: ['#7aa66a', '#4a7d55'], rocks: '#4a705c', swell: .8,
+  },
   { // Korallenriff: dusk turning into night, the finale.
     sky: [[0, '#151b47'], [.5, '#3a3672'], [.85, '#8b5f8c'], [1, '#e09a86']], glow: '#ff9f8a44', far: '#2b2d5e', tint: 'rgba(24,30,78,.62)',
     water: ['#3b8fa6', '#10294a'], surface: '#cfe0ff3a', rays: '#bcd8ff', rayAlpha: .07, mote: '#bfe9ff30',
@@ -78,7 +83,7 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
   }
   if (show?.name === 'rainbow') rainbow(c, water, show);
   // Sun, or moon and stars over the night reef.
-  if (stage === 2) {
+  if (stage === 3) {
     fill(c, '#f6f1d6', p => p.arc(392, 118, 25, 0, TAU));
     fill(c, '#f6f1d622', p => p.arc(392, 118, 44, 0, TAU));
     fill(c, '#f6f1d612', p => p.arc(392, 118, 70, 0, TAU));
@@ -88,6 +93,11 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
       fill(c, '#fff8e0', p => p.arc(hash(i + 1) * 480, hash(i + 2) * (water - 110), hash(i + 3) > .8 ? 1.6 : 1, 0, TAU));
     }
     c.globalAlpha = 1;
+  } else if (stage === 2) {
+    // A low evening sun.
+    fill(c, '#ffc98a', p => p.arc(370, water - 58, 34, 0, TAU));
+    fill(c, '#ffd9a066', p => p.arc(370, water - 58, 52, 0, TAU));
+    fill(c, '#ffcf9a30', p => p.arc(370, water - 58, 80, 0, TAU));
   } else {
     fill(c, '#ffe7a6', p => p.arc(397, water - 140, 29, 0, TAU));
     fill(c, '#fff4c777', p => p.arc(397, water - 140, 43, 0, TAU));
@@ -199,7 +209,7 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
   c.fillStyle = vertical(c, water, 850, [[0, th.water[0]], [1, th.water[1]]]); c.fillRect(-30, water, 540, 880 - water);
   c.fillStyle = vertical(c, water, water + 110, [[0, th.surface], [1, th.surface.slice(0, 7) + '00']]); c.fillRect(-30, water, 540, 110);
   // Moon path just below the surface.
-  if (stage === 2) {
+  if (stage === 3) {
     for (let k = 0; k < 9; k++) {
       const width = 26 - k * 2.4 + Math.sin(motion * 2.6 + k * 1.7) * 7;
       c.globalAlpha = (.5 - k * .05) * .7;
@@ -234,7 +244,21 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
     const x = wrap(i * 83.73 - d * .27, 520) - 20, y = water + 25 + (i * 41.4) % (820 - water);
     fill(c, th.mote, p => p.arc(x, y + Math.sin(motion + i) * 4, i % 3 === 0 ? 2 : 1, 0, TAU));
   }
-  if (stage === 2) plankton(c, water, d, motion, game, reducedMotion);
+  if (stage === 3) plankton(c, water, d, motion, game, reducedMotion);
+  if (stage === 2) {
+    // Sun path and drifting lily pads on the calm lagoon.
+    for (let k = 0; k < 7; k++) {
+      c.globalAlpha = .35 - k * .04;
+      fill(c, '#ffe2b0', p => p.ellipse(370 + Math.sin(motion * 1.3 + k) * 5, water + 8 + k * 9, Math.max(3, 24 - k * 2.6 + Math.sin(motion * 2.6 + k * 1.7) * 6), 2.2, 0, 0, TAU));
+    }
+    c.globalAlpha = 1;
+    for (let i = 0; i < 4; i++) {
+      const x = wrap(i * 149 - d * .55, 600) - 60, y = water + 2 + Math.sin(motion * 1.4 + i) * 1.2;
+      fill(c, '#5e9a5c', p => { p.ellipse(x, y, 17, 4.5, 0, .25, TAU - .1); p.lineTo(x, y); p.closePath(); });
+      fill(c, '#86bb72', p => p.ellipse(x - 2, y - 1, 12, 2.6, 0, 0, TAU));
+      if (i % 2) { fill(c, '#f6b3c4', p => p.ellipse(x + 4, y - 4, 4, 3, 0, 0, TAU)); fill(c, '#ffe9a8', p => p.arc(x + 4, y - 5, 1.4, 0, TAU)); }
+    }
+  }
 }
 // Bioluminescence: dim everywhere, bright where Pip disturbs the water.
 function plankton(c, water, d, motion, game, reducedMotion) {

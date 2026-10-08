@@ -4,15 +4,15 @@ import { readProgress, recordAttempt, applyAttempt } from '../src/progress.js';
 import { createGame } from '../src/game.js';
 test('old/invalid saves retain valid possessions and never unlock invalid stages', () => {
   for (const raw of [undefined, 'bad', 'null', '7', '[]', '{"completed":-1,"bests":[null,-4,"7"]}']) {
-    const p = readProgress(raw); assert.equal(p.completed, 0); assert.deepEqual(p.bests, [0,0,0]);
+    const p = readProgress(raw); assert.equal(p.completed, 0); assert.deepEqual(p.bests, [0,0,0,0]);
   }
   const old = readProgress(JSON.stringify({record:987,totalFish:100,outfit:'sailor',music:false,sound:false,haptics:false}));
   assert.equal(old.record,987); assert.equal(old.outfit,'sailor'); assert.equal(old.music,false); assert.equal(old.completed,0);
-  assert.equal(readProgress('{"completed":8}').completed,3);
+  assert.equal(readProgress('{"completed":8}').completed,4);
 });
 test('attempts bank fish once, advance only on completion and preserve the legacy record', () => {
   const prefs=readProgress('{"record":987,"totalFish":42}');
-  for(let stage=0;stage<3;stage++) {
+  for(let stage=0;stage<4;stage++) {
     const g=createGame(Math.random,stage);g.fish=10;g.score=100;
     assert.equal(recordAttempt(prefs,g),false);
     g.ended=true;g.endReason='complete';assert.equal(recordAttempt(prefs,g),true);assert.equal(recordAttempt(prefs,g),false);
@@ -21,7 +21,7 @@ test('attempts bank fish once, advance only on completion and preserve the legac
     const fresh=createGame(Math.random,stage);assert.equal(fresh.score,0);assert.equal(fresh.cargo,0);assert.equal(fresh.energy,100);assert.equal(fresh.player.breath,8);assert.equal(fresh.combo,0);assert.equal(fresh.mission,false);
   }
   const failed=createGame(Math.random,1);failed.ended=true;failed.endReason='air';failed.fish=3;recordAttempt(prefs,failed);
-  assert.equal(prefs.completed,3);assert.equal(prefs.totalFish,75);assert.equal(prefs.record,987);assert.deepEqual(prefs.bests,[100,100,100]);
+  assert.equal(prefs.completed,4);assert.equal(prefs.totalFish,85);assert.equal(prefs.record,987);assert.deepEqual(prefs.bests,[100,100,100,100]);
 });
 
 test('attempt ledgers merge distinct attempts and ignore repeated identifiers', () => {
@@ -33,4 +33,14 @@ test('attempt ledgers merge distinct attempts and ignore repeated identifiers', 
   assert.equal(applyAttempt(prefs, second), true);
   assert.equal(prefs.totalFish, 10); assert.equal(prefs.bests[0], 80); assert.equal(prefs.completed, 1);
   assert.deepEqual(prefs.attemptIds, ['tab-a', 'tab-b']);
+});
+
+test('saves from before the lagoon keep their reef record on the reef', () => {
+  const prefs = readProgress(JSON.stringify({ completed: 3, bests: [10, 20, 30], totalFish: 5 }));
+  assert.deepEqual(prefs.bests, [10, 20, 0, 30]); assert.equal(prefs.completed, 3);
+  assert.deepEqual(readProgress(JSON.stringify(prefs)), prefs);
+  assert.equal(applyAttempt(prefs, { id: 'old-reef', stage: 2, fish: 1, score: 99, endReason: 'energy' }), true);
+  assert.deepEqual(prefs.bests, [10, 20, 0, 99]);
+  assert.equal(applyAttempt(prefs, { id: 'new-lagoon', layout: 4, stage: 2, fish: 1, score: 77, endReason: 'complete' }), true);
+  assert.deepEqual(prefs.bests, [10, 20, 77, 99]); assert.equal(prefs.completed, 3);
 });

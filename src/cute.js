@@ -27,7 +27,7 @@ export function star(c, x, y, r, colour, rotation = 0) {
 const blush = (c, x, y, r) => ellipse(c, x, y, r, r * .6, '#ff8f9a66');
 
 // Which residents live in each stage. A run picks a few and scatters them (see game.decor).
-export const RESIDENTS = [['crab', 'starfish', 'bottle'], ['crab', 'cat', 'bottle'], ['octopus', 'seahorse', 'starfish']];
+export const RESIDENTS = [['crab', 'starfish', 'bottle'], ['crab', 'cat', 'bottle'], ['flamingo', 'frog', 'crab'], ['octopus', 'seahorse', 'starfish']];
 
 function crab(c, x, y, t, seed) {
   const step = Math.sin(t * 9), wave = Math.sin(t * 2.2 + seed) > .6 ? Math.sin(t * 14) * .5 : 0;
@@ -98,6 +98,34 @@ function bottle(c, x, water, t) {
   ellipse(c, -8, -3, 4, 1.2, '#ffffff99');
   c.restore();
 }
+// A flamingo on one leg in the shallows; now and then it dips for a snack.
+function flamingo(c, x, water, t, seed) {
+  const dip = Math.max(0, Math.sin(t * .5 + seed) - .75) * 4, sway = Math.sin(t * 1.2 + seed) * 2;
+  c.save(); c.translate(x, water); c.scale(.8, .8);
+  path(c, null, p => { p.moveTo(0, -46); p.lineTo(1, 24); }, '#e98d8f', 2.6);
+  path(c, null, p => { p.moveTo(0, -42); p.lineTo(-8, -26); p.lineTo(1, -20); }, '#e98d8f', 2.4);
+  ellipse(c, 2, -54, 20, 13, '#f7a8ad', -.15);
+  path(c, '#ee8f98', p => { p.moveTo(-6, -58); p.quadraticCurveTo(14, -66, 24, -50); p.quadraticCurveTo(10, -50, -6, -58); });
+  const hx = -10 + sway, hy = -100 + dip * 50;
+  path(c, null, p => { p.moveTo(-10, -60); p.bezierCurveTo(-24, -72, 4, -82 + dip * 20, hx, hy); }, '#f7a8ad', 6);
+  ellipse(c, hx, hy, 8, 7, '#f9b4b8');
+  path(c, '#fff2e8', p => { p.moveTo(hx - 6, hy - 1); p.quadraticCurveTo(hx - 15, hy + 1, hx - 15, hy + 9); p.quadraticCurveTo(hx - 10, hy + 4, hx - 4, hy + 4); p.closePath(); });
+  path(c, '#3a3036', p => { p.moveTo(hx - 15, hy + 6); p.quadraticCurveTo(hx - 15, hy + 10, hx - 12, hy + 9); p.lineTo(hx - 13, hy + 5); p.closePath(); });
+  cuteEye(c, hx - 1, hy - 2, 2.6, blink(t, seed), '#3a2a30'); blush(c, hx + 1, hy + 3, 2.2);
+  c.restore();
+  ellipse(c, x, water + 3, 12, 2, '#fff4dc88');
+}
+// A frog on its lily pad, puffing its throat.
+function frog(c, x, water, t, seed) {
+  const puff = Math.max(0, Math.sin(t * 2 + seed)) ** 6, bob = Math.sin(t * 1.4 + seed) * 1.2;
+  c.save(); c.translate(x, water + bob);
+  ellipse(c, 0, 2, 22, 5.5, '#5e9a5c'); ellipse(c, -2, 1, 17, 3.5, '#86bb72');
+  ellipse(c, 0, -6, 12, 8, '#8cc66a'); ellipse(c, 0, -2 + puff, 7 + puff * 2, 3 + puff * 3, '#f1f5c4');
+  for (const side of [-1, 1]) { ellipse(c, side * 11, -1, 5, 3, '#7ab55c'); ellipse(c, side * 6, -13, 5.2, 5.2, '#8cc66a'); cuteEye(c, side * 6, -13.5, 3.4, blink(t, seed + side), '#2b3a24'); }
+  blush(c, -9, -5, 2.2); blush(c, 9, -5, 2.2);
+  path(c, null, p => { p.moveTo(-4, -6); p.quadraticCurveTo(0, -3.5, 4, -6); }, '#4c7a3a', 1.2);
+  c.restore();
+}
 // The harbour cat naps on a roof; drawn with the houses so it scrolls with them.
 export function roofCat(c, x, y, t) {
   c.save(); c.translate(x, y);
@@ -117,20 +145,22 @@ export function roofCat(c, x, y, t) {
 export function drawResidents(c, game, stage, water, d, t, reducedMotion) {
   const decor = game.decor;
   if (!decor) return;
-  const night = stage === 2;
+  const night = stage === 3;
   decor.residents.forEach((kind, i) => {
     if (kind === 'cat') return;
     const span = 1500 + i * 230, x = wrap(decor.offsets[i] - d * .92, span) - 80;
     if (x < -90 || x > 570) return;
     const seed = decor.offsets[i] * .01, motion = reducedMotion ? 0 : t;
     // Drawn a third larger so the faces stay readable on a phone.
-    const anchor = { crab: 826, starfish: 832, octopus: 806, seahorse: 690, bottle: water }[kind];
+    const anchor = { crab: 826, starfish: 832, octopus: 806, seahorse: 690, bottle: water, flamingo: water, frog: water }[kind];
     c.save(); c.translate(x, anchor); c.scale(1.35, 1.35); c.translate(-x, -anchor);
     if (kind === 'crab') crab(c, x + (reducedMotion ? 0 : Math.sin(t * .6 + seed) * 22), 826, motion, seed);
     if (kind === 'starfish') starfish(c, x, 832, motion, seed);
     if (kind === 'octopus') octopus(c, x, 806, motion, seed, night);
     if (kind === 'seahorse') seahorse(c, x, 690, motion, seed, night);
     if (kind === 'bottle') bottle(c, x, water, motion);
+    if (kind === 'flamingo') flamingo(c, x, water, motion, seed);
+    if (kind === 'frog') frog(c, x, water, motion, seed);
     c.restore();
   });
 }

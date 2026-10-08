@@ -36,8 +36,8 @@ test('buoys require diving and buoy/coral narrows the route without closing it',
     assert.equal(g.endReason, kind);
   }
   for (const y of [265, 360, 440]) assert.ok(hitsTerrain({x: 118, y}, {kind: 'buoy', x: 118}));
-  const g = createGame(() => .5, 2);
-  g.wave = STAGES[2].encounters.findIndex(entry => entry.startsWith('buoy-coral'));
+  const g = createGame(() => .5, 3);
+  g.wave = STAGES[3].encounters.findIndex(entry => entry.startsWith('buoy-coral'));
   g.distance = g.nextEncounter; g.items = []; step(g, .01, false);
   const buoy = g.items.find(i => i.kind === 'buoy'), coral = g.items.find(i => i.kind === 'coral');
   assert.equal(buoy.x, coral.x);

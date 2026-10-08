@@ -92,10 +92,10 @@ test('fisher contact is fatal while hull and net contact cost energy', () => {
     assert.equal(g.energy, fatal ? 100 : 70);
   }
   const speeds = [];
-  for (let stage = 0; stage < 3; stage++) {
+  for (let stage = 0; stage < STAGES.length; stage++) {
     const g = createGame(Math.random, stage); step(g, .01, false); speeds.push(g.speed);
   }
-  assert.ok(speeds[0] < speeds[1] && speeds[1] < speeds[2], 'later starts continue the journey pace');
+  assert.ok(speeds.every((speed, i) => !i || speeds[i - 1] < speed), 'later starts continue the journey pace');
 });
 
 test('authored stages introduce individual dangers before combinations and finish safely', () => {
@@ -113,11 +113,11 @@ test('authored stages introduce individual dangers before combinations and finis
     assert.ok(g.items.some(i => i.kind === 'nest' && i.final));
     assert.equal(g.nextEncounter, Infinity);
   }
-  assert.deepEqual([...seen].sort(), ['boat', 'buoy', 'coral', 'diver', 'driftwood', 'gull', 'island', 'jelly', 'puffer', 'reef', 'shark', 'surfer', 'whirlpool'].sort());
+  assert.deepEqual([...seen].sort(), ['boat', 'buoy', 'coral', 'diver', 'driftwood', 'gull', 'island', 'jelly', 'mangrove', 'puffer', 'reef', 'shark', 'surfer', 'whirlpool'].sort());
 });
 
 test('representative safe routes remain playable in every stage with empty and full cargo', () => {
-  for (const dt of [1 / 30, 1 / 60, .016]) for (let stage = 0; stage < 3; stage++) for (const cargo of [0, 20]) {
+  for (const dt of [1 / 30, 1 / 60, .016]) for (let stage = 0; stage < STAGES.length; stage++) for (const cargo of [0, 20]) {
     const g = createGame(() => .99, stage); g.cargo = cargo;
     const control = routeController(); let last = false;
     while (g.time < 110 && !g.ended) {
@@ -485,7 +485,7 @@ test('the journey introduces dangers before combining them and has activity in e
     else learned.add(entry);
     assert.notEqual(entry, 'calm');
   }
-  assert.ok(STAGES[0].encounters.filter(k => k.includes('-')).length < STAGES[2].encounters.filter(k => k.includes('-')).length);
+  assert.ok(STAGES[0].encounters.filter(k => k.includes('-')).length < STAGES.at(-1).encounters.filter(k => k.includes('-')).length);
 });
 
 test('exhaustion at the nest cannot trigger a completion, feeding itself freezes energy', () => {
@@ -514,7 +514,7 @@ test('sharks and turtles never swim through rocks, coral or buoys', () => {
     const g = createGame(random, stage);
     for (let t = 0; t < 140; t += 1 / 30) {
       Object.assign(g.player, { x: -2000, y: 265, breath: WORLD.breath }); g.energy = 100; step(g, 1 / 30, false);
-      const blocks = g.items.filter(i => ['reef', 'buoy', 'coral'].includes(i.kind)).flatMap(terrainBlocks);
+      const blocks = g.items.filter(i => ['reef', 'buoy', 'coral', 'mangrove'].includes(i.kind)).flatMap(terrainBlocks);
       for (const s of g.items.filter(i => i.kind === 'shark' || i.kind === 'turtle')) for (const b of blocks)
         assert.ok(!(s.x + 40 > b.x && s.x - 40 < b.x + b.width && s.y + 20 > b.y && s.y - 20 < b.y + b.height), `${s.kind} inside terrain on stage ${stage}`);
     }
@@ -529,7 +529,7 @@ test('now and then a fish leaps out of the water, catchable in the air and never
     for (let t = 0; t < 140; t += 1 / 30) {
       Object.assign(g.player, { x: -2000, y: 265, breath: WORLD.breath }); g.energy = 100;
       leaps += step(g, 1 / 30, false).filter(e => e.kind === 'fishLeap').length / 2;
-      for (const f of g.items.filter(i => i.leap > 0)) for (const item of g.items.filter(i => ['island', 'reef', 'buoy', 'coral'].includes(i.kind)))
+      for (const f of g.items.filter(i => i.leap > 0)) for (const item of g.items.filter(i => ['island', 'reef', 'buoy', 'coral', 'mangrove'].includes(i.kind)))
         assert.ok(!hitsTerrain(f, item), `leaping fish hits ${item.kind} on stage ${stage}`);
     }
     waves += g.wave;
@@ -546,4 +546,14 @@ test('now and then a fish leaps out of the water, catchable in the air and never
   Object.assign(g.player, { x: g.player.x + (f.x - beakPosition(g.player).x), y: g.player.y + (f.y - beakPosition(g.player).y) });
   step(g, 1 / 60, false);
   assert.equal(g.fish, 1, 'Pip catches it in mid-air');
+});
+
+test('mangroves block the sky lane, so Pip dives under the root curtain', () => {
+  const tree = { kind: 'mangrove', x: 118 };
+  for (const y of [265, 330, 420, 510]) assert.ok(hitsTerrain({ x: 118, y }, tree), `blocked at ${y}`);
+  for (const y of [560, 640, 710]) assert.ok(!hitsTerrain({ x: 118, y }, tree), `open at ${y}`);
+  const g = createGame(() => .5, 2); g.items = [{ kind: 'mangrove', x: g.player.x }]; g.nextEncounter = Infinity;
+  Object.assign(g.player, { y: 300, wet: false });
+  step(g, .01, false);
+  assert.equal(g.endReason, 'mangrove');
 });

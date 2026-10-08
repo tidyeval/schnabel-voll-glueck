@@ -325,13 +325,58 @@ function boat(c, item, water, t, sleepy = false) {
   c.globalAlpha = 1;
   c.restore();
 }
+// A mangrove tree: leafy crown above, a tangle of arching stilt roots down to the dive gap.
+// Everything stays inside its terrain block except a few forgiving leaves.
+function mangrove(c, item, water, t, night) {
+  const x = item.x, b = terrainBlocks(item)[0], bottom = b.y + b.height;
+  // Roots fade into the water with depth, so the gap below reads as open.
+  const root = c.createLinearGradient(0, water, 0, bottom);
+  root.addColorStop(0, night ? '#4e4a44' : '#7a6450'); root.addColorStop(1, night ? '#2e4a50' : '#4f6f5f');
+  // A murky tangle behind the roots shows the whole curtain is solid.
+  const murk = c.createLinearGradient(0, water, 0, bottom);
+  murk.addColorStop(0, night ? '#1a3a4066' : '#3d5e4a55'); murk.addColorStop(1, night ? '#1a3a4022' : '#3d5e4a22');
+  path(c, murk, p => { p.moveTo(x - 30, water); p.quadraticCurveTo(x - 72, water + 40, x - 68, bottom - 30); p.quadraticCurveTo(x - 66, bottom, x - 40, bottom - 4); p.quadraticCurveTo(x, bottom + 4, x + 40, bottom - 4); p.quadraticCurveTo(x + 66, bottom, x + 68, bottom - 30); p.quadraticCurveTo(x + 72, water + 40, x + 30, water); p.closePath(); });
+  for (let i = 0; i < 10; i++) {
+    const a = x - 60 + i * 13, y1 = water + 30 + (i * 29) % 70;
+    path(c, null, p => { p.moveTo(a, y1); p.quadraticCurveTo(a + 18, y1 + 30, a + 4 + (i % 3) * 6, y1 + 60); }, night ? '#2c4a4a88' : '#5e6a5288', 1.6);
+  }
+  const arches = [[-8, -62, 1], [-4, -40, .78], [0, -18, .9], [3, 14, .72], [6, 38, 1], [9, 62, .86], [-2, -52, .5], [4, 50, .55]];
+  arches.forEach(([from, to, depth], i) => {
+    const tipY = water + (bottom - water) * depth - 4, sway = Math.sin(t * .7 + i * 1.3) * 1.5, out = x + to + sway;
+    path(c, null, p => { p.moveTo(x + from, water - 6); p.bezierCurveTo(x + from + (to - from) * .2, water + 30, out - Math.sign(to) * 6, water + 40, out, tipY); }, root, i < 6 ? 5 : 3.2);
+    ellipse(c, out, tipY, i < 6 ? 4.5 : 3, 3, night ? '#3c5a5a' : '#6d7f68');
+  });
+  for (let i = 0; i < 4; i++) ellipse(c, x - 45 + i * 30, water + 60 + (i % 2) * 50, 3.5, 2.5, '#e6dcc055');
+  // Prop roots above the surface.
+  for (let i = 0; i < 5; i++) {
+    const u = i / 4, footX = x - 60 + u * 120;
+    path(c, null, p => { p.moveTo(x + (u - .5) * 16, 312); p.quadraticCurveTo(footX - Math.sign(u - .5) * 4, 314, footX, water + 3); }, night ? '#5a4a3e' : '#8b6b52', 4.5);
+  }
+  path(c, night ? '#5a4a3e' : '#8b6b52', p => { p.moveTo(x - 8, water - 10); p.quadraticCurveTo(x - 4, 320, x - 6, 296); p.lineTo(x + 6, 296); p.quadraticCurveTo(x + 4, 320, x + 8, water - 10); p.closePath(); }, '#6e5240', 1);
+  // Crown: layered clusters, shadow below and warm evening light on top.
+  const crown = [[-62, 294, 22], [-44, 276, 26], [-18, 262, 28], [12, 256, 29], [40, 268, 27], [63, 288, 22], [-30, 298, 24], [4, 292, 27], [36, 298, 24], [-6, 244, 20], [26, 240, 17]];
+  for (const [dx, y, r] of crown) ellipse(c, x + dx, y + 6, r, r * .8, night ? '#24483c' : '#3f7a52');
+  for (const [dx, y, r] of crown) ellipse(c, x + dx, y, r * .94, r * .74, night ? '#356452' : '#5c9c5e');
+  for (const [dx, y, r] of crown.filter(([, y]) => y < 280)) ellipse(c, x + dx + r * .25, y - r * .32, r * .5, r * .3, night ? '#4c7a6455' : '#a8cf7aaa');
+  for (let i = 0; i < 14; i++) {
+    const a = i * 2.4, lx = x + Math.cos(a) * (40 + (i % 3) * 14), ly = 274 + Math.sin(a) * 26;
+    ellipse(c, lx, ly, 5, 2.4, night ? '#6a9a7a55' : '#c9e39a88', a);
+  }
+  // A kingfisher keeps watch from the crown.
+  c.save(); c.translate(x + 22, 232);
+  ellipse(c, 0, 0, 8, 7, '#3f8fb8'); ellipse(c, 1, 3, 6, 4, '#f2a35e'); ellipse(c, -4, -6, 6, 5.5, '#4aa0c8');
+  path(c, '#2f3c44', p => { p.moveTo(-9, -7); p.lineTo(-20, -5); p.lineTo(-9, -4); p.closePath(); });
+  path(c, '#3f8fb8', p => { p.moveTo(6, 1); p.lineTo(15, 6); p.lineTo(6, 5); p.closePath(); });
+  cuteEye(c, -5, -7, 2.3, blink(t, x * .01), '#1d2a30'); ellipse(c, -2, -3, 1.8, 1.1, '#ff8f9a66');
+  c.restore();
+}
 export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false, fx = null) {
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;
   const d = menu ? (reducedMotion ? 0 : t * 12) : game.distance;
   const motion = reducedMotion ? 0 : t;
   c.clearRect(0, 0, 480, 850);
-  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = stage === 2;
+  const stage = menu ? 0 : game.stage, theme = THEMES[stage], night = stage === 3;
   c.save();
   if (fx && (fx.shakeX || fx.shakeY)) { c.translate(240 + fx.shakeX, 425 + fx.shakeY); c.scale(1.03, 1.03); c.translate(-240, -425); }
   drawSky(c, stage, water, d, motion, menu ? null : game, reducedMotion, () => {
@@ -348,12 +393,20 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         if (!menu && game.decor?.residents.includes('cat') && i === game.decor.catHouse) roofCat(c, x + 50, water - 54, motion);
       }
     }
+    if (stage === 2) {
+      // Far mangrove islands: soft crowns on thin stilts.
+      for (let i = 0; i < 5; i++) {
+        const x = ((i * 157 - d * .07) % 780 + 780) % 780 - 150, w = 30 + (i % 3) * 10;
+        path(c, null, p => { for (let k = -2; k <= 2; k++) { p.moveTo(x + k * w * .12, water - 18); p.quadraticCurveTo(x + k * w * .3, water - 10, x + k * w * .36, water); } }, '#7f9c84', 1.4);
+        for (const [dx, dy, r] of [[-w * .45, -24, w * .34], [-w * .1, -33, w * .42], [w * .32, -27, w * .36]]) ellipse(c, x + dx, water + dy, r, r * .55, '#86a68a');
+      }
+    }
     // Distant seabirds.
     for (let i = 0; i < 3; i++) { const x = ((320 + i * 47 - d * .08) % 580 + 580) % 580; const y = water - 91 + Math.sin(i * 2) * 22; path(c, null, p => { p.moveTo(x - 7, y); p.quadraticCurveTo(x - 3, y - 5, x, y); p.quadraticCurveTo(x + 4, y - 5, x + 8, y); }, '#799d93', 1.3); }
   });
   drawWater(c, stage, water, d, motion, menu ? null : game, reducedMotion);
   if (!menu) { drawWhale(c, game, motion, reducedMotion); drawDolphins(c, game, water, motion, reducedMotion); }
-  if (!menu && game.stage === 2) {
+  if (!menu && game.stage === 3) {
     for (let i = 0; i < 9; i++) {
       const x = ((i * 79 - d * .22) % 650 + 650) % 650 - 80;
       for (let j = -1; j <= 1; j++) path(c, null, p => { p.moveTo(x, 824); p.quadraticCurveTo(x + j * 30, 800, x + j * 24 + Math.sin(motion + i) * 2, 730 + Math.abs(j) * 17); }, i % 2 ? '#c59191' : '#b5a0b9', 8);
@@ -394,6 +447,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         ellipse(c, item.x, 260, 7, 7, '#fff2b9');
         ellipse(c, item.x, water + 5, 42, 7, '#e9f5df66');
       }
+      if (item.kind === 'mangrove') mangrove(c, item, water, motion, night);
       if (item.kind === 'coral') {
         const b = terrainBlocks(item)[0];
         path(c, gradient(c, b.y, 850, '#e7a28e', '#98738b'), p => { b.points.forEach((v, i) => i ? p.lineTo(v.x, v.y) : p.moveTo(v.x, v.y)); p.closePath(); }, '#855f79', 2);
@@ -553,6 +607,15 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   if (!reducedMotion) for (let i = 0; i < 7; i++) {
     const x = ((i * 77 - d * .5) % 540 + 540) % 540 - 30, glint = Math.max(0, Math.sin(motion * 2.4 + i * 1.9));
     c.globalAlpha = glint * .8; path(c, night ? '#eef3ff' : '#fffbe0', p => p.ellipse(x, water + Math.sin(x * .025 + motion * 1.6) * 3 * swell, 5 + glint * 5, 1.3, 0, 0, TAU)); c.globalAlpha = 1;
+  }
+  if (stage === 2 && !menu) {
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 6; i++) {
+      const x = ((i * 61 + Math.sin(motion * .4 + i) * 30 - d * .3) % 540 + 540) % 540 - 30, y = water - 28 - (i * 37) % 110 + Math.sin(motion * .9 + i * 2) * 10;
+      const glow = reducedMotion ? .6 : Math.max(0, Math.sin(motion * (1.2 + (i % 3) * .4) + i * 2.3));
+      ellipse(c, x, y, 5, 5, `rgba(255,214,110,${.16 * glow})`); ellipse(c, x, y, 1.5, 1.5, `rgba(255,240,160,${.85 * glow})`);
+    }
+    c.globalCompositeOperation = 'source-over';
   }
   if (!menu) drawJuice(c, fx, game, water, motion, reducedMotion);
   for (const e of effects) {
