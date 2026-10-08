@@ -1,6 +1,6 @@
 // Stage atmosphere, set-piece scenery and game-feel overlays. Everything here is
 // presentation only: nothing in this file is used for collisions or scoring.
-import { WORLD, clamp, sardinePositions, currentSpan, FRENZY } from './game.js';
+import { WORLD, clamp, sardinePositions, currentSpan } from './game.js';
 import { blink, cuteEye, happyEye, manatee } from './cute.js';
 const TAU = Math.PI * 2;
 const SHOW_TIME = 13;
@@ -443,8 +443,6 @@ export function drawJuice(c, fx, game, water, motion, reducedMotion) {
       g.addColorStop(0, `rgba(255,214,110,${.42 * pulse * edge})`); g.addColorStop(1, 'rgba(255,214,110,0)');
       c.fillStyle = g; c.fillRect(side ? 400 : 0, 0, 80, 850);
     }
-    stroke(c, '#fff0b4', 4, q => q.arc(p.x, p.y - 6, 46, -Math.PI / 2, -Math.PI / 2 + TAU * game.frenzy / FRENZY.duration));
-    stroke(c, '#ffd66e55', 9, q => q.arc(p.x, p.y - 6, 46, -Math.PI / 2, -Math.PI / 2 + TAU * game.frenzy / FRENZY.duration));
   }
   if (fx.pulse > 0) stroke(c, `rgba(255,255,255,${fx.pulse})`, 3, q => q.arc(p.x, p.y - 6, 30 + (1 - fx.pulse) * 70, 0, TAU));
   if (fx.flash > 0) { c.fillStyle = fx.flashColour; c.globalAlpha = clamp(fx.flash, 0, 1); c.fillRect(-30, -30, 540, 910); c.globalAlpha = 1; }
