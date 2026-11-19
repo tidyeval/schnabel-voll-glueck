@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "de.pelican.game"
+    namespace = "de.pelican.game.phasermatter"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "de.pelican.game"
+        applicationId "de.pelican.game.phasermatter"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

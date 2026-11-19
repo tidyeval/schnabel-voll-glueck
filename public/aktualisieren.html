@@ -13,7 +13,7 @@ button.onclick = async () => {
       await Promise.all(registrations.filter(reg => reg.scope === scope).map(reg => reg.unregister()));
     }
     if ('caches' in window) {
-      const prefix = 'schnabel-voll-glueck:' + scope + ':';
+      const prefix = 'schnabelglueck-phaser-matter:' + scope + ':';
       await Promise.all((await caches.keys()).filter(key => key.startsWith(prefix)).map(key => caches.delete(key)));
     }
     location.replace(scope + '?aktualisiert=' + Date.now());

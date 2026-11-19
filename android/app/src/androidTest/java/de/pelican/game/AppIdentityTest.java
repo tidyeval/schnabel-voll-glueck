@@ -1,4 +1,4 @@
-package de.pelican.game;
+package de.pelican.game.phasermatter;
 
 import static org.junit.Assert.assertEquals;
 
@@ -13,6 +13,6 @@ public class AppIdentityTest {
     @Test
     public void usesConfiguredApplicationId() {
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("de.pelican.game", appContext.getPackageName());
+        assertEquals("de.pelican.game.phasermatter", appContext.getPackageName());
     }
 }

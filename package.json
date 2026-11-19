@@ -1,6 +1,6 @@
 {
-  "name": "pelican",
-  "version": "0.1.0",
+  "name": "schnabelglueck-phaser-matter",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -21,7 +21,8 @@
     "@capacitor/core": "^8.5.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.1",
-    "phaser": "^4.2.1"
+    "@tidyeval/game-platform": "file:vendor/tidyeval-game-platform-0.3.3.tgz",
+    "phaser": "4.2.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.1",

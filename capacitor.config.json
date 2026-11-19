@@ -1,7 +1,9 @@
 {
-  "appId": "de.pelican.game",
-  "appName": "Schnabelglück",
+  "appId": "de.pelican.game.phasermatter",
+  "appName": "Schnabelglück · Phaser + Matter",
   "webDir": "dist",
   "backgroundColor": "#ccece6",
-  "ios": { "contentInset": "never" }
+  "ios": {
+    "contentInset": "never"
+  }
 }

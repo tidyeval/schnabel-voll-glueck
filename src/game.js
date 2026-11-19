@@ -1,3 +1,5 @@
+import { movePlayerBody, syncPlayerBody } from './physics.js';
+import { Matter, polygonBody } from '@tidyeval/game-platform/matter';
 import { STAGES } from './stages.js';
 
 /**
@@ -64,16 +66,11 @@ export function netShape(boat) {
 }
 
 function hitsPolygon(x, y, points) {
-  const radius = 18;
-  let inside = false;
-  for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-    const a = points[j], b = points[i];
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const u = clamp(((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1), 0, 1);
-    if (Math.hypot(x - a.x - u * dx, y - a.y - u * dy) <= radius) return true;
-    if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inside = !inside;
-  }
-  return inside;
+  if (x < Math.min(...points.map(p => p.x)) - 18 || x > Math.max(...points.map(p => p.x)) + 18
+    || y < Math.min(...points.map(p => p.y)) - 18 || y > Math.max(...points.map(p => p.y)) + 18) return false;
+  const probe = Matter.Bodies.polygon(x, y, 64, 18, { isSensor: true });
+  const polygon = polygonBody(points, { isStatic: true, isSensor: true });
+  return Matter.Query.collides(probe, [polygon]).length > 0;
 }
 
 export function hitsNet(player, net) {
@@ -394,7 +391,9 @@ export function step(game, dt, holding) {
   }
   movePlayer(game, dt, holding, previousAir, events);
   updateCombo(game, dt);
-  return advanceWorld(game, dt, events);
+  const result = advanceWorld(game, dt, events);
+  syncPlayerBody(game);
+  return result;
 }
 
 function advanceNest(game, dt) {
@@ -426,13 +425,15 @@ function movePlayer(game, dt, holding, previousAir, events) {
   if (p.jump && !p.wet && !holding) {
     // A deep dive launches Pip ballistically above his usual gliding height.
     p.vy += JUMP.gravity * dt;
-    p.y += p.vy * dt;
+    movePlayerBody(game, dt, p.vy);
     if (p.y < JUMP.ceiling) { p.y = JUMP.ceiling; p.vy = Math.max(0, p.vy); }
     if (p.y >= 265 && p.vy > 0) { p.y = 265; p.vy = 0; p.jump = false; }
     else if (p.y > 265 && p.vy >= -100) p.jump = false;
   } else {
     p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
-    p.y = clamp(p.y + p.vy * dt, Math.min(265, p.y), 710);
+    const ceiling = Math.min(265, p.y);
+    movePlayerBody(game, dt, p.vy);
+    p.y = clamp(p.y, ceiling, 710);
     if (p.y >= 265) p.jump = false;
     if (p.y === 265 || p.y === 710) p.vy = 0;
   }
