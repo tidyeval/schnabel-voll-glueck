@@ -84,6 +84,9 @@ export function pelican(c, {
   c.save(); c.translate(x, y); c.rotate(tilt + (reducedMotion ? 0 : Math.sin(confused * 18) * .28 * Math.min(1, confused))); c.scale(scale, scale);
   // Squash on splashdown, stretch along the flight path when moving fast.
   if (!reducedMotion) { const sq = expression.squash || 0, st = expression.stretch || 0; c.scale(1 + st + sq * .17, 1 - st * .7 - sq * .17); }
+  // A little joy hop (golden fish, combo, rare moment): two bounces, quickly fading.
+  const joy = reducedMotion ? 0 : Math.min(1, expression.joy || 0);
+  if (joy) c.translate(0, -Math.abs(Math.sin((1 - joy) * Math.PI * 2.5)) * 14 * joy);
   const fullness = cargo / WORLD.capacity;
   const state = airState({ y, wet, breath }, cargo);
   const lowAir = state.level > 0, urgency = state.urgency;
@@ -92,7 +95,9 @@ export function pelican(c, {
   const yawn = reducedMotion ? 0 : expression.yawn || 0;
   const tired = Math.max(yawn * .8, happy || relief > 0 ? 0 : clamp((35 - (expression.energy ?? 100)) / 35, 0, 1));
   const hurt = (expression.hurt || 0) > 0;
-  const headAngle = (lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2) + (expression.look || 0);
+  // Swallowing tosses the head up once, the way pelicans gulp a fish down.
+  const toss = reducedMotion || gulp <= 0 ? 0 : -Math.sin((1 - Math.min(gulp, .42) / .42) * Math.PI) * .16;
+  const headAngle = (lowAir ? -.12 - urgency * .22 : expression.nest ? -.16 : shake + tired * .2) + (expression.look || 0) + toss;
   const headPose = () => { c.translate(66, -27); c.rotate(headAngle); c.translate(-66, 27); };
   if (bump) c.transform(1, 0, Math.sin(bump * 22) * .07, 1, 0, 0);
   if (!reducedMotion && expression.shiver > 0) c.rotate(Math.sin(expression.shiver * 48) * .07 * Math.min(1, expression.shiver * 3));
@@ -104,11 +109,20 @@ export function pelican(c, {
   const lift = Math.cos(progress * Math.PI) * (down ? 1 : -1) * (1 - tired * .3) - tired * .25;
   const fold = down ? 0 : Math.sin(progress * Math.PI);
   const flap = wet ? Math.sin(t * (7 + urgency * 8)) * (.15 + urgency * .35) : lift;
+  // Air poses on top of the glide cycle: one big stroke to lift off the water, wings
+  // laid back for a plunge, and a quick happy flutter.
+  let wingLift = lift, wingFold = fold;
+  if (!wet && !reducedMotion) {
+    const off = clamp(breach / .6, 0, 1), plunge = expression.plunge || 0;
+    if (off) { const stroke = Math.cos(Math.min(1, (1 - off) * 1.5) * Math.PI); wingLift = lift * (1 - off) + stroke * off; wingFold = fold * (1 - off); }
+    if (joy) { wingLift = wingLift * (1 - joy) + Math.sin(t * 17) * .8 * joy; wingFold *= 1 - joy; }
+    if (plunge) { wingLift = wingLift * (1 - plunge) - .45 * plunge; wingFold = wingFold * (1 - plunge) + plunge; }
+  }
   const outline = '#786f5d';
   // A soft painted shadow and separated tail feathers keep Pip readable over sea and sky.
   ellipse(c, -5, 17, 47, 25, '#315e5a22', -.12);
   path(c, '#d8e3ce', p => { p.moveTo(-39, 7); p.lineTo(-68, -4); p.quadraticCurveTo(-62, 10, -39, 20); p.moveTo(-40, 11); p.lineTo(-65, 17); p.quadraticCurveTo(-53, 25, -31, 22); }, outline, 1.2);
-  if (!wet) pelicanWing(c, lift, fold, true);
+  if (!wet) pelicanWing(c, wingLift, wingFold, true);
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#d9955c'; c.lineWidth = 5; c.lineCap = 'round';
   for (let i = 0; i < 2; i++) {
@@ -173,7 +187,7 @@ export function pelican(c, {
   path(c, gradient(c, 0, 35, '#f3f5e4', '#ccdcca'), p => { p.moveTo(-35, -3); p.bezierCurveTo(-16, -7, 0, 7, -5, 22); p.quadraticCurveTo(-14, 32, -23, 26); p.quadraticCurveTo(-37, 25, -43, 12); p.quadraticCurveTo(-48, 3, -35, -3); }, outline, 1);
   for (let i = 0; i < 4; i++) path(c, null, p => { p.moveTo(-36 + i * 8, 10); p.quadraticCurveTo(-31 + i * 8, 19, -25 + i * 7, 21); }, i === 3 ? '#b4c9b7' : '#c1d3c0', 1.1);
   c.restore();
-  } else pelicanWing(c, lift, fold, false);
+  } else pelicanWing(c, wingLift, wingFold, false);
   if (wet) {
     for (let i = 0; i < 3; i++) ellipse(c, -36 + i * 12, -4 + Math.sin(t * 5 + i) * 2, 1.4, 3, '#d8f2deaa', -.2);
   }
@@ -822,7 +836,8 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       expression: {
         energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick,
         squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1),
-        sparkle: fx?.sparkle, shiver: fx?.shiver,
+        sparkle: fx?.sparkle, shiver: fx?.shiver, joy: fx?.joy,
+        plunge: p.wet ? 0 : clamp((p.vy - 120) / 120, 0, 1),
         dive: p.wet ? clamp(p.vy / 500, 0, 1) : 0, rise: p.wet ? clamp(-p.vy / 500, 0, 1) : 0,
         fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140),
         nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260),
