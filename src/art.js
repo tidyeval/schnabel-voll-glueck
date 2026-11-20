@@ -217,24 +217,42 @@ export function pelican(c, {
   }
   c.restore(); c.restore();
 }
-function shark(c, item, t) {
-  const hurry = item.phase === 'dash' ? 11 : item.phase === 'warn' ? 16 : 4;
+const SHARK_LOOK = { tail: '#557f89', edge: '#426974', fin: '#638e98', body: ['#83abb0', '#527d89'], belly: '#bad0c8', flipper: '#648d96', eye: '#294e55', mouth: '#3d6670', brow: '#527783', gill: '#597e88', teeth: false };
+// The great white: paler, bigger, with a cheeky toothy grin (still a cartoon, never gory).
+const WHITE_LOOK = { tail: '#7f8d95', edge: '#56646c', fin: '#8c9aa2', body: ['#c3ced2', '#76868f'], belly: '#f5f6ee', flipper: '#85939b', eye: '#26343a', mouth: '#4a5860', brow: '#5e6d75', gill: '#7a8991', teeth: true };
+function shark(c, item, t, look = SHARK_LOOK) {
+  const hurry = item.phase === 'dash' || item.phase === 'chase' ? 11 : item.phase === 'warn' ? 16 : 4;
   const tail = Math.sin(t * hurry) * (item.phase === 'dash' ? .3 : .16);
   c.save(); c.translate(item.x, item.y); c.rotate(Math.sin(t * (item.phase === 'warn' ? 16 : 1.5)) * .04);
+  if (look.teeth) c.scale(-1.45, 1.45);
   if (item.phase === 'warn') c.scale(.92, 1.15);
   if (item.reaction > 0) c.rotate(-.1 * item.reaction);
   c.save(); c.translate(43, 0); c.rotate(tail); c.translate(-43, 0);
-  path(c, '#557f89', p => { p.moveTo(39, 0); p.lineTo(80, -30); p.quadraticCurveTo(72, -8, 67, 0); p.quadraticCurveTo(75, 10, 82, 27); p.closePath(); }, '#426974', 1.2); c.restore();
-  path(c, '#638e98', p => { p.moveTo(-7, -18); p.quadraticCurveTo(6, -50, 21, -51); p.quadraticCurveTo(20, -30, 26, -14); p.closePath(); }, '#426974', 1.1);
-  ellipse(c, 0, 0, 55, 26, gradient(c, -26, 25, '#83abb0', '#527d89'));
-  path(c, '#bad0c8', p => { p.moveTo(-50, 8); p.quadraticCurveTo(-12, 28, 46, 12); p.quadraticCurveTo(14, 29, -24, 22); p.closePath(); });
-  path(c, '#648d96', p => { p.moveTo(3, 8); p.lineTo(24, 34); p.quadraticCurveTo(20, 17, 25, 9); p.closePath(); }, '#426974', 1);
-  cuteEye(c, -33, -4, 5.4, item.reaction > 0 ? 0 : blink(t, item.baseY * .01), '#294e55');
-  path(c, null, p => { p.moveTo(-43, 8); p.quadraticCurveTo(-29, 18, -13, 7); }, '#3d6670', 2.1);
-  ellipse(c, -38, 3, 5, 2.8, '#d89e9999');
-  path(c, null, p => { p.moveTo(-40, -13); p.quadraticCurveTo(-32, -18, -23, -13); }, '#527783', 1.2);
-  for (let i = 0; i < 3; i++) path(c, null, p => { p.moveTo(-7 + i * 5, -5); p.quadraticCurveTo(-11 + i * 5, 1, -7 + i * 5, 7); }, '#597e88', 1.4);
+  path(c, look.tail, p => { p.moveTo(39, 0); p.lineTo(80, -30); p.quadraticCurveTo(72, -8, 67, 0); p.quadraticCurveTo(75, 10, 82, 27); p.closePath(); }, look.edge, 1.2); c.restore();
+  path(c, look.fin, p => { p.moveTo(-7, -18); p.quadraticCurveTo(6, -50, 21, -51); p.quadraticCurveTo(20, -30, 26, -14); p.closePath(); }, look.edge, 1.1);
+  ellipse(c, 0, 0, 55, 26, gradient(c, -26, 25, ...look.body));
+  path(c, look.belly, p => { p.moveTo(-50, 8); p.quadraticCurveTo(-12, 28, 46, 12); p.quadraticCurveTo(14, 29, -24, 22); p.closePath(); });
+  path(c, look.flipper, p => { p.moveTo(3, 8); p.lineTo(24, 34); p.quadraticCurveTo(20, 17, 25, 9); p.closePath(); }, look.edge, 1);
+  cuteEye(c, -33, -4, 5.4, item.reaction > 0 ? 0 : blink(t, (item.baseY ?? item.y) * .01), look.eye);
+  if (look.teeth) {
+    // Open grin with a neat row of little teeth.
+    path(c, '#7a3f45', p => { p.moveTo(-47, 6); p.quadraticCurveTo(-30, 22, -12, 6); p.quadraticCurveTo(-30, 13, -47, 6); });
+    for (let i = 0; i < 6; i++) { const x = -44 + i * 5.6; path(c, '#fffdf4', p => { p.moveTo(x, 7.5 + Math.sin(i / 5 * Math.PI) * 3); p.lineTo(x + 2.6, 12 + Math.sin(i / 5 * Math.PI) * 4); p.lineTo(x + 5, 7.5 + Math.sin((i + 1) / 5 * Math.PI) * 3); p.closePath(); }); }
+    path(c, null, p => { p.moveTo(-41, -14); p.lineTo(-26, -9); }, look.brow, 2.2);
+  } else {
+    path(c, null, p => { p.moveTo(-43, 8); p.quadraticCurveTo(-29, 18, -13, 7); }, look.mouth, 2.1);
+    ellipse(c, -38, 3, 5, 2.8, '#d89e9999');
+    path(c, null, p => { p.moveTo(-40, -13); p.quadraticCurveTo(-32, -18, -23, -13); }, look.brow, 1.2);
+  }
+  for (let i = 0; i < 3; i++) path(c, null, p => { p.moveTo(-7 + i * 5, -5); p.quadraticCurveTo(-11 + i * 5, 1, -7 + i * 5, 7); }, look.gill, 1.4);
   c.restore();
+}
+function greatWhite(c, item, water, t) {
+  if (item.phase !== 'stalk') return shark(c, item, t, WHITE_LOOK);
+  // First only the tall fin cuts the surface at the left edge, with a little wake.
+  const x = item.x + 110, bob = Math.sin(t * 3) * 1.5;
+  path(c, null, p => { p.moveTo(x - 46, water + 2); p.quadraticCurveTo(x - 22, water - 4, x + 4, water + 1); }, '#ffffffaa', 2);
+  path(c, WHITE_LOOK.fin, p => { p.moveTo(x - 30, water + 3 + bob); p.quadraticCurveTo(x - 16, water - 38 + bob, x + 2, water - 46 + bob); p.quadraticCurveTo(x - 2, water - 18 + bob, x + 6, water + 3 + bob); p.closePath(); }, WHITE_LOOK.edge, 1.3);
 }
 function turtle(c, item, t) {
   c.save(); c.translate(item.x, item.y);
@@ -779,22 +797,35 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         c.restore();
       }
       if (item.kind === 'gull') {
-        const wing = Math.sin(motion * 10) * 18;
+        const wing = Math.sin(motion * 7) * 16;
         c.save(); c.translate(item.x, item.y);
         if (!reducedMotion) c.rotate(item.kicked ? (1 - item.reaction) * 8 : item.reactionKind === 'confused' ? Math.sin(item.reaction * 16) * .7 : 0);
         else if (item.kicked) c.rotate(-.35);
-        path(c, '#f8f2dc', p => { p.moveTo(0, 0); p.quadraticCurveTo(-18, -18, -38, -wing); p.quadraticCurveTo(-22, 2, -3, 7); p.closePath(); }, '#918b73', 1);
-        path(c, '#fff8e8', p => { p.moveTo(0, 0); p.quadraticCurveTo(16, -18, 38, -wing); p.quadraticCurveTo(24, 2, 3, 7); p.closePath(); }, '#918b73', 1);
-        ellipse(c, 0, 0, 18, 10, '#eee8d4'); ellipse(c, -13, -7, 9, 9, '#fff9e8');
-        path(c, '#e6a953', p => { p.moveTo(-19, -9); p.lineTo(-34, -4); p.lineTo(-19, -1); p.closePath(); }, '#ad7043', .8);
+        // A proper little gull: grey wings with dark tips that bend at the elbow, a round white body and a fanned tail.
+        const wingSide = (dir, shade) => {
+          const elbowY = -wing * .45, tipY = -wing - 4;
+          path(c, shade, p => { p.moveTo(dir * 2, -2); p.quadraticCurveTo(dir * 12, elbowY - 8, dir * 22, elbowY - 4); p.quadraticCurveTo(dir * 34, tipY - 2, dir * 42, tipY); p.quadraticCurveTo(dir * 30, tipY + 9, dir * 20, elbowY + 6); p.quadraticCurveTo(dir * 10, 6, dir * 2, 6); p.closePath(); }, '#8a8f8c', 1);
+          path(c, '#3f4a4c', p => { p.moveTo(dir * 34, tipY + 1); p.quadraticCurveTo(dir * 39, tipY - 1, dir * 42, tipY); p.quadraticCurveTo(dir * 37, tipY + 6, dir * 31, tipY + 6); p.closePath(); });
+        };
+        wingSide(1, '#c9cfcb'); wingSide(-1, '#dfe4e0');
+        path(c, '#f4f1e6', p => { p.moveTo(14, -1); p.lineTo(25, -5); p.lineTo(24, 2); p.lineTo(26, 7); p.lineTo(14, 5); p.closePath(); }, '#a7a593', .9);
+        ellipse(c, 2, 1, 19, 11, gradient(c, -10, 12, '#ffffff', '#e4e4da'));
+        ellipse(c, -13, -7, 9.5, 9, '#fffdf5');
+        path(c, '#f2c14e', p => { p.moveTo(-20, -10); p.quadraticCurveTo(-30, -8, -35, -5); p.lineTo(-20, -2); p.closePath(); }, '#c99a35', .8);
+        ellipse(c, -29, -4.6, 1.5, 1.2, '#d9534f');
         if (item.reactionKind === 'confused') path(c, null, p => { p.moveTo(-20, -13); p.lineTo(-12, -6); p.moveTo(-12, -13); p.lineTo(-20, -6); }, '#315852', 1.7);
         else { cuteEye(c, -15.5, -10, 3.4, blink(motion, item.baseY * .01 + 3), '#315852'); ellipse(c, -11, -5, 2.6, 1.5, '#f3a0a066'); }
-        path(c, null, p => { p.moveTo(9, 5); p.lineTo(21, 9); }, '#b8ad91', 2); c.restore();
+        path(c, null, p => { p.moveTo(4, 9); p.lineTo(8, 14); p.moveTo(9, 9); p.lineTo(13, 13); }, '#e0a35a', 1.6); c.restore();
       }
       if (item.kind === 'jelly') {
         const pulse = Math.sin(motion * 4) * 2, depth = 20 + item.phase * 65;
-        for (let i = -2; i <= 2; i++) path(c, null, p => { p.moveTo(item.x + i * 9, item.y); p.bezierCurveTo(item.x + i * 9 - 12, item.y + depth / 2, item.x + i * 9 + 12, item.y + depth / 2, item.x + i * 9, item.y + depth); }, i % 2 ? '#df9dcecc' : '#efb7dbcc', 3);
-        path(c, gradient(c, item.y - 31, item.y + 11, '#f0c8e1', '#cf8fc4'), p => { p.moveTo(item.x - 27 - pulse, item.y); p.quadraticCurveTo(item.x - 25, item.y - 31, item.x, item.y - 31 - pulse); p.quadraticCurveTo(item.x + 25, item.y - 31, item.x + 27 + pulse, item.y); p.quadraticCurveTo(item.x + 18, item.y + 8, item.x + 10, item.y); p.quadraticCurveTo(item.x, item.y + 10, item.x - 10, item.y); p.quadraticCurveTo(item.x - 19, item.y + 8, item.x - 27 - pulse, item.y); }, '#8e6d96', 1);
+        // Thin trailing tentacles that sway, frilly oral arms in the middle, and a see-through bell.
+        for (let i = -3; i <= 3; i++) path(c, null, p => { const x = item.x + i * 7.5, sway = Math.sin(motion * 2.2 + i) * 6; p.moveTo(x, item.y); p.bezierCurveTo(x - 10 + sway, item.y + depth * .4, x + 10 + sway, item.y + depth * .7, x + sway * .6, item.y + depth); }, i % 2 ? '#e6a6d4aa' : '#f3c2e2aa', 1.6);
+        for (const dx of [-5, 5]) path(c, null, p => { const x = item.x + dx; p.moveTo(x, item.y); for (let k = 1; k <= 12; k++) p.lineTo(x + Math.sin(k * .9 + motion * 2.5 + dx) * 3.5, item.y + k * depth * .055); }, '#f7d3eacc', 3.2);
+        c.globalAlpha = .88;
+        path(c, gradient(c, item.y - 31, item.y + 11, '#f6d6ea', '#d394c8'), p => { p.moveTo(item.x - 27 - pulse, item.y); p.quadraticCurveTo(item.x - 25, item.y - 31, item.x, item.y - 31 - pulse); p.quadraticCurveTo(item.x + 25, item.y - 31, item.x + 27 + pulse, item.y); p.quadraticCurveTo(item.x + 18, item.y + 8, item.x + 10, item.y); p.quadraticCurveTo(item.x, item.y + 10, item.x - 10, item.y); p.quadraticCurveTo(item.x - 19, item.y + 8, item.x - 27 - pulse, item.y); }, '#8e6d96', 1);
+        c.globalAlpha = 1;
+        for (const [dx, dy] of [[-12, -20], [2, -24], [13, -17]]) ellipse(c, item.x + dx, item.y + dy, 3, 3, '#ffe6f466');
         ellipse(c, item.x - 9, item.y - 17, 7, 4, '#fff3ed77');
         for (const dx of [-8, 8]) { cuteEye(c, item.x + dx, item.y - 8, 3.6, blink(motion, item.x * .002 + 4), '#655879'); ellipse(c, item.x + dx * 1.6, item.y - 3, 3, 1.6, '#ff8fb066'); }
         path(c, null, p => { p.moveTo(item.x - 5, item.y); p.quadraticCurveTo(item.x, item.y + 4, item.x + 5, item.y); }, '#755e83', 1.2);
@@ -805,6 +836,15 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         path(c, null, p => { p.moveTo(item.x - 34, item.y); p.quadraticCurveTo(item.x, item.y + 5, item.x + 32, item.y - 1); }, '#d4a77d', 2);
         ellipse(c, item.x + 41, item.y + 1, 5, 8, '#d9ac7b'); ellipse(c, item.x - 25, item.y - 2, 4, 2, '#765040');
         path(c, '#719b78', p => { p.moveTo(item.x - 16, item.y - 7); p.quadraticCurveTo(item.x - 10, item.y - 21, item.x - 2, item.y - 8); p.closePath(); });
+        // Growth rings on the cut end, barnacles, and a little crab riding along and waving.
+        for (const r of [3.5, 1.6]) { c.beginPath(); c.ellipse(item.x + 41, item.y + 1, r, r * 1.6, 0, 0, TAU); c.strokeStyle = '#a97a55'; c.lineWidth = .9; c.stroke(); }
+        for (const [dx, dy] of [[-40, 4], [-36, 7], [22, 7]]) { ellipse(c, item.x + dx, item.y + dy, 2.6, 2.2, '#efe6d3'); ellipse(c, item.x + dx, item.y + dy - .4, 1, .8, '#9b8f7a'); }
+        const wave = reducedMotion ? 0 : Math.sin(motion * 5) * .5, cx = item.x + 14, cy = item.y - 14;
+        for (const s of [-1, 1]) path(c, null, p => { p.moveTo(cx + s * 5, cy + 3); p.lineTo(cx + s * 9, cy + 7); p.moveTo(cx + s * 3, cy + 4); p.lineTo(cx + s * 6, cy + 8); }, '#c4553f', 1.3);
+        ellipse(c, cx, cy, 7.5, 5, '#e2725a');
+        c.save(); c.translate(cx + 7, cy - 3); c.rotate(-.6 + wave); ellipse(c, 4, -2, 3.6, 2.6, '#e2725a'); c.restore();
+        ellipse(c, cx - 8, cy - 1, 2.8, 2.2, '#e2725a');
+        for (const dx of [-2.5, 2.5]) { path(c, null, p => { p.moveTo(cx + dx, cy - 4); p.lineTo(cx + dx, cy - 8); }, '#c4553f', 1); ellipse(c, cx + dx, cy - 8.5, 1.6, 1.6, '#2f3b3a'); }
       }
       if (item.kind === 'whirlpool') {
         // Swirling water, not a hole: a faint light shimmer with short swirl strokes turning around it.
@@ -842,6 +882,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);
+      if (item.kind === 'whiteshark') greatWhite(c, item, water, motion);
       if (item.kind === 'boat') boat(c, item, water, motion, game.decor?.sleepy);
     }
     const p = game.player;

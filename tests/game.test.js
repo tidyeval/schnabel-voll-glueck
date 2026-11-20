@@ -176,21 +176,21 @@ test('bubbles refill capped air once', () => {
 });
 
 
-test('air tricks need a breach and complete turns; double/triple presses award once', () => {
-  for (const count of [2, 3]) {
+test('air tricks need a breach and complete turns; triple/quadruple presses award once', () => {
+  for (const count of [3, 4]) {
     const g = createGame(); g.items = []; g.nextEncounter = Infinity;
     press(g); press(g); assert.equal(g.player.turns, 0, 'no tricks before a dive');
     g.player.y = 373; g.player.wet = true; g.player.vy = -210;
     step(g, .02, false);
     for (let i = 0; i < count; i++) { press(g); step(g, .05, false); }
     assert.equal(g.score, 0, 'no bonus before a full rotation');
-    assert.equal(g.player.turns, count - 1);
+    assert.equal(g.player.turns, count - 2);
     const events = [];
     for (let i = 0; i < 30; i++) events.push(...step(g, .05, false));
-    assert.equal(g.score, count === 2 ? 50 : 120);
+    assert.equal(g.score, count === 3 ? 50 : 120);
     assert.equal(events.filter(e => e.kind === 'trick').length, 1);
-    press(g); press(g); for (let i = 0; i < 30; i++) step(g, .05, false);
-    assert.equal(g.score, count === 2 ? 50 : 120, 'one bonus per breach');
+    press(g); press(g); press(g); for (let i = 0; i < 30; i++) step(g, .05, false);
+    assert.equal(g.score, count === 3 ? 50 : 120, 'one bonus per breach');
   }
 });
 
@@ -198,7 +198,7 @@ test('water and surface collisions cancel incomplete tricks without bonus', () =
   for (const failure of ['water', 'boat', 'fisher']) {
     const g = createGame(); g.items = []; g.nextEncounter = Infinity;
     g.player.y = 373; g.player.wet = true; g.player.vy = -210; step(g, .02, false);
-    press(g); step(g, .05, false); press(g); step(g, .05, false);
+    press(g); step(g, .05, false); press(g); step(g, .05, false); press(g); step(g, .05, false);
     if (failure === 'water') { g.player.y = 375; g.player.vy = 240; }
     else { g.player.y = failure === 'boat' ? 365 : 280; g.items = [{ kind: 'boat', x: g.player.x + (failure === 'boat' ? 80 : 0), cast: -1 }]; }
     step(g, .01, true);

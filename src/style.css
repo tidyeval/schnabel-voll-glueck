@@ -209,7 +209,7 @@ dialog[open]::backdrop{animation:backdrop-in .3s ease-out both}
 .start-screen:not(.hidden) .intro,.start-screen:not(.hidden) .start-bottom{animation:hud-in .6s .1s ease-out both}
 @media (prefers-reduced-motion:reduce){.veil.fade,dialog[open],dialog[open]::backdrop,#hud:not(.hidden) .score-row,#hud:not(.hidden) .status-panel,.start-screen:not(.hidden) .intro,.start-screen:not(.hidden) .start-bottom{animation:none}}
 /* First-run coach: one friendly bubble under the HUD with the step count and a skip button. */
-.coach{position:absolute;top:50%;left:8%;right:8%;display:flex;flex-direction:column;align-items:center;gap:1.2cqw;padding:3cqw 4cqw;border-radius:5cqw;background:#fff6dcee;color:#3d5344;text-align:center;box-shadow:0 2cqw 6cqw #1d3a3a33;animation:hud-in .4s ease-out both}
+.coach{position:absolute;top:calc(4.2% + 13cqw);left:8%;right:8%;display:flex;flex-direction:column;align-items:center;gap:1.2cqw;padding:3cqw 4cqw;border-radius:5cqw;background:#fff6dcee;color:#3d5344;text-align:center;box-shadow:0 2cqw 6cqw #1d3a3a33;animation:hud-in .4s ease-out both}
 .coach strong{font-size:clamp(14px,4.2cqw,20px);line-height:1.25}
 #coach-step{font-size:clamp(10px,2.4cqw,12px);font-weight:800;letter-spacing:.12em;color:#c5895a}
 #coach-skip{pointer-events:auto;background:none;border:0;text-decoration:underline;font-size:clamp(11px,2.6cqw,13px);font-weight:700;color:#6f8f86;padding:1cqw 3cqw;min-height:32px}

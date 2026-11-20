@@ -78,3 +78,29 @@ test('the pre-built bay current runs into a whirlpool set piece', () => {
   const current = g.items.find(item => item.kind === 'current'), pool = g.items.find(item => item.kind === 'whirlpool');
   assert.ok(current && pool?.setPiece && pool.x > current.x + current.length / 2 && pool.y > current.y);
 });
+
+// The great white: once per stage from the harbour on, slower than Pip, escapable by surfacing.
+const chase = (stage = 1) => {
+  const g = createGame(() => .5, stage); g.items = []; g.nextEncounter = Infinity; g.wave = g.chaseWave;
+  Object.assign(g.player, { y: 560, wet: true }); return g;
+};
+test('the great white never appears in the bay', () => {
+  const g = createGame(() => .5, 0); assert.equal(g.chaseWave, Infinity);
+});
+test('a great white that catches Pip at the same depth bites once and swims off', () => {
+  const g = chase(), events = [];
+  // Pip holds his depth: the shark closes in from behind.
+  for (let t = 0; t < 8 && !g.ended; t += 1 / 60) { g.player.y = 560; g.player.vy = 0; g.player.breath = 10; g.energy = Math.max(g.energy, 60); events.push(...step(g, 1 / 60, false)); }
+  assert.ok(events.some(e => e.kind === 'chase'), 'it is announced');
+  assert.equal(events.filter(e => e.kind === 'hurt').length, 1, 'one bite');
+  assert.equal(g.ended, false, 'a bite costs energy, not the run');
+  assert.equal(g.chased, true);
+});
+test('surfacing shakes off the great white without a bite', () => {
+  const g = chase(), events = [];
+  for (let t = 0; t < 1.6; t += 1 / 60) { g.player.y = 560; g.player.vy = 0; events.push(...step(g, 1 / 60, true)); }
+  for (let t = 0; t < 6 && !g.ended; t += 1 / 60) events.push(...step(g, 1 / 60, false));
+  assert.ok(events.some(e => e.kind === 'chase'));
+  assert.equal(events.some(e => e.kind === 'hurt'), false);
+  assert.equal(g.items.some(i => i.kind === 'whiteshark'), false, 'it has left');
+});

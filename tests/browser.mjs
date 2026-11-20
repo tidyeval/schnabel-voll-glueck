@@ -27,9 +27,9 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     const score = Number(await page.locator('#score').textContent());
     assert.ok(score > 0, 'holding then releasing catches real fish');
     await page.clock.runFor(350); // Finish breaching before the aerial presses.
-    for (let i = 0; i < 2; i++) { await page.keyboard.down('Space'); await page.clock.runFor(40); await page.keyboard.up('Space'); await page.clock.runFor(60); }
+    for (let i = 0; i < 3; i++) { await page.keyboard.down('Space'); await page.clock.runFor(40); await page.keyboard.up('Space'); await page.clock.runFor(60); }
     await page.clock.runFor(800);
-    assert.ok(Number(await page.locator('#score').textContent()) >= score + 50, 'double press completes an airborne trick');
+    assert.ok(Number(await page.locator('#score').textContent()) >= score + 50, 'triple press completes an airborne trick');
     await page.locator('#pause').click();
     const time = await page.locator('#time').textContent();
     await page.clock.runFor(2000);

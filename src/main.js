@@ -322,6 +322,7 @@ function frame(now, seconds) {
       const label = labels[event.kind];
       if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
       if (event.kind === 'show' && showLabels[event.name]) toast(t(showLabels[event.name]));
+      if (event.kind === 'chase') toast(t('chaseHint'));
       audio.effect(event.kind, event.golden ? 'golden' : event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }

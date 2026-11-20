@@ -100,7 +100,7 @@ export function createAudio(settings) {
         if (kind === 'catch') { tone(880, .12, .13); tone(1174, .18, .09, 'sine', .06); }
         if (kind === 'splash' || kind === 'netSplash') tone(190, .2, kind === 'netSplash' ? .09 : .05, 'triangle');
         if (kind === 'breach') { tone(392, .18, .06); tone(587, .25, .04, 'sine', .08); }
-        if (kind === 'warning' || kind === 'airWarning') { tone(660, .13, .07, 'triangle'); tone(520, .18, .05, 'triangle', .15); }
+        if (kind === 'warning' || kind === 'airWarning' || kind === 'chase') { tone(660, .13, .07, 'triangle'); tone(520, .18, .05, 'triangle', .15); }
         if (kind === 'bounce') tone(300, .22, .08, 'sine', 0, 520);
         if (kind === 'shutter') { tone(2400, .025, .07, 'square'); tone(1100, .05, .06, 'square', .05); }
         if (kind === 'hurt') { tone(160, .22, .08, 'triangle'); tone(120, .22, .05, 'triangle', .12); }
