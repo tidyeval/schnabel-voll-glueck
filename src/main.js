@@ -9,6 +9,7 @@ import { App } from '@capacitor/app';
 import { createGame, step, press, WORLD, airState } from './game.js';
 import { drawWorld } from './art.js';
 import { createAudio } from './audio.js';
+import { drawPhoto, photoFile, photoScene } from './photo.js';
 import { createJuice } from './juice.js';
 import { recordAttempt, attemptFromGame } from './progress.js';
 import { restoreProgress, readStoredProgress, prepareProgress, saveSetting, saveAttempt, isProgressKey } from './storage.js';
@@ -85,6 +86,47 @@ document.querySelectorAll('[data-locale]').forEach(button => button.onclick = ()
   refreshLocale(); persistSettings('language');
 });
 
+// End-of-round press photo: viewfinder, flash and click, then the Polaroid can be shared.
+let lastResult = null, photoRun = 0, photoReady = null;
+function photoCard() {
+  const r = lastResult;
+  return {
+    stage: r.stage, score: formatNumber(r.score), fish: formatNumber(r.fish), stageName: stageName(r.stage),
+    title: r.final ? t('photoAllNests') : r.complete ? t('photoNest') : t('photoRound'), points: t('points'), fishLabel: t('fish'),
+    record: r.record ? t('photoRecord') : null, date: new Intl.DateTimeFormat(currentLocale()).format(new Date()),
+    game: { de: 'Schnabelglück', en: 'Happy Beak', es: 'Pico Feliz' }[currentLocale()],
+  };
+}
+function openPhoto() {
+  if (!lastResult) return;
+  const card = photoCard(), scene = photoScene(card.stage), dialog = $('photo-dialog'), ctx = $('photo-canvas').getContext('2d'), run = ++photoRun;
+  photoReady = null; photoFile(card).then(file => { if (run === photoRun) photoReady = file; }).catch(() => {});
+  dialog.classList.remove('taken'); dialog.classList.add('shooting'); $('result-dialog').close(); dialog.showModal();
+  const began = performance.now();
+  const frame = now => {
+    if (run !== photoRun || !dialog.open) return;
+    const age = (now - began) / 1000;
+    drawPhoto(ctx, card, reducedMotion ? 0 : age, scene);
+    if (age >= (reducedMotion ? .2 : 1.1) && dialog.classList.contains('shooting')) {
+      dialog.classList.replace('shooting', 'taken'); audio.effect('shutter');
+    }
+    if (age < 3) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+async function sharePhoto() {
+  const file = photoReady || await photoFile(photoCard());
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: photoCard().game }); } catch (error) { if (error.name !== 'AbortError') toast(error.message); }
+    return;
+  }
+  // No image sharing here (e.g. desktop): save the photo instead.
+  const url = URL.createObjectURL(file), link = Object.assign(document.createElement('a'), { href: url, download: file.name });
+  link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function closePhoto() { photoRun++; $('photo-dialog').close(); $('result-dialog').showModal(); }
+$('share-photo').onclick = openPhoto; $('photo-share').onclick = sharePhoto; $('photo-close').onclick = closePhoto;
+$('photo-dialog').addEventListener('cancel', event => { event.preventDefault(); closePhoto(); });
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start(elapsed) {
   if (savePending) return;
@@ -119,7 +161,8 @@ async function finish() {
   savePending = true;
   const pendingSave = persistAttempt(attempt);
   text('result-kicker', complete ? (final ? t('allNests') : t('nestReached')) : record ? t('newRecord') : stageName(game.stage));
-  text('result-title', game.endReason === 'complete' && final ? t('reasons.final') : t(`reasons.${game.endReason}`) || t('reasons.fallback'));
+  text('result-title', game.endReason === 'complete' && final ? t('reasons.final') : t(`reasons.${game.endReason || 'fallback'}`));
+  lastResult = { stage: game.stage, score: game.score, fish: game.fish, record, complete, final };
   text('result-score', formatNumber(game.score)); text('result-fish', formatNumber(game.fish)); text('result-combo', formatNumber(game.bestCombo)); text('result-time', clock(game.time));
   const resultMessage = complete ? (final ? t('finalMission') : t('nextMission', { stage: stageName(game.stage + 1) })) : game.mission ? t('mission') : t('nextGoal');
   text('result-mission', resultMessage);

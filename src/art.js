@@ -621,7 +621,9 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     const wink = phase(4.3, 5.4) ? Math.sin(phase(4.3, 5.4) * Math.PI) : 0;
     const yawn = phase(11, 12.8) ? Math.sin(phase(11, 12.8) * Math.PI) : 0;
     const shiver = phase(14, 14.8) ? (1 - phase(14, 14.8)) * .5 : 0;
-    const leap = phase(7, 8.1), gulp = phase(8.1, 8.52) ? (1 - phase(8.1, 8.52)) * .42 : 0, hearts = phase(8.1, 9.8);
+    const leap = phase(7, 8.1), hearts = phase(8.1, 9.8);
+    // The beak opens while the fish is still in the air (gulp .42 → .21 opens it), then snaps shut after the catch.
+    const gulp = leap > .45 ? .42 - .21 * (leap - .45) / .55 : phase(8.1, 8.52) ? (1 - phase(8.1, 8.52)) * .21 : 0;
     const y = 378 + bob + hop;
     if (leap) {
       const fx = 452 - leap * 100, fy = water + 12 + (y - 46 - water - 12) * leap - Math.sin(leap * Math.PI) * 80;

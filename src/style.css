@@ -175,3 +175,24 @@ dialog{position:fixed;max-height:85svh}
 #settings-dialog .app-actions .quiet-button{background:#e9f1e3;color:#264f48}
 /* The overall run record stays in the save; the start screen shows only the chosen stage's record. */
 .start-bottom .record{display:none}
+/* End-of-round press photo. */
+.share-photo{display:block;margin:0 auto 3cqw;padding:2cqw 4cqw;border-radius:6cqw;background:#e9f1e3;color:#264f48;font-size:3.2cqw;font-weight:800}
+.photo-dialog{padding:5cqw;width:90%;background:#1d3a3a;border-color:#1d3a3a}
+.photo-stage{position:relative;overflow:hidden;border-radius:2cqw}
+#photo-canvas{position:static;display:block;width:100%;height:auto;aspect-ratio:1080/1350}
+.viewfinder,.photo-flash{position:absolute;inset:0;pointer-events:none}
+.viewfinder{border:3px solid transparent;background:linear-gradient(#fff,#fff) top left/9cqw 3px,linear-gradient(#fff,#fff) top left/3px 9cqw,linear-gradient(#fff,#fff) top right/9cqw 3px,linear-gradient(#fff,#fff) top right/3px 9cqw,linear-gradient(#fff,#fff) bottom left/9cqw 3px,linear-gradient(#fff,#fff) bottom left/3px 9cqw,linear-gradient(#fff,#fff) bottom right/9cqw 3px,linear-gradient(#fff,#fff) bottom right/3px 9cqw;background-repeat:no-repeat;margin:4cqw;opacity:0}
+.viewfinder span{position:absolute;top:2cqw;right:3cqw;width:2.4cqw;height:2.4cqw;border-radius:50%;background:#ff5a4f;animation:rec .5s steps(2) infinite}
+@keyframes rec{50%{opacity:0}}
+.photo-flash{background:#fff;opacity:0}
+.photo-actions{display:flex;flex-direction:column;gap:1cqw;margin-top:4cqw;opacity:0;pointer-events:none;transition:opacity .4s .5s}
+.photo-actions .quiet-button{color:#e9f1e3}
+.shooting .viewfinder{opacity:1}
+.shooting #photo-canvas{animation:focus 1.1s ease-out both}
+@keyframes focus{from{transform:scale(1.12);filter:blur(3px)}to{transform:scale(1.03);filter:blur(0)}}
+.taken .photo-flash{animation:flash .6s ease-out both}
+@keyframes flash{from{opacity:1}to{opacity:0}}
+.taken .photo-stage{animation:print .7s cubic-bezier(.3,1.5,.5,1) both;box-shadow:0 3cqw 8cqw #00000055}
+@keyframes print{from{transform:scale(1.04)}to{transform:scale(.96) rotate(-2deg)}}
+.taken .photo-actions{opacity:1;pointer-events:auto}
+@media (prefers-reduced-motion:reduce){.shooting #photo-canvas,.taken .photo-stage,.taken .photo-flash{animation:none}.taken .photo-stage{transform:rotate(-2deg)}}
