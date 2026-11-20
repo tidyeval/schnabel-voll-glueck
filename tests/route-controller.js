@@ -24,6 +24,8 @@ export function routeController() {
       const sameSide = candidates.filter(y => sharks.every(shark => (shark.y < p.y && shark.y < y - 75) || (shark.y > p.y && shark.y > y + 75)));
       target = p.y < 380 && candidates.includes(265) ? 265 : (sameSide.length ? sameSide : candidates).sort((a,b) => clearance(b)-clearance(a) || Math.abs(a-p.y)-Math.abs(b-p.y))[0] ?? target;
     }
+    // A great white on Pip's tail: do what the hint says and surface.
+    if (game.items.some(i => i.kind === 'whiteshark' && i.phase !== 'leave')) target = 265;
     return target > p.y + p.vy * .11;
   };
 }

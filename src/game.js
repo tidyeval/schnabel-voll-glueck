@@ -714,6 +714,10 @@ function advanceWorld(game, dt, events) {
   if (!game.chased && game.wave >= game.chaseWave && p.wet && !game.items.some(item => ['shark', 'diver', 'jelly', 'puffer', 'whirlpool'].includes(item.kind))) {
     // Only into calm water: never on top of another underwater threat.
     game.chased = true;
+    // The chase is its own set piece: the next encounter waits until it is over.
+    game.nextEncounter = Math.max(game.nextEncounter, game.distance + game.speed * 6);
+    // A fish trail just under the surface rewards the escape upwards.
+    for (let i = 0; i < 8; i++) game.items.push({ kind: 'fish', x: 560 + i * 60, y: WORLD.water + 45 + Math.sin(i * .8) * 12, golden: false, calm: true, route: 'chase' });
     game.items.push({ kind: 'whiteshark', x: -150, y: clamp(p.y + 30, WORLD.water + 70, 690), phase: 'stalk', timer: 0 });
     events.push({ kind: 'chase', x: 40, y: WORLD.water - 30 });
   }
