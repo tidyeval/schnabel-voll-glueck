@@ -70,17 +70,20 @@ function refreshMenu() {
   text('record', formatNumber(prefs.record));
   $('stages').replaceChildren(...STAGES.map((stage, i) => {
     const option = document.createElement('option'); option.value = i;
-    option.textContent = `${i < prefs.completed ? '✓ ' : ''}${stageName(i)}${i > prefs.completed ? ` · ${t('locked')}` : ''}`;
-    option.disabled = i > prefs.completed; return option;
+    option.textContent = `${i < prefs.completed ? '✓ ' : i > prefs.completed ? '🔒 ' : ''}${stageName(i)}`;
+    return option;
   }));
   $('stages').value = selectedStage;
-  text('stage-best', prefs.bests[selectedStage] ? t('best', { score: formatNumber(prefs.bests[selectedStage]) }) : '');
-  $('stage-prev').disabled = selectedStage === 0; $('stage-next').disabled = selectedStage >= Math.min(prefs.completed, STAGES.length - 1);
+  // Locked stages can be browsed, so you can see what is still ahead, but not started.
+  const locked = selectedStage > prefs.completed;
+  text('stage-best', locked ? t('lockedHint', { stage: stageName(selectedStage - 1) }) : prefs.bests[selectedStage] ? t('best', { score: formatNumber(prefs.bests[selectedStage]) }) : '');
+  $('play').disabled = locked;
+  $('stage-prev').disabled = selectedStage === 0; $('stage-next').disabled = selectedStage >= STAGES.length - 1;
   text('play-label', prefs.completed ? t('continue') : t('play'));
 }
 $('stages').onchange = () => { selectedStage = Number($('stages').value); refreshMenu(); };
-// Arrows step through the unlocked stages; the select still opens the full list.
-for (const [id, step] of [['stage-prev', -1], ['stage-next', 1]]) $(id).onclick = () => { selectedStage = Math.max(0, Math.min(selectedStage + step, prefs.completed, STAGES.length - 1)); refreshMenu(); };
+// Arrows step through all stages (locked ones show a lock); the select still opens the full list.
+for (const [id, step] of [['stage-prev', -1], ['stage-next', 1]]) $(id).onclick = () => { selectedStage = Math.max(0, Math.min(selectedStage + step, STAGES.length - 1)); refreshMenu(); };
 document.querySelectorAll('[data-locale]').forEach(button => button.onclick = () => {
   prefs.language = button.dataset.locale;
   refreshLocale(); persistSettings('language');
@@ -129,7 +132,7 @@ $('share-photo').onclick = openPhoto; $('photo-share').onclick = sharePhoto; $('
 $('photo-dialog').addEventListener('cancel', event => { event.preventDefault(); closePhoto(); });
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
 function start(elapsed) {
-  if (savePending) return;
+  if (savePending || selectedStage > prefs.completed) return;
   phaserScene?.scene.resume();
   closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');

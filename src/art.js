@@ -112,7 +112,10 @@ export function pelican(c, {
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#d9955c'; c.lineWidth = 5; c.lineCap = 'round';
   for (let i = 0; i < 2; i++) {
-    const kicking = expression.kick > 0 && i === 1, dx = kicking ? 42 : -24 + i * 19, dy = kicking ? 14 : 36 + flap * 2;
+    // Under water the feet only paddle when Pip pushes deeper: slow alternate strokes, otherwise they trail.
+    const push = wet && !reducedMotion ? clamp(((expression.dive || 0) - .15) / .6, 0, 1) : 0;
+    const paddle = push ? Math.sin(t * (3 + push * 1.5) + i * Math.PI) * push : 0;
+    const kicking = expression.kick > 0 && i === 1, dx = kicking ? 42 : -24 + i * 19 - paddle * 13, dy = kicking ? 14 : 36 + flap * 2 + paddle * 8;
     c.beginPath(); c.moveTo(-17 + i * 17, 27); c.lineTo(dx, dy); c.stroke();
     path(c, '#e7a662', p => { p.moveTo(dx - 5, dy - 3); p.lineTo(dx + (kicking ? 15 : -12), dy + 4); p.lineTo(dx + (kicking ? 7 : -1), dy + 8); p.lineTo(dx + (kicking ? 17 : 7), dy + 12); p.lineTo(dx + 4, dy + 10); p.closePath(); }, '#c98550', .8);
   }
@@ -163,7 +166,10 @@ export function pelican(c, {
   if (hurt && !reducedMotion) for (let i = 0; i < 3; i++) { const a = t * 6 + i * TAU / 3; star(c, 20 + Math.cos(a) * 22, -72 + Math.sin(a) * 7, 4.5, i % 2 ? '#ffd66e' : '#fff0b0', a); }
   c.restore();
   if (wet) {
-  c.save(); c.translate(-12, 5); c.scale(.8, .6);
+  // Wings stay tucked under water; a strong stroke now and then while diving, spread a little when rising.
+  const dive = reducedMotion ? 0 : expression.dive || 0, rise = reducedMotion ? 0 : expression.rise || 0;
+  const strokeBeat = dive * Math.pow(Math.max(0, Math.sin(t * 4.2)), 4);
+  c.save(); c.translate(-12, 5); c.rotate(-strokeBeat * 1.05 - rise * .35); c.scale(.8 + strokeBeat * .5 + rise * .2, .6 + strokeBeat * .45 + rise * .25);
   path(c, gradient(c, 0, 35, '#f3f5e4', '#ccdcca'), p => { p.moveTo(-35, -3); p.bezierCurveTo(-16, -7, 0, 7, -5, 22); p.quadraticCurveTo(-14, 32, -23, 26); p.quadraticCurveTo(-37, 25, -43, 12); p.quadraticCurveTo(-48, 3, -35, -3); }, outline, 1);
   for (let i = 0; i < 4; i++) path(c, null, p => { p.moveTo(-36 + i * 8, 10); p.quadraticCurveTo(-31 + i * 8, 19, -25 + i * 7, 21); }, i === 3 ? '#b4c9b7' : '#c1d3c0', 1.1);
   c.restore();
@@ -817,6 +823,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick,
         squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1),
         sparkle: fx?.sparkle, shiver: fx?.shiver,
+        dive: p.wet ? clamp(p.vy / 500, 0, 1) : 0, rise: p.wet ? clamp(-p.vy / 500, 0, 1) : 0,
         fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140),
         nest: game.feeding || game.settling || game.items.some(i => i.kind === 'nest' && Math.abs(i.x - p.x) < 260),
       },
