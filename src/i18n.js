@@ -1,5 +1,6 @@
 import { STAGES } from './stages.js';
-const translations = {
+// Exported for tests/design.test.js (every key in every locale).
+export const translations = {
   de: {
     title: 'Schnabelglück', description: 'Ein kleiner Pelikan. Ein großes Abenteuer. Tauche nach Fischen und entdecke deine neue Lieblingspause.', desktopNote: 'Ein bisschen Meer.<br>Ein bisschen mehr Glück.', edition: 'DEINE KLEINE AUSZEIT · 01', footerBrand: 'MIT LIEBE ZUM MEER.', footerControls: 'HALTEN ↓ TAUCHEN · LOSLASSEN ↑ FLIEGEN',
     app: 'Schnabelglück Spiel', canvas: 'Küstenwelt. Halten oder Leertaste zum Tauchen, loslassen zum Fliegen.', pause: 'Spiel pausieren', settings: 'Einstellungen öffnen',
