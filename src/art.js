@@ -84,11 +84,11 @@ export function pelican(c, {
   c.save(); c.translate(x, y); c.rotate(tilt + (reducedMotion ? 0 : Math.sin(confused * 18) * .28 * Math.min(1, confused))); c.scale(scale, scale);
   // Squash on splashdown, stretch along the flight path when moving fast.
   if (!reducedMotion) { const sq = expression.squash || 0, st = expression.stretch || 0; c.scale(1 + st + sq * .17, 1 - st * .7 - sq * .17); }
-  // Joy (golden fish, mission, combo, rare moment): a high hop with a back flip, then a smaller second hop.
+  // Joy (golden fish, mission, combo, rare moment): a high hop, then a smaller second one.
   const joyLeft = reducedMotion ? 0 : clamp((expression.joy || 0) / 1.4, 0, 1), joy = Math.min(1, joyLeft * 2);
   if (joyLeft) {
     const u = 1 - joyLeft, hop = u < .55 ? Math.sin(u / .55 * Math.PI) * 46 : Math.sin((u - .55) / .45 * Math.PI) * 16;
-    c.translate(0, -hop - 10); c.rotate(expression.flip && u < .5 ? -Math.sin(u / .5 * Math.PI / 2) * TAU : 0); c.translate(0, 10);
+    c.translate(0, -hop);
   }
   const fullness = cargo / WORLD.capacity;
   const state = airState({ y, wet, breath }, cargo);
@@ -105,7 +105,7 @@ export function pelican(c, {
   if (bump) c.transform(1, 0, Math.sin(bump * 22) * .07, 1, 0, 0);
   if (!reducedMotion && expression.shiver > 0) c.rotate(Math.sin(expression.shiver * 48) * .07 * Math.min(1, expression.shiver * 3));
   const wobble = reducedMotion ? 0 : Math.sin(t * 6) * fullness * 3 + Math.sin(gulp * 22) * gulp * 8;
-  const bite = Math.max(yawn * 1.3, lowAir ? 0 : gulp > 0 ? Math.sin((1 - gulp / .42) * Math.PI) : relief > .8 ? .45 : expression.fish ? .18 : 0);
+  const bite = Math.max(yawn * 1.3, lowAir ? 0 : gulp > 0 ? Math.sin((1 - Math.min(gulp, .42) / .42) * Math.PI) * 1.5 : relief > .8 ? .45 : expression.fish ? .35 : 0);
   // Shared, stable phase: brisk downstroke and slower, folded recovery.
   const cycle = (t * 1.3) % 1, down = cycle < .42;
   const progress = down ? cycle / .42 : (cycle - .42) / .58;
@@ -854,7 +854,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       expression: {
         energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick,
         squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1),
-        sparkle: fx?.sparkle, shiver: fx?.shiver, joy: fx?.joy, flip: fx?.flip,
+        sparkle: fx?.sparkle, shiver: fx?.shiver, joy: fx?.joy,
         plunge: p.wet ? 0 : clamp((p.vy - 120) / 120, 0, 1),
         dive: p.wet ? clamp(p.vy / 500, 0, 1) : 0, rise: p.wet ? clamp(-p.vy / 500, 0, 1) : 0,
         fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140),
