@@ -105,7 +105,7 @@ test('authored stages introduce individual dangers before combinations and finis
     const g = createGame(() => .5, stage);
     for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
       g.items = []; g.distance = g.nextEncounter; step(g, .01, false);
-      const dangers = g.items.filter(i => !['fish', 'bubble', 'turtle', 'baitball', 'current'].includes(i.kind));
+      const dangers = g.items.filter(i => !i.setPiece && !['fish', 'bubble', 'turtle', 'baitball', 'current'].includes(i.kind));
       dangers.forEach(i => seen.add(i.kind));
       if (STAGES[stage].encounters[wave] === 'calm') assert.equal(dangers.length, 0);
       assert.equal(dangers.length, STAGES[stage].encounters[wave].split('-').filter(kind => !['calm', 'turtle'].includes(kind)).length);
@@ -253,9 +253,10 @@ test('gulls and driftwood collide, jelly tentacles pulse, whirlpools pull withou
     g.items = [{ kind: 'jelly', x: g.player.x, y: 640 }]; step(g, .001, false);
     assert.equal(g.energy < 90, fatal, 'contracted tentacles leave room below');
   }
-  const g = createGame(); g.player.y = 620; g.player.wet = true;
-  g.items = [{ kind: 'whirlpool', x: g.player.x, y: 640 }];
-  const before = g.player.y; step(g, .01, false); assert.ok(g.player.y > before); assert.equal(g.ended, false);
+  // The pull is a force: compared with open water, Pip rises more slowly next to a whirlpool.
+  const rise = items => { const g = createGame(() => .5, 2); g.nextEncounter = Infinity; Object.assign(g.player, { y: 620, wet: true }); g.items = items; for (let i = 0; i < 20; i++) step(g, 1 / 60, false); return g; };
+  assert.ok(rise([{ kind: 'whirlpool', x: 150, y: 680 }]).player.y > rise([]).player.y + 5);
+  const g = rise([{ kind: 'whirlpool', x: 150, y: 680 }]); assert.equal(g.ended, false);
   for (let i = 0; i < 120; i++) step(g, 1 / 60, false);
   assert.equal(g.player.wet, false, 'releasing escapes the pull');
 });
@@ -323,7 +324,7 @@ test('islands force flight, reefs leave a clear passage and full cargo can ascen
   for (const y of [350, 500, 710]) assert.ok(hitsTerrain({ x: 118, y }, island));
   assert.ok(!hitsTerrain({ x: 118, y: 530 }, reef));
   for (const y of [420, 630]) assert.ok(hitsTerrain({ x: 118, y }, reef));
-  const g = createGame(); g.time = 120; g.cargo = WORLD.capacity; g.player.y = 710; g.player.wet = true;
+  const g = createGame(); g.time = 120; g.player.vx = paceAt(120).speed; g.cargo = WORLD.capacity; g.player.y = 710; g.player.wet = true;
   g.items = [{ kind: 'island', x: g.player.x + 90 + paceAt(120).speed * 3 - 1 }]; g.nextEncounter = Infinity;
   assert.ok(step(g, .01, false).some(e => e.kind === 'islandWarning'));
   for (let i = 0; i < 240 && !g.ended; i++) step(g, 1 / 60, false);
@@ -459,15 +460,14 @@ test('contacts cost energy once, protect briefly, and never take cargo or air', 
   assert.equal(g.endReason, 'energy'); assert.equal(g.energy, 0);
 });
 
-test('sharks, fishermen, reefs and divers end the stage while other creatures only drain energy', () => {
+test('sharks, fishermen and divers end the stage while other creatures only drain energy', () => {
   const fatal = [
     ['shark', {x: 118, y: 500, baseY: 500}],
     ['fisher', {kind: 'boat', x: 125, cast: -1}],
-    ['reef', {x: 118, playerY: 420}],
     ['diver', {x: 118, y: 500, phase: 'idle'}],
   ];
   for (const [reason, item] of fatal) {
-    const g = createGame(); Object.assign(g.player, {y: reason === 'fisher' ? 280 : item.playerY ?? 500, wet: reason !== 'fisher'});
+    const g = createGame(Math.random, 1); Object.assign(g.player, {y: reason === 'fisher' ? 280 : item.playerY ?? 500, wet: reason !== 'fisher'});
     g.items = [{kind: reason === 'fisher' ? 'boat' : reason, ...item}];
     const events = step(g, .001, false);
     assert.equal(g.ended, true, reason); assert.equal(g.endReason, reason); assert.ok(events.some(event => event.kind === 'end'));
@@ -555,8 +555,8 @@ test('mangroves block the sky lane, so Pip dives under the root curtain', () => 
   for (const y of [560, 640, 710]) assert.ok(!hitsTerrain({ x: 118, y }, tree), `open at ${y}`);
   const g = createGame(() => .5, 2); g.items = [{ kind: 'mangrove', x: g.player.x }]; g.nextEncounter = Infinity;
   Object.assign(g.player, { y: 300, wet: false });
-  step(g, .01, false);
-  assert.equal(g.endReason, 'mangrove');
+  const events = []; for (let i = 0; i < 30; i++) events.push(...step(g, 1 / 60, false));
+  assert.equal(g.ended, false); assert.ok(events.some(e => e.kind === 'bounce'), 'flying into the canopy bounces');
 });
 
 test('every run meets its stage\'s special moment once, at a random wave in the middle', () => {
@@ -569,7 +569,7 @@ test('every run meets its stage\'s special moment once, at a random wave in the 
       hits++; assert.equal(rare.name, STAGES[stage].rareMoment);
       assert.ok(rare.wave >= 2 && rare.wave < STAGES[stage].encounters.length - 2);
     }
-    assert.equal(hits, 3000, `stage ${stage}: ${hits} runs with a moment`);
+    assert.equal(hits, STAGES[stage].rareMoment ? 3000 : 0, `stage ${stage}: ${hits} runs with a moment`);
   }
   const g = createGame(() => .5, 2); g.rare = { name: 'manateeCalf', wave: 3 };
   let events = [];

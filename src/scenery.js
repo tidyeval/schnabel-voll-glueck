@@ -29,6 +29,19 @@ export function swellOf(game, stage, reducedMotion) {
   return STAGES[stage].theme.swell + (show && show.name === 'trawler' ? show.envelope * 1.5 : 0);
 }
 
+/*
+ * Light over the course of a stage (about 50 s of travel): the bay goes from morning to noon,
+ * the harbour into late afternoon, the lagoon sinks into dusk and the moon climbs over the reef.
+ */
+export function daylight(stage, game) {
+  const id = STAGES[stage].id, u = game ? clamp(game.time / 50, 0, 1) : .35;
+  const ease = u * u * (3 - 2 * u);
+  if (id === 'bay') return { u, sunX: 397, sunY: WORLD.water - 75 - ease * 75, haze: .38 * (1 - ease), hazeColour: '#ffc9a8', dusk: 0, sun: true };
+  if (id === 'harbor') return { u, sunX: 397, sunY: WORLD.water - 150 + ease * 45, haze: .22 * ease, hazeColour: '#ffc78f', dusk: 0, sun: true };
+  if (id === 'lagoon') return { u, sunX: 370, sunY: WORLD.water - 58 + ease * 42, haze: .2 + .15 * ease, hazeColour: '#ff9f7a', dusk: .26 * ease, sun: true };
+  return { u, sunX: 392, sunY: 118 - ease * 22, haze: 0, hazeColour: '#000000', dusk: 0, sun: false };
+}
+
 // Scenery is painted first, tinted in place, and the sky is slipped in behind it.
 export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawScenery) {
   const th = STAGES[stage].theme;
@@ -62,10 +75,11 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
   }
   if (show?.name === 'rainbow') rainbow(c, water, show);
   // Sun, or moon and stars over the night reef.
+  const light = daylight(stage, game);
   if (STAGES[stage].id === 'reef') {
-    fill(c, '#f6f1d6', p => p.arc(392, 118, 25, 0, TAU));
-    fill(c, '#f6f1d622', p => p.arc(392, 118, 44, 0, TAU));
-    fill(c, '#f6f1d612', p => p.arc(392, 118, 70, 0, TAU));
+    fill(c, '#f6f1d6', p => p.arc(light.sunX, light.sunY, 25, 0, TAU));
+    fill(c, '#f6f1d622', p => p.arc(light.sunX, light.sunY, 44, 0, TAU));
+    fill(c, '#f6f1d612', p => p.arc(light.sunX, light.sunY, 70, 0, TAU));
     for (let i = 0; i < 46; i++) {
       const twinkle = reducedMotion ? .7 : .55 + Math.sin(motion * (1 + hash(i) * 2) + i) * .45;
       c.globalAlpha = clamp(twinkle, .1, 1) * (1 - hash(i + 9) * .5);
@@ -74,17 +88,22 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
     c.globalAlpha = 1;
   } else if (STAGES[stage].id === 'lagoon') {
     // A low evening sun.
-    fill(c, '#ffc98a', p => p.arc(370, water - 58, 34, 0, TAU));
-    fill(c, '#ffd9a066', p => p.arc(370, water - 58, 52, 0, TAU));
-    fill(c, '#ffcf9a30', p => p.arc(370, water - 58, 80, 0, TAU));
+    fill(c, '#ffc98a', p => p.arc(light.sunX, light.sunY, 34, 0, TAU));
+    fill(c, '#ffd9a066', p => p.arc(light.sunX, light.sunY, 52, 0, TAU));
+    fill(c, '#ffcf9a30', p => p.arc(light.sunX, light.sunY, 80, 0, TAU));
   } else {
-    fill(c, '#ffe7a6', p => p.arc(397, water - 140, 29, 0, TAU));
-    fill(c, '#fff4c777', p => p.arc(397, water - 140, 43, 0, TAU));
-    fill(c, '#fff0bd35', p => p.arc(397, water - 140, 61, 0, TAU));
+    fill(c, '#ffe7a6', p => p.arc(light.sunX, light.sunY, 29, 0, TAU));
+    fill(c, '#fff4c777', p => p.arc(light.sunX, light.sunY, 43, 0, TAU));
+    fill(c, '#fff0bd35', p => p.arc(light.sunX, light.sunY, 61, 0, TAU));
+    fill(c, '#fff0bd18', p => p.arc(light.sunX, light.sunY, 95, 0, TAU));
   }
+  // Morning or evening haze low over the horizon, behind the scenery.
+  if (light.haze) { c.fillStyle = vertical(c, water - 210, water, [[0, light.hazeColour + '00'], [1, light.hazeColour + Math.round(light.haze * 255).toString(16).padStart(2, '0')]]); c.fillRect(-30, water - 210, 540, 210); }
   c.fillStyle = vertical(c, water - 150, water, [[0, th.glow.slice(0, 7) + '00'], [1, th.glow]]); c.fillRect(-30, water - 150, 540, 150);
   c.fillStyle = vertical(c, 0, water, th.sky); c.fillRect(-30, -30, 540, water + 30);
   c.globalCompositeOperation = 'source-over';
+  // Dusk settles over sky and scenery alike.
+  if (light.dusk) { c.fillStyle = vertical(c, 0, water, [[0, `rgba(70,60,120,${light.dusk})`], [1, `rgba(120,70,110,${light.dusk * .45})`]]); c.fillRect(-30, -30, 540, water + 30); }
   if (show?.name === 'goldenHour') goldenHour(c, water, show, motion);
   if (show?.name === 'shootingStars') shootingStars(c, water, show);
 }
@@ -204,6 +223,7 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
     g.addColorStop(0, th.rays + Math.round(clamp(alpha, 0, 1) * 255).toString(16).padStart(2, '0')); g.addColorStop(1, th.rays + '00');
     fill(c, g, p => { p.moveTo(x, water); p.lineTo(x + wide, water); p.lineTo(x + wide + 150, 850); p.lineTo(x + 70, 850); p.closePath(); });
   }
+  drawFarDepth(c, stage, water, d, motion, reducedMotion);
   // Distant underwater rocks, slower than the play layer.
   c.globalAlpha = .5;
   fill(c, th.rocks, p => {
@@ -213,22 +233,185 @@ export function drawWater(c, stage, water, d, motion, game, reducedMotion) {
   });
   c.globalAlpha = 1;
   if (STAGES[stage].id === 'harbor') {
-    // Pier posts fade with depth.
+    // A sunken pirate ship rests on the harbour floor and passes once, mid-level (~10 400 units long).
+    const shipX = 520 - (d - 4200) * .3;
+    if (shipX > -320 && shipX < 640) sunkenShip(c, shipX, 818, motion, reducedMotion);
     for (let i = 0; i < 5; i++) {
       const x = wrap(i * 173 - d * .16, 760) - 120;
       c.fillStyle = vertical(c, water, water + 300, [[0, '#3d5f5244'], [1, '#3d5f5200']]); c.fillRect(x, water, 11, 300);
     }
   }
-  for (let i = 0; i < 30; i++) {
-    const x = wrap(i * 83.73 - d * .27, 520) - 20, y = water + 25 + (i * 41.4) % (820 - water);
-    fill(c, th.mote, p => p.arc(x, y + Math.sin(motion + i) * 4, i % 3 === 0 ? 2 : 1, 0, TAU));
+  // Depth haze: the far layers melt into the deep water colour.
+  c.fillStyle = vertical(c, water + 120, 850, [[0, th.water[1] + '00'], [1, th.water[1] + '73']]); c.fillRect(-30, water + 120, 540, 850 - water - 120);
+  // Marine snow drifts slowly up and with the travel; a few motes catch the light.
+  for (let i = 0; i < 44; i++) {
+    const span = 820 - water - 25, rise = reducedMotion ? 0 : motion * (4 + hash(i + 7) * 7);
+    const x = wrap(i * 83.73 - d * (.22 + hash(i) * .12) + Math.sin(motion * .5 + i) * 6, 520) - 20, y = water + 25 + wrap((i * 41.4) - rise, span);
+    c.globalAlpha = .55 + hash(i + 4) * .45;
+    fill(c, th.mote, p => p.arc(x, y, i % 5 === 0 ? 2.4 : i % 3 === 0 ? 1.7 : 1, 0, TAU));
   }
+  c.globalAlpha = 1;
+  drawSurfaceLight(c, stage, water, d, motion, game, reducedMotion);
   if (STAGES[stage].id === 'reef') plankton(c, water, d, motion, game, reducedMotion);
-  if (STAGES[stage].id === 'lagoon') {
-    // Sun path on the calm lagoon.
-    for (let k = 0; k < 7; k++) {
-      c.globalAlpha = .35 - k * .04;
-      fill(c, '#ffe2b0', p => p.ellipse(370 + Math.sin(motion * 1.3 + k) * 5, water + 8 + k * 9, Math.max(3, 24 - k * 2.6 + Math.sin(motion * 2.6 + k * 1.7) * 6), 2.2, 0, 0, TAU));
+  const light = daylight(stage, game);
+  if (light.sun) {
+    // Sun path below the surface; lower suns lay a longer, warmer path.
+    const low = clamp((water - light.sunY) / 150, 0, 1), rows = Math.round(10 - low * 4);
+    for (let k = 0; k < rows; k++) {
+      c.globalAlpha = (.36 - k * .03) * (1.2 - low * .5);
+      fill(c, STAGES[stage].id === 'lagoon' ? '#ffd7a4' : '#fff1c4', p => p.ellipse(light.sunX + Math.sin(motion * 1.3 + k) * 5, water + 8 + k * 9, Math.max(3, 24 - k * 2.2 + Math.sin(motion * 2.6 + k * 1.7) * 6), 2.2, 0, 0, TAU));
+    }
+    c.globalAlpha = 1;
+  }
+}
+
+// Background wreck: tilted hull, broken mast with a friendly skull flag, curious fish in the
+// portholes and an open treasure chest. Presentation only; nothing collides with it.
+function sunkenShip(c, x, y, t, reducedMotion) {
+  const sway = reducedMotion ? 0 : t;
+  c.save(); c.translate(x, y); c.rotate(-.1);
+  c.globalAlpha = .92;
+  // Broken mast with crow's nest and tattered flag.
+  stroke(c, '#6b4a36', 9, p => { p.moveTo(40, -88); p.lineTo(58, -250); });
+  stroke(c, '#6b4a36', 5, p => { p.moveTo(20, -205); p.lineTo(92, -215); });
+  fill(c, '#7d573f', p => p.roundRect(40, -238, 34, 12, 4));
+  const flap = Math.sin(sway * 1.6) * 6;
+  fill(c, '#3d4258', p => { p.moveTo(57, -248); p.quadraticCurveTo(80, -258 + flap, 104, -250); p.lineTo(100, -238); p.lineTo(106, -228); p.quadraticCurveTo(80, -222 - flap, 57, -224); p.closePath(); });
+  fill(c, '#f7f1df', p => p.arc(80, -238, 7, 0, TAU));
+  fill(c, '#3d4258', p => { p.arc(77, -239, 1.6, 0, TAU); p.arc(83, -239, 1.6, 0, TAU); });
+  stroke(c, '#3d4258', 1.2, p => { p.moveTo(77, -235); p.quadraticCurveTo(80, -233, 83, -235); });
+  stroke(c, '#f7f1df', 2, p => { p.moveTo(71, -229); p.lineTo(89, -224); p.moveTo(89, -229); p.lineTo(71, -224); });
+  // Hull with a raised stern, planks and a broken hole.
+  const hull = c.createLinearGradient(0, -110, 0, 0); hull.addColorStop(0, '#9a6b48'); hull.addColorStop(1, '#5a3a2a');
+  fill(c, hull, p => { p.moveTo(-150, -70); p.lineTo(110, -78); p.lineTo(118, -122); p.lineTo(175, -126); p.quadraticCurveTo(178, -40, 120, 4); p.lineTo(-110, 4); p.quadraticCurveTo(-148, -20, -150, -70); p.closePath(); });
+  for (let k = 1; k < 4; k++) stroke(c, '#4a2f2266', 1.5, p => { p.moveTo(-146, -70 + k * 18); p.quadraticCurveTo(10, -72 + k * 19, 168, -96 + k * 24); });
+  fill(c, '#c9925a', p => { p.rect(-150, -76, 262, 6); p.rect(110, -128, 66, 6); });
+  for (let k = 0; k < 9; k++) fill(c, '#b07c4e', p => p.rect(-140 + k * 28, -92, 5, 16));
+  fill(c, '#2b2422', p => { p.moveTo(-70, -40); p.lineTo(-48, -52); p.lineTo(-30, -38); p.lineTo(-38, -18); p.lineTo(-62, -20); p.closePath(); });
+  fill(c, '#ffe0a2', p => p.roundRect(140, -112, 20, 16, 4));
+  // Portholes; a fish peeks out of the middle one.
+  for (const [px, peek] of [[-110, false], [-10, true], [60, false]]) {
+    fill(c, '#d8b06a', p => p.arc(px, -48, 11, 0, TAU));
+    fill(c, '#21384a', p => p.arc(px, -48, 8, 0, TAU));
+    if (peek) {
+      const out = reducedMotion ? 3 : Math.max(0, Math.sin(sway * .9)) * 7;
+      fill(c, '#ffa36c', p => p.ellipse(px - out, -48, 7, 5.5, 0, 0, TAU));
+      fill(c, '#fffdf1', p => p.arc(px - out - 3, -50, 2.3, 0, TAU)); fill(c, '#2b3b3b', p => p.arc(px - out - 3.4, -50, 1.3, 0, TAU));
+    }
+  }
+  // Barnacles and sea grass on the hull.
+  for (let k = 0; k < 7; k++) fill(c, '#e8e3cf', p => p.ellipse(-120 + k * 40 + (k % 2) * 12, -12 - (k % 3) * 9, 3.2, 2.6, 0, 0, TAU));
+  for (let k = 0; k < 5; k++) { const bx = -130 + k * 62, lean = Math.sin(sway * 1.2 + k) * 6; stroke(c, k % 2 ? '#6fae86' : '#86c19a', 4, p => { p.moveTo(bx, 2); p.quadraticCurveTo(bx + lean, -22, bx + lean * 1.8, -40 - (k % 2) * 14); }); }
+  c.restore();
+  c.globalAlpha = 1;
+  // Open treasure chest on the sand with glinting coins.
+  const cx = x + 205, cy = y - 8;
+  fill(c, '#e9c25a', p => p.ellipse(cx + 2, cy + 2, 30, 7, 0, 0, TAU));
+  fill(c, '#7a4e33', p => p.roundRect(cx - 22, cy - 22, 44, 24, 4));
+  fill(c, '#5a3a2a', p => { p.moveTo(cx - 22, cy - 22); p.lineTo(cx - 26, cy - 46); p.quadraticCurveTo(cx, cy - 56, cx + 26, cy - 46); p.lineTo(cx + 22, cy - 22); p.closePath(); });
+  fill(c, '#f2c94c', p => p.ellipse(cx, cy - 22, 21, 7, 0, Math.PI, TAU));
+  for (const [dx, dy] of [[-12, -26], [-3, -29], [7, -27], [14, -24], [-18, -2], [20, -1], [27, 3]]) fill(c, '#ffd966', p => p.ellipse(cx + dx, cy + dy, 4, 3, 0, 0, TAU));
+  fill(c, '#c9925a', p => { p.rect(cx - 22, cy - 13, 44, 4); p.rect(cx - 3, cy - 18, 6, 9); });
+  c.globalCompositeOperation = 'lighter';
+  fill(c, '#ffd96622', p => p.arc(cx, cy - 26, 34, 0, TAU));
+  c.globalCompositeOperation = 'source-over';
+  for (let k = 0; k < 3; k++) {
+    const glint = reducedMotion ? .6 : Math.max(0, Math.sin(t * 2.2 + k * 2.1));
+    if (glint > .1) { c.globalAlpha = glint; const sx = cx - 14 + k * 14, sy = cy - 34 - (k % 2) * 6; fill(c, '#fffbe0', p => { p.moveTo(sx, sy - 6); p.lineTo(sx + 1.5, sy - 1.5); p.lineTo(sx + 6, sy); p.lineTo(sx + 1.5, sy + 1.5); p.lineTo(sx, sy + 6); p.lineTo(sx - 1.5, sy + 1.5); p.lineTo(sx - 6, sy); p.lineTo(sx - 1.5, sy - 1.5); p.closePath(); }); c.globalAlpha = 1; }
+  }
+  // Bubbles escape from the broken hull.
+  if (!reducedMotion) for (let k = 0; k < 4; k++) {
+    const rise = wrap(t * 30 + k * 40, 160);
+    c.globalAlpha = clamp(1 - rise / 160, 0, 1) * .7;
+    stroke(c, '#e9fff7', 1, p => p.arc(x - 45 + Math.sin(t * 2 + k) * 4, y - 40 - rise, 1.8 + k * .5, 0, TAU));
+  }
+  c.globalAlpha = 1;
+}
+
+// Far layer: a swaying kelp forest and a second ridge, both lost in the blue.
+function drawFarDepth(c, stage, water, d, motion, reducedMotion) {
+  const th = STAGES[stage].theme, sway = reducedMotion ? 0 : motion;
+  c.globalAlpha = .28;
+  fill(c, th.rocks, p => {
+    p.moveTo(-30, 850);
+    for (let x = -30; x <= 520; x += 20) { const u = (x + d * .05) * .009; p.lineTo(x, 700 - Math.abs(Math.sin(u + 2)) * 80 - Math.sin(u * 2.3) * 18); }
+    p.lineTo(520, 850); p.closePath();
+  });
+  c.globalAlpha = .22;
+  for (let i = 0; i < 9; i++) {
+    const base = wrap(i * 97 + hash(i) * 40 - d * .08, 700) - 110, h = 170 + hash(i + 3) * 170;
+    for (let k = 0; k < 3; k++) {
+      const x0 = base + k * 9;
+      stroke(c, th.grass[1], 5 - k, p => {
+        p.moveTo(x0, 850);
+        for (let s = 1; s <= 10; s++) { const y = 850 - h * s / 10; p.lineTo(x0 + Math.sin(sway * .7 + s * .45 + i + k) * s * 1.6, y); }
+      });
+      for (let s = 3; s <= 9; s += 2) { const y = 850 - h * s / 10, x = x0 + Math.sin(sway * .7 + s * .45 + i + k) * s * 1.6; fill(c, th.grass[1], p => p.ellipse(x + (s % 4 ? 6 : -6), y, 7, 3, s % 4 ? .5 : -.5, 0, TAU)); }
+    }
+  }
+  c.globalAlpha = 1;
+}
+
+// Rippling light just under the surface, and a gentle glitter on the crests.
+function drawSurfaceLight(c, stage, water, d, motion, game, reducedMotion) {
+  const night = STAGES[stage].night;
+  c.globalCompositeOperation = 'lighter';
+  // Short glints that come and go, like sunlight through ripples, rather than continuous lines.
+  for (let row = 0; row < 4; row++) for (let i = 0; i < 12; i++) {
+    const w = reducedMotion ? 0 : motion * (1.1 + row * .3);
+    const x = wrap(i * 47 + hash(i + row * 13) * 40 - d * (.5 - row * .08), 560) - 40, y = water + 9 + row * 10 + Math.sin(x * .05 + w) * 2;
+    const on = Math.sin(w * 1.7 + i * 2.3 + row) * .5 + .5;
+    if (on < .25) continue;
+    const alpha = (night ? .06 : .16) * (on - .25) * (1 - row * .2), len = 8 + hash(i + row) * 14;
+    stroke(c, `rgba(255,250,215,${alpha.toFixed(3)})`, 2.4 - row * .4, p => { p.moveTo(x - len, y); p.quadraticCurveTo(x, y - 3, x + len, y); });
+  }
+  c.globalCompositeOperation = 'source-over';
+}
+
+// Seabed life: sea grass that leans with the current, shells, pebbles and anemones.
+export function drawSeabedLife(c, stage, d, motion, game, reducedMotion) {
+  const th = STAGES[stage].theme, sway = reducedMotion ? 0 : motion, boost = game?.boost || 0, night = STAGES[stage].night;
+  const ground = x => 833 + Math.sin(x * .013 + 1) * 6;
+  for (let i = 0; i < 22; i++) {
+    const x = wrap(i * 41 + hash(i) * 30 - d * .92, 900) - 130, kind = Math.floor(hash(i + 11) * 5), y = ground(x);
+    if (x < -60 || x > 540) continue;
+    if (kind <= 1) {
+      // Sea grass tuft: leans forward with the current.
+      for (let k = -2; k <= 2; k++) {
+        const h = 30 + hash(i * 5 + k) * 38, lean = Math.sin(sway * 1.3 + i + k * .6) * 5 - boost * 12;
+        stroke(c, k % 2 ? th.grass[0] : th.grass[1], 3.2, p => { p.moveTo(x + k * 5, y + 4); p.quadraticCurveTo(x + k * 6 + lean * .4, y - h * .55, x + k * 7 + lean, y - h); });
+      }
+    } else if (kind === 2) {
+      // Anemone: a soft dome with swaying tentacles.
+      const colour = ['#ff9fb2', '#ffb78a', '#c9a3ff'][i % 3];
+      for (let k = 0; k < 7; k++) {
+        const a = -Math.PI + (k + .5) * Math.PI / 7, len = 13 + (k % 2) * 4, wob = Math.sin(sway * 2 + k + i) * 3 - boost * 6;
+        stroke(c, colour, 3.4, p => { p.moveTo(x + Math.cos(a) * 9, y - 6 + Math.sin(a) * 6); p.quadraticCurveTo(x + Math.cos(a) * 15 + wob * .5, y - 6 + Math.sin(a) * 14, x + Math.cos(a) * 14 + wob, y - 6 + Math.sin(a) * len); });
+        fill(c, '#fff1f4', p => p.arc(x + Math.cos(a) * 14 + wob, y - 6 + Math.sin(a) * len, 1.8, 0, TAU));
+      }
+      fill(c, colour, p => p.ellipse(x, y - 2, 12, 8, 0, Math.PI, TAU));
+      if (night) { c.globalCompositeOperation = 'lighter'; fill(c, colour + '22', p => p.arc(x, y - 10, 22, 0, TAU)); c.globalCompositeOperation = 'source-over'; }
+    } else if (kind === 3) {
+      // Scallop shell with ribs.
+      c.save(); c.translate(x, y); c.scale(1.4, 1.4); c.translate(-x, -y);
+      fill(c, '#f6c7b4', p => { p.moveTo(x - 9, y); p.quadraticCurveTo(x - 10, y - 13, x, y - 14); p.quadraticCurveTo(x + 10, y - 13, x + 9, y); p.closePath(); });
+      for (let k = -2; k <= 2; k++) stroke(c, '#dc9c8c', 1, p => { p.moveTo(x, y - 1); p.lineTo(x + k * 4, y - 12); });
+      fill(c, '#e8a996', p => p.ellipse(x, y + 1, 4, 2, 0, 0, TAU));
+      c.restore();
+    } else {
+      // A little pile of pebbles.
+      fill(c, '#c9c2a5', p => p.ellipse(x - 6, y, 8, 5, 0, 0, TAU));
+      fill(c, '#a9b49a', p => p.ellipse(x + 5, y + 1, 6, 4, 0, 0, TAU));
+      fill(c, '#e2dcc2', p => p.ellipse(x - 1, y - 4, 4, 3, 0, 0, TAU));
+    }
+  }
+  // Bubbles rising from the sand now and then.
+  if (!reducedMotion) for (let i = 0; i < 3; i++) {
+    const x = wrap(i * 173 + 60 - d * .92, 520) - 20;
+    for (let k = 0; k < 4; k++) {
+      const rise = wrap(motion * 38 + k * 46 + i * 30, 190), r = 1.5 + k * .4 + rise * .01;
+      c.globalAlpha = clamp(1 - rise / 190, 0, 1) * .7;
+      stroke(c, '#e9fff7', 1, p => p.arc(x + Math.sin(motion * 3 + k) * 3, 826 - rise, r, 0, TAU));
     }
     c.globalAlpha = 1;
   }
@@ -250,9 +433,9 @@ function plankton(c, water, d, motion, game, reducedMotion) {
   }
   c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
 }
-// Bay seabed light net, drawn over the sand.
+// Seabed light net on sunny stages, drawn over the sand.
 export function drawCaustics(c, stage, d, motion, reducedMotion) {
-  if (STAGES[stage].id !== 'bay') return;
+  if (STAGES[stage].night) return;
   c.globalCompositeOperation = 'lighter';
   for (let row = 0; row < 3; row++) {
     stroke(c, `rgba(255,250,200,${.13 - row * .03})`, 2.2 - row * .5, p => {
@@ -272,7 +455,6 @@ export function drawRare(c, game, water, motion, reducedMotion) {
   const age = game.time - game.rareShow.start;
   if (age < 0 || age > RARE_TIME) return;
   const name = game.rareShow.name;
-  if (name === 'hatchlings') for (let i = 0; i < 5; i++) hatchling(c, 560 - age * 46 + i * 34, water + 22 + Math.sin(motion * 2 + i) * 3 + (i % 2) * 6, motion + i * .4, i);
   if (name === 'otters') { const ox = 580 - age * 42; c.save(); c.translate(ox, water); c.scale(1.5, 1.5); c.translate(-ox, -water); otters(c, ox, water, motion); c.restore(); }
   if (name === 'manateeCalf') {
     const x = 620 - age * 44;
@@ -281,16 +463,6 @@ export function drawRare(c, game, water, motion, reducedMotion) {
     if (Math.sin(motion * 1.7) > .3) fill(c, '#ff9fb0aa', p => { const hx = x + 52, hy = 640 - 26 - wrap(motion * 14, 20); p.moveTo(hx, hy + 3); p.bezierCurveTo(hx - 5, hy - 1, hx - 2, hy - 5, hx, hy - 2); p.bezierCurveTo(hx + 2, hy - 5, hx + 5, hy - 1, hx, hy + 3); });
   }
   if (name === 'manta') manta(c, 640 - age * 52, 560 + Math.sin(age * .8) * 30, motion);
-}
-function hatchling(c, x, y, t, seed) {
-  const paddle = Math.sin(t * 9) * .6;
-  c.save(); c.translate(x, y); c.scale(1.3, 1.3);
-  for (const [fx, side] of [[-5, 1], [5, -1]]) { c.save(); c.translate(fx, 3); c.rotate(side * paddle); fill(c, '#5f8f6a', p => p.ellipse(side * -3, 4, 3, 7, side * .5, 0, TAU)); c.restore(); }
-  fill(c, '#7aa57a', p => p.ellipse(-11, -1, 5, 4.5, 0, 0, TAU));
-  fill(c, '#5a7a52', p => p.ellipse(0, 0, 10, 7, 0, 0, TAU));
-  fill(c, '#86a86a', p => p.ellipse(-1, -1.5, 7, 4.5, 0, 0, TAU));
-  cuteEye(c, -12.5, -2, 1.9, blink(t, seed), '#1d2b20');
-  c.restore();
 }
 function otters(c, x, water, t) {
   const bob = Math.sin(t * 1.6) * 2;

@@ -42,6 +42,11 @@ export function createJuice(reducedMotion) {
         if (!reducedMotion) { freeze = .06; shake = .25; shakePower = 4; squash = .45; }
         for (let i = 0; i < 7; i++) { const a = rand(0, Math.PI * 2); spawn('star', event.x, event.y - 20, Math.cos(a) * 130, Math.sin(a) * 130 - 40, rand(.5, .8), rand(4, 6.5), i % 2 ? '#ffd66e' : '#fff3c2'); }
       }
+      if (event.kind === 'bounce') {
+        // A springy boing off rock or buoy: a squash, a small wobble and a puff of foam, no stars.
+        if (!reducedMotion) { shake = .14; shakePower = 2.5; squash = .4; }
+        burst(event.x, event.y, 9, 150, '#e8fbff');
+      }
       if (event.kind === 'nearMiss') { if (!reducedMotion) { slow = .5; pulse = 1; } burst(event.x, event.y, 8, 140, '#ffffff'); }
       if (event.kind === 'catch') {
         // Little hearts float up from the beak; golden fish get stars and starry eyes.

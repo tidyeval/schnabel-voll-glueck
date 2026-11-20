@@ -72,11 +72,12 @@ test('a current speeds the journey only while Pip swims inside it', () => {
   const g = quiet(1); g.nextEncounter = 1e9; run(g, 1.4, true);
   const base = paceAt(g.elapsed + g.time).speed;
   g.items.push({ kind: 'current', x: g.player.x - 20, y: g.player.y, length: 2000, entered: false });
-  const events = run(g, 1, true, game => { game.items[0].y = game.player.y; game.player.breath = WORLD.breath; });
+  const events = run(g, 2, true, game => { game.items[0].y = game.player.y; game.player.breath = WORLD.breath; });
   assert.equal(events.filter(e => e.kind === 'current').length, 1);
   assert.ok(g.speed > base * 1.3, `${g.speed} vs ${base}`);
-  g.items[0].y = g.player.y + 300; run(g, 1.2, true, game => { game.player.breath = WORLD.breath; });
-  assert.ok(Math.abs(g.speed - paceAt(g.elapsed + g.time).speed) < .5);
+  // Out of the current Pip settles back to the pace, without a jump.
+  g.items[0].y = g.player.y + 300; run(g, 3.5, true, game => { game.player.breath = WORLD.breath; });
+  assert.ok(Math.abs(g.speed - paceAt(g.elapsed + g.time).speed) < 3);
 });
 
 test('every run rolls its own set pieces, always on safe waves and never overlapping', () => {

@@ -1,5 +1,4 @@
-import { movePlayerBody, syncPlayerBody } from './physics.js';
-import { Matter, polygonBody } from '@tidyeval/game-platform/matter';
+import { grow, movePlayerSolid, shape, syncPlayerBody, touches } from './physics.js';
 import { STAGES } from './stages.js';
 
 /**
@@ -25,7 +24,7 @@ import { STAGES } from './stages.js';
  * Events are returned in simulation order; presentation consumers only read state.
  * Position/payload fields are present only when relevant to that event.
  * @typedef {object} GameEvent
- * @property {'end'|'delivery'|'rare'|'show'|'airWarning'|'splash'|'breach'|'islandWarning'|'reefWarning'|'sardine'|'feast'|'current'|'warning'|'netSplash'|'outsmart'|'airBonus'|'fishLeap'|'catch'|'airCatch'|'frenzy'|'mission'|'nearMiss'|'kick'|'hurt'|'trick'} kind
+ * @property {'end'|'delivery'|'bounce'|'rare'|'show'|'airWarning'|'splash'|'breach'|'islandWarning'|'reefWarning'|'sardine'|'feast'|'current'|'warning'|'netSplash'|'outsmart'|'airBonus'|'fishLeap'|'catch'|'airCatch'|'frenzy'|'mission'|'nearMiss'|'kick'|'hurt'|'trick'} kind
  * @property {number} [x]
  * @property {number} [y]
  * @property {string} [name]
@@ -65,16 +64,12 @@ export function netShape(boat) {
   return { phase, x, y, width, depth, points: [[-.82,0],[.82,0],[1,.28],[.85,.8],[.4,1],[-.4,1],[-.85,.8],[-1,.28]].map(([dx, dy]) => ({ x: x + dx * width, y: y + dy * depth })) };
 }
 
-function hitsPolygon(x, y, points) {
-  if (x < Math.min(...points.map(p => p.x)) - 18 || x > Math.max(...points.map(p => p.x)) + 18
-    || y < Math.min(...points.map(p => p.y)) - 18 || y > Math.max(...points.map(p => p.y)) + 18) return false;
-  const probe = Matter.Bodies.polygon(x, y, 64, 18, { isSensor: true });
-  const polygon = polygonBody(points, { isStatic: true, isSensor: true });
-  return Matter.Query.collides(probe, [polygon]).length > 0;
-}
+// Pip's body for solid contacts: a circle around the centre, lifted slightly for surface objects.
+const pipBody = (player, lift = 0) => shape.circle(player.x, player.y - lift, 18);
+const pipPoint = player => shape.point(player.x, player.y);
 
 export function hitsNet(player, net) {
-  return net ? hitsPolygon(player.x, player.y - 8, net.points) : false;
+  return net ? touches(pipBody(player, 8), shape.polygon(net.points)) : false;
 }
 
 // One trick attempt per breach; a third quick press upgrades the running spin.
@@ -91,16 +86,15 @@ export function press(game) {
   if (p.taps === 2) { p.turns = 1; p.spin = 0; p.trickUsed = true; }
 }
 
+// Hull and fisherman, matching the visible drawing rather than its center only.
+const hullShape = boat => shape.box(boat.x - 77, WORLD.water - 17, boat.x + 77, WORLD.water + 28);
+const fisherShape = boat => shape.box(boat.x - 30, WORLD.water - 100, boat.x + 25, WORLD.water - 17);
 export function hitsBoat(player, boat) {
-  const x = player.x, y = player.y - 8, radius = 18;
-  // Hull and fisherman, matching the visible drawing rather than its center only.
-  return [[-77, 77, -17, 28], [-30, 25, -100, -17]].some(([left, right, top, bottom]) =>
-    Math.hypot(x - clamp(x, boat.x + left, boat.x + right), y - clamp(y, WORLD.water + top, WORLD.water + bottom)) < radius);
+  return touches(pipBody(player, 8), hullShape(boat)) || hitsFisher(player, boat);
 }
 
 export function hitsFisher(player, boat) {
-  const x = player.x, y = player.y - 8, radius = 18;
-  return Math.hypot(x - clamp(x, boat.x - 30, boat.x + 25), y - clamp(y, WORLD.water - 100, WORLD.water - 17)) < radius;
+  return touches(pipBody(player, 8), fisherShape(boat));
 }
 
 // Solid scenery. A mangrove's canopy and root curtain block the sky lane, so Pip dives under it.
@@ -133,7 +127,7 @@ export function terrainSafeY(items, x, y, halfHeight = 32, ahead = 150) {
   return clamp(y, a, b);
 }
 export function hitsTerrain(player, item) {
-  return terrainBlocks(item).some(b => hitsPolygon(player.x, player.y, b.points));
+  return terrainBlocks(item).some(b => touches(pipBody(player), shape.polygon(b.points)));
 }
 
 // One journey: more speed and less space as active play time accumulates.
@@ -171,7 +165,7 @@ export function rollSetPieces(stage, random) {
 // Every run holds one special moment per stage, a little wonder at a random point.
 export const RARE = { chance: 1 };
 export function rollRare(stage, random) {
-  if (random() >= RARE.chance) return null;
+  if (random() >= RARE.chance || !STAGES[stage].rareMoment) return null;
   return { name: STAGES[stage].rareMoment, wave: 2 + Math.floor(random() * (STAGES[stage].encounters.length - 4)) };
 }
 // Background residents and small character moments, scattered differently every run.
@@ -191,17 +185,54 @@ export function sardinePositions(ball, time) {
   });
 }
 export const currentSpan = item => ({ left: item.x, right: item.x + item.length, top: item.y - 46, bottom: item.y + 46 });
-function hazardGap(item, p) {
-  const dx = Math.abs(item.x - p.x), dy = Math.abs(item.y - p.y);
-  if (item.kind === 'shark') return p.wet ? Math.max(dx - 58, dy - 34) : Infinity;
-  if (item.kind === 'gull') return item.kicked ? Infinity : Math.max(dx - 36, dy - 30);
-  if (item.kind === 'jelly') return Math.max(dx - 35, item.y - 35 - p.y, p.y - (item.y + 20 + item.phase * 65));
-  if (item.kind === 'puffer') return item.phase === 'puffed' ? Math.hypot(dx, dy) - pufferRadius(item) - 18 : Infinity;
-  return Infinity;
+// Where Pip's centre counts as touching each moving hazard. Terrain and boats use Pip's body instead.
+export function hazardShape(item) {
+  const around = (w, h) => shape.box(item.x - w, item.y - h, item.x + w, item.y + h);
+  switch (item.kind) {
+    case 'shark': return around(58, 34);
+    case 'diver': return around(45, 30);
+    case 'gull': return around(36, 30);
+    case 'harpoon': return shape.circle(item.x, item.y, 25);
+    case 'jelly': return shape.box(item.x - 35, item.y - 35, item.x + 35, item.y + 20 + item.phase * 65);
+    case 'surfer': return shape.box(item.x - 65, WORLD.water - 90, item.x + 65, WORLD.water + 30);
+    case 'driftwood': return shape.box(item.x - 65, WORLD.water - 30, item.x + 65, WORLD.water + 30);
+    case 'puffer': return item.phase === 'puffed' ? shape.circle(item.x, item.y, pufferRadius(item) + 18) : null;
+    default: return null;
+  }
+}
+// Hazards that reward a close pass; the zone is the hazard shape plus the near-miss margin.
+function nearMissZone(item, p) {
+  const counts = item.kind === 'shark' ? p.wet : item.kind === 'gull' ? !item.kicked : item.kind === 'jelly' || item.kind === 'puffer';
+  return counts ? grow(hazardShape(item), NEAR_MISS.margin) : null;
 }
 export const LEAP = { from: WORLD.water + 40, height: 125, duration: 1.1, at: 430 };
 export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 0, 1) * Math.PI) * LEAP.height; }
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2 };
+/*
+ * Matter play: Pip has momentum and the camera follows him.
+ * Terrain is solid: a bump bounces Pip back and costs speed instead of ending the run.
+ * Currents and whirlpools are forces on Pip (through Matter) and on the fish.
+ */
+export const MOMENTUM = { recover: 1.4 };
+export const FLOW = { current: 110, hold: 4, whirlRadius: 170, pull: 900, swirl: 500, fishDrag: 1.6 };
+export function flowAt(game, x, y) {
+  let ax = 0, ay = 0;
+  for (const item of game.items) {
+    if (item.kind === 'current') {
+      const span = currentSpan(item);
+      if (touches(shape.point(x, y), shape.box(span.left, span.top, span.right, span.bottom))) { ax += FLOW.current; ay += (item.y - y) * FLOW.hold; }
+    } else if (item.kind === 'whirlpool') {
+      const dx = item.x - x, dy = item.y - y, d = Math.hypot(dx, dy);
+      if (d > 1 && d < FLOW.whirlRadius) {
+        const k = 1 - d / FLOW.whirlRadius;
+        ax += (dx * FLOW.pull - dy * FLOW.swirl) * k / d;
+        ay += (dy * FLOW.pull + dx * FLOW.swirl) * k / d;
+      }
+    }
+  }
+  return { x: ax, y: ay };
+}
+
 const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
 // Includes continued descent during reaction time and the turn from diving to rising.
@@ -218,7 +249,7 @@ export function pufferRadius(item) {
   return 22 + 23 * (item.phase === 'puffed' ? 1 : item.phase === 'inflate' ? clamp(1 - item.timer / .45, 0, 1) : item.phase === 'deflate' ? clamp(item.timer / .7, 0, 1) : 0);
 }
 export function hitsPuffer(player, item) {
-  return item.phase === 'puffed' && Math.hypot(player.x - item.x, player.y - item.y) < pufferRadius(item) + 18;
+  return item.kind === 'puffer' && touches(pipPoint(player), hazardShape(item));
 }
 function encounter(game) {
   const entry = STAGES[game.stage].encounters[game.wave];
@@ -300,6 +331,9 @@ function encounter(game) {
     const band = UNDERWATER_BANDS.find(candidate => !taken.includes(candidate.id)) || UNDERWATER_BANDS[1];
     game.items.push({ kind: 'current', x: 700, y: band.y, length: 560, entered: false });
     for (let i = 0; i < 8; i++) game.items.push({ kind: 'fish', x: 760 + i * 62, y: band.y + Math.sin(i * .9) * 14, golden: false, lane: 'alternate', route: wave, bonus: true });
+    // In the bay the current runs into a whirlpool, so riding it is a choice with a catch. Later
+    // stages follow the current with tighter waves, so there it stays a plain reward.
+    if (STAGES[game.stage].id === 'bay') game.items.push({ kind: 'whirlpool', x: 700 + 560 - 40, y: Math.min(660, band.y + 110), phase: 0, setPiece: true });
   } else if (piece) {
     game.show = { name: piece, start: game.time };
     game.pendingShow = piece;
@@ -343,7 +377,7 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
     pieces, decor, rare, rareShow: null,
     elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
-    player: { x: 118, y: 265, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
+    player: { x: 118, y: 265, vx: paceAt(elapsed).speed, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: [
       { kind: 'boat', x: 460, y: WORLD.water, cast: -1, hit: false, look: 0 },
       { kind: 'gull', x: 640, y: 285, phase: 0 },
@@ -370,11 +404,10 @@ export function step(game, dt, holding) {
   if (game.feeding > 0 || game.settling > 0) return advanceNest(game, dt);
   game.time += dt;
   const waitingNest = game.items.find(item => item.kind === 'nest' && item.final && item.x <= p.x + 55);
-  game.speed = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed * (1 + .35 * game.boost);
+  game.cruise = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed;
   if (game.pendingRare) { events.push({ kind: 'rare', name: game.pendingRare }); game.pendingRare = null; }
   if (game.pendingShow) { events.push({ kind: 'show', name: game.pendingShow }); game.pendingShow = null; }
   game.frenzy = Math.max(0, game.frenzy - dt);
-  game.distance += game.speed * dt;
   p.hurt = Math.max(0, (p.hurt || 0) - dt);
   // Check before encounters/nest arrival: coasting cannot bypass exhaustion.
   const energyDrain = p.wet ? ENERGY.drain : ENERGY.flightDrain;
@@ -418,6 +451,17 @@ function advanceNest(game, dt) {
   }
 }
 
+function moveBody(game, dt, events) {
+  const p = game.player;
+  // Pip swims back up to cruising speed; arriving at the final nest stops him at once.
+  p.vx = game.cruise ? p.vx + (game.cruise - p.vx) * (1 - Math.exp(-dt * MOMENTUM.recover)) : 0;
+  const wet = p.wet, terrain = game.items.filter(item => TERRAIN.includes(item.kind)).map(item => ({ item, blocks: terrainBlocks(item) }));
+  const result = movePlayerSolid(game, dt, p.vx, p.vy, terrain, (x, y) => wet ? flowAt(game, x, y) : { x: 0, y: 0 });
+  game.distance += result.moved; game.speed = dt ? result.moved / dt : 0;
+  p.y = result.y; p.vx = result.vx; p.vy = result.vy;
+  if (result.bumped && !p.bump) { p.bump = .6; events.push({ kind: 'bounce', x: result.bumped.x, y: result.bumped.y }); }
+}
+
 function movePlayer(game, dt, holding, previousAir, events) {
   const p = game.player;
   const weight = game.cargo / WORLD.capacity;
@@ -425,14 +469,14 @@ function movePlayer(game, dt, holding, previousAir, events) {
   if (p.jump && !p.wet && !holding) {
     // A deep dive launches Pip ballistically above his usual gliding height.
     p.vy += JUMP.gravity * dt;
-    movePlayerBody(game, dt, p.vy);
+    moveBody(game, dt, events);
     if (p.y < JUMP.ceiling) { p.y = JUMP.ceiling; p.vy = Math.max(0, p.vy); }
     if (p.y >= 265 && p.vy > 0) { p.y = 265; p.vy = 0; p.jump = false; }
     else if (p.y > 265 && p.vy >= -100) p.jump = false;
   } else {
     p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
     const ceiling = Math.min(265, p.y);
-    movePlayerBody(game, dt, p.vy);
+    moveBody(game, dt, events);
     p.y = clamp(p.y, ceiling, 710);
     if (p.y >= 265) p.jump = false;
     if (p.y === 265 || p.y === 710) p.vy = 0;
@@ -536,6 +580,13 @@ function updateBoat(game, item, dt, events) {
 
 function updateFish(game, item, dt, beak, events) {
   const p = game.player;
+  if (item.leap === undefined) {
+    // Fish drift with the water; the drag lets them settle back once the flow lets go.
+    const flow = flowAt(game, item.x, item.y), drag = FLOW.fishDrag;
+    item.drift = { x: (item.drift?.x || 0) + (flow.x - drag * (item.drift?.x || 0)) * dt, y: (item.drift?.y || 0) + (flow.y - drag * (item.drift?.y || 0)) * dt };
+    item.x += item.drift.x * dt; item.y += item.drift.y * dt;
+    if (item.homeY !== undefined) item.homeY += item.drift.y * dt;
+  }
   if (game.stage === 0 && !item.golden && !item.calm && item.leap === undefined) {
     item.homeY ??= item.y;
     const gap = Math.hypot(item.x - p.x, item.y - p.y);
@@ -556,7 +607,7 @@ function updateFish(game, item, dt, beak, events) {
       if (item.leap >= LEAP.duration) events.push({ kind: 'fishLeap', x: item.x, y: WORLD.water });
     }
   }
-  if (Math.hypot((item.x - beak.x) / 1.15, item.y - beak.y) < 32) {
+  if (touches(shape.point(beak.x, beak.y), shape.ellipse(item.x, item.y, 32 * 1.15, 32))) {
     item.caught = true;
     game.fish++; game.cargo = Math.min(WORLD.capacity, game.cargo + 1); game.combo++; if (p.wet) game.diveFish++;
     game.comboTime = 8.5; p.gulp = .42;
@@ -580,11 +631,13 @@ function updateFish(game, item, dt, beak, events) {
 
 function resolveHazard(game, item, events) {
   const p = game.player;
+  // Terrain is solid in Matter (see moveBody); touching it bounces instead of hurting.
+  if (TERRAIN.includes(item.kind)) return;
   if (!item.hit && !item.nearDone) {
-    item.near = Math.min(item.near ?? Infinity, hazardGap(item, p));
+    if (!item.near && touches(pipPoint(p), nearMissZone(item, p))) item.near = true;
     if (item.x < p.x - 70) {
       item.nearDone = true;
-      if (item.near < NEAR_MISS.margin && !p.hurt) {
+      if (item.near && !p.hurt) {
         game.score += NEAR_MISS.points; game.nearMisses++;
         events.push({ kind: 'nearMiss', x: p.x, y: p.y, points: NEAR_MISS.points });
       }
@@ -592,18 +645,9 @@ function resolveHazard(game, item, events) {
   }
   const netHit = item.kind === 'boat' && hitsNet(p, netShape(item));
   const fisherHit = item.kind === 'boat' && hitsFisher(p, item);
-  const hit = item.kind === 'shark'
-    ? Math.abs(item.x - p.x) < 58 && Math.abs(item.y - p.y) < 34
-    : TERRAIN.includes(item.kind) ? hitsTerrain(p, item)
-    : item.kind === 'puffer' ? hitsPuffer(p, item)
-    : item.kind === 'diver' ? Math.abs(item.x - p.x) < 45 && Math.abs(item.y - p.y) < 30
-    : item.kind === 'harpoon' ? Math.hypot(item.x - p.x, item.y - p.y) < 25
-    : item.kind === 'surfer' ? Math.abs(item.x - p.x) < 65 && p.y > WORLD.water - 90 && p.y < WORLD.water + 30
-    : item.kind === 'gull' ? Math.abs(item.x - p.x) < 36 && Math.abs(item.y - p.y) < 30
-    : item.kind === 'jelly' ? Math.abs(item.x - p.x) < 35 && p.y > item.y - 35 && p.y < item.y + 20 + item.phase * 65
-    : item.kind === 'driftwood' ? Math.abs(item.x - p.x) < 65 && Math.abs(p.y - WORLD.water) < 30
-    : hitsBoat(p, item) || netHit;
-  const fatalHit = item.kind === 'shark' || item.kind === 'reef' || item.kind === 'diver' || fisherHit;
+  const hit = item.kind === 'boat' ? hitsBoat(p, item) || netHit
+    : touches(pipPoint(p), hazardShape(item));
+  const fatalHit = item.kind === 'shark' || item.kind === 'diver' || fisherHit;
   if (hit && item.kind === 'gull' && !p.wet && p.turns) {
     item.kicked = true; item.reaction = 1; item.reactionKind = 'kicked';
     p.kick = .45;
@@ -646,7 +690,7 @@ function advanceWorld(game, dt, events) {
     }
     if (item.kind === 'nest') {
       item.celebration = Math.max(0, item.celebration - dt);
-      if (!item.served && !p.wet && (item.final || game.cargo > 0) && Math.abs(item.x - p.x) < 65) {
+      if (!item.served && !p.wet && (item.final || game.cargo > 0) && touches(pipPoint(p), shape.box(item.x - 65, 0, item.x + 65, WORLD.height))) {
         item.served = true; item.celebration = 3; game.feeding = 1.8; game.feedingTotal = game.cargo;
         p.y = 285; p.vy = 0; p.spin = 0; p.turns = 0; p.feedX = item.x - 55;
         return events;
@@ -654,10 +698,10 @@ function advanceWorld(game, dt, events) {
       continue;
     }
     if (item.kind === 'baitball') {
-      const near = Math.hypot(item.x - p.x, item.y - p.y) < 120;
+      const near = touches(pipPoint(p), shape.circle(item.x, item.y, 120));
       item.scatter = clamp(item.scatter + (near ? dt * 2.5 : -dt * .6), 0, 1);
       sardinePositions(item, game.time).forEach((sardine, i) => {
-        if (sardine.eaten || Math.hypot(sardine.x - beak.x, sardine.y - beak.y) > 26) return;
+        if (sardine.eaten || !touches(shape.point(beak.x, beak.y), shape.circle(sardine.x, sardine.y, 26))) return;
         item.eaten[i] = true; item.left--;
         game.score += 5; game.energy = Math.min(100, game.energy + 1); game.comboTime = Math.max(game.comboTime, 3); p.gulp = .3;
         events.push({ kind: 'sardine', x: sardine.x, y: sardine.y, points: 5 });
@@ -667,7 +711,7 @@ function advanceWorld(game, dt, events) {
     }
     if (item.kind === 'current') {
       const span = currentSpan(item);
-      if (p.wet && p.x > span.left && p.x < span.right && p.y > span.top && p.y < span.bottom) {
+      if (p.wet && touches(pipPoint(p), shape.box(span.left, span.top, span.right, span.bottom))) {
         inCurrent = true;
         if (!item.entered) { item.entered = true; events.push({ kind: 'current', x: p.x, y: p.y }); }
       }
@@ -680,7 +724,7 @@ function advanceWorld(game, dt, events) {
       item.baseY = item.x > 520 ? turtleSafe : item.baseY + clamp(turtleSafe - item.baseY, -200 * dt, 200 * dt);
       item.y = item.baseY + Math.sin(game.time * 1.8) * 10;
       item.reaction = Math.max(0, (item.reaction || 0) - dt);
-      if (!item.touched && Math.hypot((item.x - p.x) / 1.6, item.y - p.y) < 36) {
+      if (!item.touched && touches(pipPoint(p), shape.ellipse(item.x, item.y, 36 * 1.6, 36))) {
         item.touched = true; item.reaction = .8; p.bump = .6;
       }
       continue;
@@ -705,7 +749,7 @@ function advanceWorld(game, dt, events) {
     if (item.kind === 'harpoon') {
       item.x += item.vx * dt; item.y += item.vy * dt; item.life -= dt;
       if (item.life <= 0 || item.y < WORLD.water + 18 || item.y > 760) { item.caught = true; continue; }
-      const wood = game.items.find(other => other.kind === 'driftwood' && Math.abs(other.x - item.x) < 55 && Math.abs(other.y - item.y) < 25);
+      const wood = game.items.find(other => other.kind === 'driftwood' && touches(shape.point(item.x, item.y), shape.box(other.x - 55, other.y - 25, other.x + 55, other.y + 25)));
       if (wood) { item.caught = true; events.push({ kind: 'netSplash', x: item.x, y: item.y }); continue; }
       if (item.x < p.x - 35 && !item.rewarded && !item.hit) { item.rewarded = true; game.score += 25; events.push({ kind: 'outsmart', points: 25, x: p.x, y: p.y }); }
     }
@@ -729,12 +773,10 @@ function advanceWorld(game, dt, events) {
       item.x -= 20 * dt; item.y = 285 + Math.sin(game.time * 2) * 18;
     }
     if (item.kind === 'jelly') item.phase = (Math.sin(game.time * 2) + 1) / 2;
-    if (item.kind === 'whirlpool') {
-      if (p.wet && Math.hypot(item.x - p.x, item.y - p.y) < 115) p.y = Math.min(710, p.y + 65 * dt);
-      continue;
-    }
+    // Whirlpools act through flowAt as forces; they have no contact rule.
+    if (item.kind === 'whirlpool') continue;
     if (item.kind === 'bubble') {
-      if (Math.hypot(item.x - p.x, item.y - p.y) < 35) {
+      if (touches(pipPoint(p), shape.circle(item.x, item.y, 35))) {
         item.caught = true; p.breath = Math.min(WORLD.breath, p.breath + 2);
         events.push({ kind: 'airBonus', x: item.x, y: item.y });
       }

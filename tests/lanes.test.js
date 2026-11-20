@@ -31,10 +31,10 @@ test('buoys require diving and buoy/coral narrows the route without closing it',
   for (const kind of ['buoy', 'coral']) {
     const item = {kind, x: 118};
     assert.equal(hitsTerrain({x: 118, y: 530}, item), false);
-    const g = createGame(); g.items = [item]; g.nextEncounter = Infinity;
+    const g = createGame(Math.random, 1); g.items = [{ ...item, x: 200 }]; g.nextEncounter = Infinity;
     g.player.y = kind === 'buoy' ? 360 : 650; g.player.wet = true;
-    step(g, .001, false);
-    assert.equal(g.endReason, kind);
+    const events = []; for (let i = 0; i < 30; i++) events.push(...step(g, 1 / 60, kind === 'coral'));
+    assert.equal(g.ended, false); assert.ok(events.some(e => e.kind === 'bounce'), `${kind} blocks with a bounce`);
   }
   for (const y of [265, 360, 440]) assert.ok(hitsTerrain({x: 118, y}, {kind: 'buoy', x: 118}));
   const g = createGame(() => .5, 3);

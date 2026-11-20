@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
-import { drawSky, drawWater, drawCaustics, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare } from './scenery.js';
+import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -403,6 +403,72 @@ function nestBase(c, x, water, stage, t) {
   }
 }
 /** @param {Readonly<import('./game.js').GameState>} game Simulation state; drawing must not mutate it. */
+// Rounded boulders inside the shared collision silhouette: smooth outline, stacked stones,
+// a mossy cap, swaying weed and a few small residents. Purely visual; collisions use the polygon.
+const hashOf = i => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+function rock(c, b, item, index, water, t, night) {
+  const pts = b.points, mid = (a, z) => ({ x: (a.x + z.x) / 2, y: (a.y + z.y) / 2 });
+  const outline = p => {
+    const start = mid(pts[pts.length - 1], pts[0]); p.moveTo(start.x, start.y);
+    pts.forEach((point, i) => { const next = mid(point, pts[(i + 1) % pts.length]); p.quadraticCurveTo(point.x, point.y, next.x, next.y); });
+    p.closePath();
+  };
+  const seed = item.kind === 'island' ? 3 : 7 + index * 5;
+  c.save(); c.lineJoin = 'round';
+  path(c, gradient(c, b.y, b.y + b.height, night ? '#6f9a92' : '#a3c3a4', night ? '#2e5560' : '#4d7f76'), outline);
+  c.beginPath(); outline(c); c.clip();
+  // Stacked round stones, each with a lit top and a soft shadow.
+  const rows = Math.max(1, Math.round(b.height / 60)), rowH = b.height / rows;
+  for (let r = 0; r < rows; r++) {
+    const cols = Math.max(1, Math.round(b.width / (50 + hashOf(seed + r) * 30))), colW = b.width / cols, shift = (hashOf(seed * 3 + r) - .5) * colW;
+    for (let k = -1; k <= cols; k++) {
+      const h = hashOf(seed * 31 + r * 7 + k), h2 = hashOf(h * 99), cx = b.x + shift + (k + .5) * colW + (h - .5) * 22, cy = b.y + (r + .55) * rowH + (h2 - .5) * 14;
+      const rx = colW * (.42 + h * .3), ry = rowH * (.42 + h2 * .25);
+      const tone = ['#9dbf9f', '#8db497', '#a9c7a2', '#86ad95'][Math.floor(h * 4)];
+      ellipse(c, cx, cy + 3, rx, ry, night ? '#24485233' : '#3f6f6a40');
+      ellipse(c, cx, cy, rx * .94, ry * .9, night ? '#5f8d88' : tone);
+      ellipse(c, cx - rx * .25, cy - ry * .38, rx * .45, ry * .26, night ? '#86aaa333' : '#e6eccb55', -.2);
+    }
+  }
+  // Depth shading: stones darken where light no longer reaches.
+  c.fillStyle = gradient(c, Math.max(b.y, water), b.y + b.height, '#1f4d5800', night ? '#0f2c4066' : '#24586060'); c.fillRect(b.x - 5, Math.max(b.y, water), b.width + 10, b.height);
+  c.restore();
+  path(c, null, outline, night ? '#2c5260' : '#3e6d68', 2.5);
+  // Mossy cap with a sandy rim; underwater caps get pink weed instead of grass.
+  const top = b.y, wet = top > water;
+  for (let i = 0; i < Math.round(b.width / 16); i++) {
+    const x = b.x + 8 + i * (b.width - 16) / Math.max(1, Math.round(b.width / 16) - 1);
+    ellipse(c, x, top + 5 + Math.sin(i * 1.7) * 2, 11, 6, wet ? (i % 2 ? '#8fbf8a' : '#7cae86') : i % 2 ? '#9ccc8c' : '#86bb85');
+  }
+  if (wet) for (let i = 0; i < 4; i++) {
+    const x = b.x + b.width * (.18 + i * .22), sway = Math.sin(t * 1.6 + i + index) * 5;
+    path(c, null, p => { p.moveTo(x, top + 2); p.quadraticCurveTo(x + sway, top - 14, x + sway * 1.6 - 2, top - 26 - (i % 2) * 8); }, i % 2 ? '#e79bb0' : '#83c08f', 4);
+  }
+  // Weed trailing from the sides below the surface.
+  for (const side of [0, 1]) {
+    const x = side ? b.x + b.width - 2 : b.x + 2, from = Math.max(top + 30, water + 20);
+    for (let k = 0; k < 2; k++) {
+      const y0 = from + k * 70 + hashOf(seed + side * 3 + k) * 30;
+      if (y0 > b.y + b.height - 40) continue;
+      const swing = Math.sin(t * 1.3 + k + side * 2 + index) * 6, dir = side ? 1 : -1;
+      path(c, null, p => { p.moveTo(x, y0); p.quadraticCurveTo(x + dir * (10 + swing), y0 + 18, x + dir * (4 + swing * 1.4), y0 + 40); }, '#6fae86', 4);
+      ellipse(c, x + dir * (8 + swing * .9), y0 + 22, 5, 2.6, '#86c19a', dir * .6);
+    }
+  }
+  // Small residents: a starfish, a shell, barnacles and, on big rocks, a peeking crab.
+  const below = y => Math.max(y, water + 30);
+  const sx = b.x + b.width * (.25 + hashOf(seed) * .5), sy = below(b.y + b.height * .45);
+  if (sy < b.y + b.height - 25) star(c, sx, sy, 9, night ? '#ff9fb8' : '#ffad8f', t * .2 + seed);
+  if (sy < b.y + b.height - 25) { ellipse(c, sx - 2, sy - 2, 1.5, 1.5, '#5a3b3b'); ellipse(c, sx + 2.5, sy - 2, 1.5, 1.5, '#5a3b3b'); }
+  for (let i = 0; i < 5; i++) { const bx = b.x + 10 + hashOf(seed + i * 3) * (b.width - 20), by = below(b.y + 20 + hashOf(seed + i * 5) * (b.height - 40)); if (by < b.y + b.height - 12) { ellipse(c, bx, by, 3.2, 2.6, '#e8e3cf'); ellipse(c, bx, by - .5, 1.2, 1, '#7d8f86'); } }
+  if (b.height > 200) {
+    const cx = b.x + b.width * .7, cy = below(b.y + b.height * .62), peek = Math.max(0, Math.sin(t * .8 + seed)) * 5;
+    ellipse(c, cx, cy + 6, 16, 9, night ? '#1d3d47' : '#2f5b58');
+    ellipse(c, cx, cy + 4 - peek, 10, 6, '#f08a70');
+    for (const dx of [-4, 4]) { path(c, null, p => { p.moveTo(cx + dx, cy - peek); p.lineTo(cx + dx, cy - 6 - peek); }, '#d9705c', 2); cuteEye(c, cx + dx, cy - 8 - peek, 2.6, blink(t, seed + dx), '#2b3b3b'); }
+  }
+}
+
 export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false, fx = null) {
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;
@@ -413,15 +479,28 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   c.save();
   if (fx && (fx.shakeX || fx.shakeY)) { c.translate(240 + fx.shakeX, 425 + fx.shakeY); c.scale(1.03, 1.03); c.translate(-240, -425); }
   drawSky(c, stage, water, d, motion, menu ? null : game, reducedMotion, () => {
-    cloud(c, 68 - d * .025 % 160, 92, .95, .55); cloud(c, 406 - d * .015 % 120, 125, .65, .55); cloud(c, 240 - d * .02 % 100, water - 122, .45, .55);
+    // Clouds drift on the wind as well as with travel; the far ones are smaller and fainter.
+    const drift = (x, speed, wind, span) => ((x - d * speed - motion * wind) % span + span) % span - 90;
+    for (let i = 0; i < 3; i++) cloud(c, drift(60 + i * 190, .008, 2, 660), 150 + i * 23, .32 + i * .05, .4);
+    cloud(c, drift(160, .025, 5, 640), 92, .95, .55); cloud(c, drift(500, .015, 4, 640), 125, .65, .55); cloud(c, drift(330, .02, 6, 640), water - 122, .45, .55);
     island(c, 24 - d * .055 % 780, water - 6, motion);
     island(c, 805 - d * .055 % 780, water - 6, motion);
     c.save(); c.translate(415, water - 1); c.scale(.5, .5); path(c, '#e5d3aa', p => { p.moveTo(-80, 0); p.quadraticCurveTo(-15, -31, 69, 0); }); palm(c, 0, -6, .8, motion); palm(c, -23, -5, .53, motion); c.restore();
     if (STAGES[stage].id === 'harbor') {
       for (let i = 0; i < 6; i++) {
         const x = ((i * 115 - d * .12) % 760 + 760) % 760 - 140;
-        path(c, '#89aaa0', p => { p.rect(x, water - 50, 65, 43); p.moveTo(x - 5, water - 50); p.lineTo(x + 30, water - 74); p.lineTo(x + 70, water - 50); });
-        c.fillStyle = '#d9dac0'; c.fillRect(x + 12, water - 38, 13, 17); c.fillRect(x + 42, water - 38, 13, 17);
+        // Pastel harbour houses with bright roofs, round windows and bunting between them.
+        const wall = ['#f2d2b6', '#c7e3d9', '#f5e4ad', '#ecc4cf', '#cfd9ee', '#e6d7bf'][i], roof = ['#d9806a', '#5fa0a6', '#e5a257', '#b77a98', '#6f93c4', '#cf7a62'][i];
+        path(c, wall, p => p.roundRect(x, water - 50, 65, 47, [3, 3, 0, 0]), '#9a8f7c', 1);
+        path(c, roof, p => { p.moveTo(x - 7, water - 48); p.quadraticCurveTo(x + 30, water - 82, x + 72, water - 48); p.closePath(); }, '#8c6a5c', 1);
+        c.fillStyle = '#b9a58f'; c.fillRect(x + 48, water - 76, 7, 14);
+        for (const wx of [17, 47]) { ellipse(c, x + wx, water - 30, 7, 7, '#ffe6a6'); path(c, null, p => { p.moveTo(x + wx - 7, water - 30); p.lineTo(x + wx + 7, water - 30); p.moveTo(x + wx, water - 37); p.lineTo(x + wx, water - 23); }, '#a58c74', 1); }
+        path(c, roof, p => p.roundRect(x + 27, water - 22, 11, 19, [5, 5, 0, 0]));
+        const nx = ((((i + 1) * 115 - d * .12) % 760 + 760) % 760 - 140);
+        if (nx > x && nx - x < 200) {
+          path(c, null, p => { p.moveTo(x + 65, water - 46); p.quadraticCurveTo((x + nx) / 2 + 32, water - 32, nx, water - 46); }, '#a58c74', 1);
+          for (let k = 1; k < 5; k++) { const u = k / 5, fx = x + 65 + (nx - x - 65) * u, fy = water - 46 + Math.sin(u * Math.PI) * 9; path(c, ['#ff9fb2', '#ffd36e', '#7fc6c0', '#c9a3ff'][k % 4], p => { p.moveTo(fx - 4, fy); p.lineTo(fx + 4, fy); p.lineTo(fx, fy + 8); p.closePath(); }); }
+        }
         path(c, null, p => { p.moveTo(x, water - 3); p.lineTo(x + 92, water - 3); p.moveTo(x + 8, water - 3); p.lineTo(x + 8, water + 5); }, '#8c8970', 5);
         if (!menu && game.decor?.residents.includes('cat') && i === game.decor.catHouse) roofCat(c, x + 50, water - 54, motion);
       }
@@ -450,6 +529,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   // Sandy seabed and gently moving sea grass frame the action.
   path(c, theme.seabed, p => { p.moveTo(-30, 833); p.bezierCurveTo(120, 807, 172, 852, 282, 832); p.quadraticCurveTo(398, 803, 510, 825); p.lineTo(510, 880); p.lineTo(-30, 880); });
   drawCaustics(c, stage, d, motion, reducedMotion);
+  drawSeabedLife(c, stage, d, motion, menu ? null : game, reducedMotion);
   for (let side = 0; side < 2; side++) {
     for (let i = 0; i < 8; i++) { const x = side ? 475 - i * 9 : i * 9 - 15; const h = 37 + (i * 31) % 112;
       path(c, theme.grass[i % 2 ? 0 : 1], p => { p.moveTo(x - 4, 850); p.bezierCurveTo(x - 18, 800, x + Math.sin(motion + i) * 12, 850 - h, x + 12, 840 - h); p.bezierCurveTo(x + 2, 820 - h, x + 20, 805, x + 5, 850); }, '#386f63', .7);
@@ -521,22 +601,10 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         }
       }
       if (['island', 'reef'].includes(item.kind)) {
-        for (const b of terrainBlocks(item)) {
-          const outline = p => { b.points.forEach((point, i) => i ? p.lineTo(point.x, point.y) : p.moveTo(point.x, point.y)); p.closePath(); };
-          c.save(); c.lineJoin = 'round';
-          path(c, gradient(c, b.y, b.y + b.height, '#8eaf96', '#477772'), outline, '#3e6d68', 2);
-          c.beginPath(); outline(c); c.clip();
-          path(c, '#e4cf9f', p => { p.moveTo(b.x, b.y + 8); p.quadraticCurveTo(b.x + b.width * .25, b.y - 1, b.x + b.width * .52, b.y + 7); p.quadraticCurveTo(b.x + b.width * .78, b.y - 1, b.x + b.width, b.y + 8); p.lineTo(b.x + b.width, b.y + 19); p.quadraticCurveTo(b.x + b.width * .5, b.y + 11, b.x, b.y + 20); p.closePath(); }, '#bfa877', 1);
-          const layers = Math.max(1, Math.min(5, Math.ceil(b.height / 95)));
-          for (let i = 0; i < layers; i++) {
-            const y = b.y + 32 + i * Math.max(1, (b.height - 64) / Math.max(1, layers - 1));
-            path(c, i % 2 ? '#70988655' : '#acc09a44', p => p.ellipse(b.x + b.width * (.43 + (i % 2) * .13), y, b.width * .43, Math.min(34, b.height * .34), i % 2 ? -.12 : .15, 0, TAU), '#3d6d6755', 1.3);
-            path(c, null, p => { p.moveTo(b.x + b.width * .25, y - 3); p.quadraticCurveTo(b.x + b.width * .43, y + 8, b.x + b.width * .57, y + 2); }, '#d0d0a344', 1.2);
-          }
-          c.restore();
-        }
+        for (const [index, b] of terrainBlocks(item).entries()) rock(c, b, item, index, water, motion, night);
         if (item.kind === 'island') {
           for (let i = 0; i < 5; i++) ellipse(c, item.x - 45 + i * 22, 329 + Math.sin(i * 2) * 3, 18, 8, i % 2 ? '#79aa80' : '#8db686');
+          for (const [dx, colour] of [[-38, '#ffd3e0'], [-6, '#fff3b0'], [30, '#ffd3e0']]) { ellipse(c, item.x + dx, 322, 3.4, 3.4, colour); ellipse(c, item.x + dx, 322, 1.3, 1.3, '#f2b35c'); }
           ellipse(c, item.x + 22, 323, 8, 4, '#f0ccb0'); ellipse(c, item.x + 23, 321, 2, 2, '#f7e7c8');
         } else {
           for (let i = 0; i < 5; i++) path(c, null, p => { p.moveTo(item.x - 60 + i * 27, 610); p.quadraticCurveTo(item.x - 70 + i * 27 + Math.sin(motion + i) * 4, 638, item.x - 55 + i * 27, 657); }, i % 2 ? '#d49a91' : '#e0af95', 5);
@@ -572,19 +640,25 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
           c.save(); c.setLineDash(item.phase === 'aim' ? [5, 8] : []);
           path(c, null, p => { p.moveTo(item.x - 30, item.y); p.lineTo(item.aimX, item.aimY); }, item.phase === 'locked' ? '#ffd28a' : '#c2e8d277', 2); c.restore();
         }
+        // Chibi diver: round wetsuit, big mask with friendly eyes, little flippers.
         const kick = Math.sin(motion * 5) * 5;
-        ellipse(c, item.x + 8, item.y, 31, 16, gradient(c, item.y - 16, item.y + 16, '#557e89', '#355f70'));
-        path(c, '#e9bc62', p => { p.roundRect(item.x - 1, item.y - 21, 29, 11, 5); }, '#8a7448', 1);
-        for (let i = 0; i < 2; i++) path(c, i ? '#e3a255' : '#efb565', p => { p.moveTo(item.x + 29, item.y + i * 7); p.quadraticCurveTo(item.x + 48, item.y + i * 10, item.x + 64, item.y - 5 + i * 19 + kick * (i ? -1 : 1)); p.lineTo(item.x + 48, item.y + 13 + i * 8); p.closePath(); }, '#9d704d', 1);
-        ellipse(c, item.x - 23, item.y - 4, 15, 15, gradient(c, item.y - 19, item.y + 11, '#efc39f', '#d99d82'));
-        path(c, '#8bc8ca', p => p.roundRect(item.x - 39, item.y - 14, 25, 14, 5), '#294f60', 3);
-        path(c, null, p => { p.moveTo(item.x - 27, item.y - 14); p.lineTo(item.x - 27, item.y); }, '#d9f1e7aa', 1);
-        ellipse(c, item.x - 30, item.y - 8, 2, 3, '#31596a');
-        path(c, null, p => { p.moveTo(item.x - 18, item.y + 10); p.quadraticCurveTo(item.x - 35, item.y + 18, item.x - 49, item.y + 4); }, '#e3b78d', 5);
-        path(c, null, p => { p.moveTo(item.x - 53, item.y + 3); p.lineTo(item.x - 20, item.y + 3); }, '#405b61', 5);
-        path(c, null, p => { p.moveTo(item.x - 51, item.y - 1); p.lineTo(item.x - 58, item.y + 3); p.lineTo(item.x - 51, item.y + 7); }, '#d7d1a8', 1.5);
-        if (!reducedMotion) for (let i = 0; i < 2; i++) { const rise = (motion * 20 + i * 17) % 35; ellipse(c, item.x - 22 + i * 7, item.y - 20 - rise, 2 + i, 2 + i, '#d9f5e088'); }
-
+        c.lineCap = 'round';
+        for (let i = 0; i < 2; i++) path(c, i ? '#ff9f6b' : '#ffb27a', p => { p.moveTo(item.x + 22, item.y + i * 6); p.quadraticCurveTo(item.x + 38, item.y + i * 8, item.x + 50, item.y - 6 + i * 18 + kick * (i ? -1 : 1)); p.quadraticCurveTo(item.x + 44, item.y + 12 + i * 4, item.x + 30, item.y + 8 + i * 5); p.closePath(); }, '#c46f4f', 1);
+        ellipse(c, item.x + 6, item.y + 2, 24, 17, gradient(c, item.y - 16, item.y + 18, '#5f97a6', '#3d6d82'));
+        path(c, '#ffd36e', p => p.roundRect(item.x - 2, item.y - 20, 24, 10, 5), '#b58a3e', 1);
+        ellipse(c, item.x - 20, item.y - 4, 20, 19, '#f6cfaa');
+        path(c, '#3d6d82', p => p.ellipse(item.x - 20, item.y - 12, 21, 14, 0, Math.PI, TAU));
+        path(c, '#bfeef0cc', p => p.roundRect(item.x - 38, item.y - 13, 30, 17, 8), '#2f5c70', 3);
+        ellipse(c, item.x - 31, item.y - 9, 5, 2.4, '#ffffffaa', -.3);
+        for (const dx of [-30, -18]) cuteEye(c, item.x + dx, item.y - 4, 3.4, blink(motion, item.x * .002 + 6), '#2b4a55');
+        ellipse(c, item.x - 34, item.y + 7, 3.4, 2, '#ff9d9d88'); ellipse(c, item.x - 13, item.y + 7, 3.4, 2, '#ff9d9d88');
+        path(c, null, p => { p.moveTo(item.x - 26, item.y + 9); p.quadraticCurveTo(item.x - 23, item.y + 12, item.x - 20, item.y + 9); }, '#9a5a48', 1.4);
+        path(c, null, p => { p.moveTo(item.x - 4, item.y - 16); p.lineTo(item.x - 4, item.y - 30); p.quadraticCurveTo(item.x - 4, item.y - 35, item.x + 1, item.y - 35); }, '#ffd36e', 3.5);
+        path(c, null, p => { p.moveTo(item.x - 14, item.y + 12); p.quadraticCurveTo(item.x - 28, item.y + 18, item.x - 40, item.y + 6); }, '#f6cfaa', 5);
+        path(c, null, p => { p.moveTo(item.x - 50, item.y + 4); p.lineTo(item.x - 22, item.y + 4); }, '#5a6f75', 5);
+        path(c, null, p => { p.moveTo(item.x - 49, item.y); p.lineTo(item.x - 56, item.y + 4); p.lineTo(item.x - 49, item.y + 8); }, '#e8e1b8', 1.5);
+        if (!reducedMotion) for (let i = 0; i < 3; i++) { const rise = (motion * 22 + i * 13) % 40; ellipse(c, item.x + 1 + Math.sin(motion * 3 + i) * 2, item.y - 38 - rise, 1.6 + i * .7, 1.6 + i * .7, '#d9f5e0aa'); }
+        c.lineCap = 'butt';
       }
       if (item.kind === 'harpoon') {
         c.save(); c.translate(item.x, item.y); c.rotate(Math.atan2(item.vy, item.vx));
@@ -592,22 +666,28 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         path(c, '#d6c18e', p => { p.moveTo(4, -6); p.lineTo(14, 0); p.lineTo(4, 6); p.lineTo(8, 0); p.closePath(); }, '#725f4f', 1); c.restore();
       }
       if (item.kind === 'surfer') {
+        // Chibi surfer: big head, short limbs, rosy cheeks. The hit zone is unchanged.
         const bob = Math.sin(motion * 4) * 3, lean = Math.sin(motion * 2.2) * .05;
         const wave = !reducedMotion && item.reaction > 0 ? Math.sin(item.reaction * 18) * 15 : 0;
         path(c, null, p => { p.moveTo(item.x + 65, WORLD.water + 10); p.quadraticCurveTo(item.x + 18, WORLD.water - 22, item.x - 68, WORLD.water + 7); }, '#e8f6dfcc', 6);
-        ellipse(c, item.x, WORLD.water + bob, 50, 7, gradient(c, WORLD.water - 6, WORLD.water + 8, '#f5bc80', '#dc7f68'));
-        path(c, null, p => { p.moveTo(item.x - 36, WORLD.water + bob); p.quadraticCurveTo(item.x, WORLD.water + bob + 5, item.x + 38, WORLD.water + bob); }, '#fff0b999', 1.5);
-        c.save(); c.translate(item.x, WORLD.water + bob); c.scale(item.escaping ? -1 : 1, 1);
-        c.rotate(lean);
-        path(c, null, p => { p.moveTo(-20, -4); p.lineTo(-5, -28); p.lineTo(14, -4); }, '#dba77f', 9);
-        ellipse(c, -20, -3, 7, 3, '#f1c194'); ellipse(c, 14, -3, 7, 3, '#f1c194');
-        path(c, gradient(c, -59, -27, '#7eb0a7', '#527f7c'), p => { p.moveTo(-12, -27); p.lineTo(-14, -56); p.lineTo(8, -59); p.lineTo(14, -27); p.closePath(); }, '#456f6e', 1);
-        path(c, null, p => { p.moveTo(-10, -49); p.quadraticCurveTo(-23, -47, -36, -39 + wave); p.moveTo(7, -50); p.quadraticCurveTo(20, -56, 31, -61); }, '#edc39a', 7);
-        ellipse(c, -36, -39 + wave, 4, 4, '#edc39a'); ellipse(c, 31, -61, 4, 4, '#edc39a');
-        ellipse(c, -4, -71, 12, 13, '#edc39a');
-        path(c, '#8f5f49', p => { p.arc(-4, -75, 13, Math.PI, Math.PI * 2); p.quadraticCurveTo(5, -77, 9, -71); p.closePath(); });
-        ellipse(c, -9, -72, 2, 2.5, '#315852'); ellipse(c, -10, -73, .7, .8, '#fff8e3');
-        path(c, null, p => { p.moveTo(-12, -65); p.quadraticCurveTo(-6, -61, 0, -66); }, '#8f5f49', 1.3); c.restore();
+        ellipse(c, item.x, WORLD.water + bob, 50, 8, gradient(c, WORLD.water - 6, WORLD.water + 8, '#ffc48a', '#f08f78'));
+        path(c, null, p => { p.moveTo(item.x - 36, WORLD.water + bob - 1); p.quadraticCurveTo(item.x, WORLD.water + bob + 4, item.x + 38, WORLD.water + bob - 1); }, '#fff6cf', 2.5);
+        star(c, item.x + 22, WORLD.water + bob, 4, '#fff6cf');
+        c.save(); c.translate(item.x, WORLD.water + bob); c.scale(item.escaping ? -1 : 1, 1); c.rotate(lean);
+        c.lineCap = 'round';
+        path(c, null, p => { p.moveTo(-12, -6); p.lineTo(-6, -22); p.moveTo(10, -6); p.lineTo(5, -22); }, '#efc39a', 7);
+        ellipse(c, -13, -4, 6, 3, '#efc39a'); ellipse(c, 11, -4, 6, 3, '#efc39a');
+        path(c, '#7fc6c0', p => p.roundRect(-12, -42, 22, 22, 9), '#4f8f8a', 1.2);
+        path(c, '#ffd36e', p => { p.moveTo(-12, -30); p.lineTo(10, -30); p.lineTo(10, -25); p.lineTo(-12, -25); p.closePath(); });
+        path(c, null, p => { p.moveTo(-10, -37); p.quadraticCurveTo(-20, -34, -27, -27 + wave); p.moveTo(8, -37); p.quadraticCurveTo(17, -42, 24, -47); }, '#efc39a', 6);
+        ellipse(c, -27, -27 + wave, 4, 4, '#efc39a'); ellipse(c, 24, -47, 4, 4, '#efc39a');
+        ellipse(c, -1, -60, 19, 18, '#f4cba4');
+        path(c, '#8a5a3f', p => { p.ellipse(-1, -66, 20, 14, 0, Math.PI, TAU); p.quadraticCurveTo(14, -60, 17, -56); p.quadraticCurveTo(8, -66, -1, -63); p.quadraticCurveTo(-10, -66, -20, -60); p.closePath(); });
+        path(c, '#8a5a3f', p => { p.moveTo(-2, -80); p.quadraticCurveTo(4, -90, 10, -84); p.quadraticCurveTo(4, -84, -2, -80); });
+        for (const dx of [-9, 5]) cuteEye(c, dx, -57, 3.6, blink(motion, item.x * .003 + 5), '#2f4f4c');
+        ellipse(c, -13, -50, 3.6, 2, '#ff9d9d77'); ellipse(c, 10, -50, 3.6, 2, '#ff9d9d77');
+        path(c, null, p => { p.moveTo(-5, -49); p.quadraticCurveTo(-2, -45, 1, -49); }, '#8a4f3c', 1.4);
+        c.restore();
       }
       if (item.kind === 'gull') {
         const wing = Math.sin(motion * 10) * 18;
@@ -638,10 +718,25 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         path(c, '#719b78', p => { p.moveTo(item.x - 16, item.y - 7); p.quadraticCurveTo(item.x - 10, item.y - 21, item.x - 2, item.y - 8); p.closePath(); });
       }
       if (item.kind === 'whirlpool') {
-        ellipse(c, item.x, item.y + 3, 100, 42, '#255d6a33');
-        for (let i = 0; i < 4; i++) { c.beginPath(); c.ellipse(item.x, item.y, 30 + i * 25, 8 + i * 11, motion * .7 + i * .4, 0, Math.PI * 1.6); c.strokeStyle = i % 2 ? '#bde7d799' : '#e7edc6aa'; c.lineWidth = 3; c.stroke(); }
-        ellipse(c, item.x, item.y + 4, 17, 6, '#28596888');
-
+        // A soft funnel with spiral arms, and bubbles and sparkles circling in.
+        const spin = motion * 1.6, squash = .42;
+        const funnel = c.createRadialGradient(item.x, item.y, 4, item.x, item.y, 120);
+        funnel.addColorStop(0, '#1d4f60aa'); funnel.addColorStop(.45, '#2b6a7455'); funnel.addColorStop(1, '#2b6a7400');
+        c.save(); c.translate(item.x, item.y); c.scale(1, squash); c.translate(-item.x, -item.y);
+        c.fillStyle = funnel; c.beginPath(); c.arc(item.x, item.y, 120, 0, TAU); c.fill();
+        for (let arm = 0; arm < 3; arm++) {
+          c.beginPath();
+          for (let k = 0; k <= 40; k++) { const u = k / 40, r = 112 * (1 - u) + 6, a = spin + arm * TAU / 3 + u * 5.2; const x = item.x + Math.cos(a) * r, y = item.y + Math.sin(a) * r; k ? c.lineTo(x, y) : c.moveTo(x, y); }
+          c.strokeStyle = ['#d9f6ecbb', '#b9e8dc99', '#f2f6d0aa'][arm]; c.lineWidth = 4; c.lineCap = 'round'; c.stroke();
+        }
+        c.restore();
+        for (let i = 0; i < 12; i++) {
+          const u = ((reducedMotion ? 0 : motion * .35) + i / 12) % 1, r = 110 * (1 - u) + 6, a = spin + i * 2.1 + u * 6;
+          const x = item.x + Math.cos(a) * r, y = item.y + Math.sin(a) * r * squash;
+          if (i % 3) { c.strokeStyle = '#eafff8cc'; c.lineWidth = 1.2; c.beginPath(); c.arc(x, y, 2.5 + (1 - u) * 2.5, 0, TAU); c.stroke(); }
+          else star(c, x, y, 3 + (1 - u) * 2, '#fff6c8', motion * 2 + i);
+        }
+        ellipse(c, item.x, item.y, 14, 6, '#163f4fcc');
       }
       if (item.kind === 'bubble') {
         ellipse(c, item.x, item.y, 18, 18, gradient(c, item.y - 18, item.y + 18, '#e5fff5aa', '#83d7cf33'));

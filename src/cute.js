@@ -185,7 +185,8 @@ export function drawResidents(c, game, stage, water, d, t, reducedMotion) {
   const night = STAGES[stage].night;
   decor.residents.forEach((kind, i) => {
     if (kind === 'cat') return;
-    const span = 1500 + i * 230, x = wrap(decor.offsets[i] - d * .92, span) - 80;
+    // The bottle drifts by rarely (about twice a level); other residents repeat more often.
+    const span = kind === 'bottle' ? 5000 : 1500 + i * 230, x = wrap(decor.offsets[i] - d * .92, span) - 80;
     if (x < -90 || x > 570) return;
     const seed = decor.offsets[i] * .01, motion = reducedMotion ? 0 : t;
     // Drawn a third larger so the faces stay readable on a phone.
