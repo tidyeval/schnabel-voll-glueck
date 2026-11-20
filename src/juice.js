@@ -27,7 +27,7 @@ export function createJuice(reducedMotion) {
         rings.push({ x: event.x, life: 1, power: .6 + power * .8 });
         for (let i = 0; i < 7 + power * 12; i++) spawn('drop', event.x + rand(-14, 14), water - 2, rand(-110, 110) * (.5 + power) - (up ? 0 : 40), -rand(140, 300) * (.55 + power * (up ? .9 : .6)), rand(.5, .95), rand(1.6, 3.2));
         if (!up) for (let i = 0; i < 6 + power * 8; i++) spawn('bubble', event.x + rand(-18, 18), water + rand(14, 60), rand(-60, 10), -rand(20, 70), rand(.5, 1.1), rand(1.5, 4.5));
-        if (up && power > .75) { shake = .16; shakePower = 3; }
+        if (up && power > .75 && !reducedMotion) { shake = .16; shakePower = 3; }
         // Pip shakes the sea off like a wet puppy, a beat after surfacing.
         if (up) shiver = .55;
         if (!up && Math.abs(event.x - game.player.x) < 60) squash = .45;

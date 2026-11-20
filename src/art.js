@@ -1,4 +1,5 @@
 import { STAGES } from './stages.js';
+import { t as translate } from './i18n.js';
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
 import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawStageHighlight, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare, drawRollers, drawStorm, rollerLift } from './scenery.js';
@@ -945,7 +946,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     }
     if (['catch', 'mission', 'trick', 'outsmart', 'delivery', 'kick', 'feast', 'nearMiss', 'frenzy'].includes(e.kind)) {
       if (!reducedMotion) for (let i = 0; i < 5; i++) { const r = (1 - e.life) * 45; ellipse(c, e.x + Math.cos(i * 1.25) * r, e.y + Math.sin(i * 1.25) * r, 2.5 * e.life, 2.5 * e.life, '#fff2b6'); }
-      if (e.kind === 'kick') { c.fillStyle = '#fff2b6'; c.font = "bold 15px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText(`KUNG-FU +${e.points}`, e.x, e.y - 42); }
+      if (e.kind === 'kick') { c.fillStyle = '#fff2b6'; c.font = "bold 15px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText(translate('fxKick', { points: e.points }), e.x, e.y - 42); }
     } else if (!fx && !reducedMotion && ['splash', 'breach', 'netSplash'].includes(e.kind)) {
       for (let i = 0; i < 9; i++) { const v = i - 4; const age = 1 - e.life; ellipse(c, e.x + v * age * (e.kind === 'netSplash' ? 31 : 19), e.y - Math.sin(age * Math.PI) * ((e.kind === 'breach' ? 45 : 27) - Math.abs(v) * 3), 2 * e.life, 4 * e.life, '#e8f8de'); }
     }
