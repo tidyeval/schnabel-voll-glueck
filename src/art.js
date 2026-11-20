@@ -84,9 +84,12 @@ export function pelican(c, {
   c.save(); c.translate(x, y); c.rotate(tilt + (reducedMotion ? 0 : Math.sin(confused * 18) * .28 * Math.min(1, confused))); c.scale(scale, scale);
   // Squash on splashdown, stretch along the flight path when moving fast.
   if (!reducedMotion) { const sq = expression.squash || 0, st = expression.stretch || 0; c.scale(1 + st + sq * .17, 1 - st * .7 - sq * .17); }
-  // A little joy hop (golden fish, combo, rare moment): two bounces, quickly fading.
-  const joy = reducedMotion ? 0 : Math.min(1, expression.joy || 0);
-  if (joy) c.translate(0, -Math.abs(Math.sin((1 - joy) * Math.PI * 2.5)) * 14 * joy);
+  // Joy (golden fish, mission, combo, rare moment): a high hop with a back flip, then a smaller second hop.
+  const joyLeft = reducedMotion ? 0 : clamp((expression.joy || 0) / 1.4, 0, 1), joy = Math.min(1, joyLeft * 2);
+  if (joyLeft) {
+    const u = 1 - joyLeft, hop = u < .55 ? Math.sin(u / .55 * Math.PI) * 46 : Math.sin((u - .55) / .45 * Math.PI) * 16;
+    c.translate(0, -hop - 10); c.rotate(expression.flip && u < .5 ? -Math.sin(u / .5 * Math.PI / 2) * TAU : 0); c.translate(0, 10);
+  }
   const fullness = cargo / WORLD.capacity;
   const state = airState({ y, wet, breath }, cargo);
   const lowAir = state.level > 0, urgency = state.urgency;
@@ -114,7 +117,7 @@ export function pelican(c, {
   let wingLift = lift, wingFold = fold;
   if (!wet && !reducedMotion) {
     const off = clamp(breach / .6, 0, 1), plunge = expression.plunge || 0;
-    if (off) { const stroke = Math.cos(Math.min(1, (1 - off) * 1.5) * Math.PI); wingLift = lift * (1 - off) + stroke * off; wingFold = fold * (1 - off); }
+    if (off) { const stroke = Math.cos(Math.min(1, (1 - off) * 1.5) * Math.PI) * 1.3; wingLift = lift * (1 - off) + stroke * off; wingFold = fold * (1 - off); }
     if (joy) { wingLift = wingLift * (1 - joy) + Math.sin(t * 17) * .8 * joy; wingFold *= 1 - joy; }
     if (plunge) { wingLift = wingLift * (1 - plunge) - .45 * plunge; wingFold = wingFold * (1 - plunge) + plunge; }
   }
@@ -188,6 +191,16 @@ export function pelican(c, {
   for (let i = 0; i < 4; i++) path(c, null, p => { p.moveTo(-36 + i * 8, 10); p.quadraticCurveTo(-31 + i * 8, 19, -25 + i * 7, 21); }, i === 3 ? '#b4c9b7' : '#c1d3c0', 1.1);
   c.restore();
   } else pelicanWing(c, wingLift, wingFold, false);
+  if (!wet && !reducedMotion && breach > 0) {
+    // The big lift-off stroke flings the sea off the wings in a spray of drops.
+    const u = 1 - clamp(breach / .6, 0, 1);
+    c.globalAlpha = 1 - u;
+    for (let i = 0; i < 10; i++) {
+      const sx = -22 - i * 5 - u * (30 + (i % 3) * 22), sy = -34 + (i % 4) * 9 - u * (40 - i * 3) + u * u * 150;
+      ellipse(c, sx, sy, 2.2 + (i % 3) * .7, 3.2 + (i % 3), i % 2 ? '#e8f8f2' : '#bfe8ee', -.4);
+    }
+    c.globalAlpha = 1;
+  }
   if (wet) {
     for (let i = 0; i < 3; i++) ellipse(c, -36 + i * 12, -4 + Math.sin(t * 5 + i) * 2, 1.4, 3, '#d8f2deaa', -.2);
   }
@@ -322,6 +335,11 @@ function boat(c, item, water, t, sleepy = false) {
   c.fillStyle = '#ffebc3'; c.font = "bold 7px 'Trebuchet MS'"; c.textAlign = 'center'; c.fillText('LÜTTE LOTTE', -24, 14);
   // Pip gets an expressive opponent: raincoat, rosy nose and a very serious moustache.
   c.save(); c.translate(-7, -17); c.rotate(hauling && !item.hit ? Math.sin(t * 12) * .06 : -windup * (1 - throwing) * .08);
+  // Legs in dark trousers and yellow rubber boots, standing on the deck below the coat.
+  for (const lx of [-13, 8]) {
+    path(c, '#4f5d66', p => { p.moveTo(lx - 6, -2); p.lineTo(lx + 6, -2); p.lineTo(lx + 5, 7); p.lineTo(lx - 5, 7); p.closePath(); }, '#3c474e', .8);
+    path(c, '#f2c14e', p => { p.moveTo(lx - 6, 6); p.lineTo(lx + 5, 6); p.lineTo(lx + 6, 13); p.quadraticCurveTo(lx + 11, 13, lx + 11, 16); p.lineTo(lx - 6, 16); p.closePath(); }, '#c99a35', .9);
+  }
   path(c, gradient(c, -45, 2, coat, shade), p => { p.moveTo(-22, 0); p.lineTo(-20, -32); p.quadraticCurveTo(-18, -48, -1, -47); p.quadraticCurveTo(19, -48, 23, -30); p.lineTo(25, 0); p.closePath(); }, shade, 1);
   path(c, null, p => { p.moveTo(1, -36); p.lineTo(3, -1); }, '#fff0bb', 1.5);
   for (let i = 0; i < 3; i++) ellipse(c, 5, -25 + i * 9, 1.5, 1.5, '#a87944');
@@ -836,7 +854,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       expression: {
         energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick,
         squash: fx?.squash, stretch: game.feeding ? 0 : clamp(Math.abs(p.vy) / 3400, 0, .1),
-        sparkle: fx?.sparkle, shiver: fx?.shiver, joy: fx?.joy,
+        sparkle: fx?.sparkle, shiver: fx?.shiver, joy: fx?.joy, flip: fx?.flip,
         plunge: p.wet ? 0 : clamp((p.vy - 120) / 120, 0, 1),
         dive: p.wet ? clamp(p.vy / 500, 0, 1) : 0, rise: p.wet ? clamp(-p.vy / 500, 0, 1) : 0,
         fish: game.items.find(i => i.kind === 'fish' && i.x > p.x + 30 && i.x < p.x + 140),
