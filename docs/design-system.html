@@ -36,11 +36,13 @@
   .specimen.tall{min-height:420px}
   .specimen .label{position:absolute;top:6px;left:12px;font:11px ui-monospace,Menlo,monospace;color:#214d4dcc;z-index:30}
   .specimen.sea .label{color:#fff8e4}
-  .specimen .toast,.specimen .coach{position:relative;top:auto;left:auto;right:auto;margin-top:14px}
+  .specimen > .toast{position:relative;top:auto;left:auto;right:auto;margin-top:14px}
   .specimen dialog{position:relative;inset:auto;margin:14px auto 0;max-height:none;animation:none}
   .specimen .stack{display:flex;flex-direction:column;gap:10px;margin-top:14px}
   .specimen .row{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px}
   .crop canvas{width:100%;height:auto;border-radius:8px}
+  .toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}.toc a{font-size:13px;padding:3px 10px;border-radius:999px;background:#eaf0dd;color:#214d4d;text-decoration:none}.toc a:hover{background:#ffdc86}
+  .ds h2{scroll-margin-top:12px}
   .chips span{display:inline-block;margin:2px 4px 2px 0;padding:1px 8px;border-radius:999px;background:#eaf0dd;font-size:12px}
   .rule-auto{color:#3f7e6c;font-weight:700}
   .rule-manual{color:#b78250;font-weight:700}
@@ -53,27 +55,33 @@
     <h1>Schnabelglück design system</h1>
     <p>Rendered from <code>design/tokens.json</code> and <code>design/ontology.json</code> with the game's own <code>src/style.css</code> and canvas drawing functions (<code>pelican</code>, <code>fish</code>, <code>drawWorld</code>). Development page; it is not part of the production build. <span id="counts" class="muted"></span></p>
   </header>
-  <h2>Characters</h2>
+  <nav class="toc"><a href="#s-characters">Characters</a><a href="#s-obstacles">Hazards, creatures and terrain</a><a href="#s-telegraphs">Telegraph states</a><a href="#s-moments">Rare moments, shows and storm</a><a href="#s-residents">Residents</a><a href="#s-stages">Stages</a><a href="#s-colours">Colours</a><a href="#s-gradients">Gradients</a><a href="#s-type">Typography</a><a href="#s-components">Components (live CSS)</a><a href="#s-component-tokens">Component tokens</a><a href="#s-motion">Sizes, motion and juice</a><a href="#s-sounds">Sound cues</a><a href="#s-rules">Design principles</a><a href="#s-ontology">Ontology</a></nav>
+  <h2 id="s-characters">Characters</h2>
   <h3>Pip · expressions (pelican())</h3><div class="grid" id="pip"></div>
   <h3>Fish (fish())</h3><div class="grid" id="fish"></div>
-  <h2>Hazards, creatures and terrain (drawWorld())</h2><div class="grid wide" id="world"></div>
-  <h2>Stages</h2><div class="grid" id="stages"></div>
-  <h2>Colours</h2><div id="colours"></div>
-  <h2>Gradients</h2><div class="grid wide" id="gradients"></div>
-  <h2>Typography</h2><div id="type"></div>
-  <h2>Components (live CSS)</h2><div class="specimens" id="components"></div>
-  <h2>Component tokens</h2><div id="component-tokens"></div>
-  <h2>Sizes, motion and juice</h2><div id="motion"></div>
-  <h2>Sound cues</h2><div id="sounds"></div>
-  <h2>Design principles</h2><div id="rules"></div>
-  <h2>Ontology</h2><div id="ontology"></div>
+  <h2 id="s-obstacles">Hazards, creatures and terrain (drawWorld())</h2><div class="grid wide" id="world"></div>
+  <h2 id="s-telegraphs">Telegraph states</h2><p class="muted">The harmless announcement each obstacle shows before it can hurt (properties.telegraph in the ontology; lead times are simulated by tests/design.test.js).</p><div class="grid wide" id="telegraphs"></div>
+  <h2 id="s-moments">Rare moments, shows and storm</h2><div class="grid" id="moments"></div>
+  <h2 id="s-residents">Residents</h2><div class="grid" id="residents"></div>
+  <h2 id="s-stages">Stages</h2><div class="grid" id="stages"></div>
+  <h2 id="s-colours">Colours</h2><div id="colours"></div>
+  <h2 id="s-gradients">Gradients</h2><div class="grid wide" id="gradients"></div>
+  <h2 id="s-type">Typography</h2><div id="type"></div>
+  <h2 id="s-components">Components (live CSS)</h2><div class="specimens" id="components"></div>
+  <h2 id="s-component-tokens">Component tokens</h2><div id="component-tokens"></div>
+  <h2 id="s-motion">Sizes, motion and juice</h2><div id="motion"></div>
+  <h2 id="s-sounds">Sound cues</h2><div id="sounds"></div>
+  <h2 id="s-rules">Design principles</h2><div id="rules"></div>
+  <h2 id="s-ontology">Ontology</h2><div id="ontology"></div>
 </div>
 <script type="module">
 import tokensFile from '/design/tokens.json';
 import ontology from '/design/ontology.json';
 import { pelican, fish, drawWorld } from '/src/art.js';
-import { createGame, WORLD } from '/src/game.js';
+import { createGame, WORLD, flashAt } from '/src/game.js';
 import { STAGES } from '/src/stages.js';
+import { setLocale, t } from '/src/i18n.js';
+import { roofCat } from '/src/cute.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, attrs = {}, ...children) => { const node = Object.assign(document.createElement(tag), attrs); node.append(...children); return node; };
@@ -122,19 +130,20 @@ for (const [name, golden, scale] of [['fish', false, 2], ['golden fish', true, 2
 // Hazards and terrain: the real drawWorld() on an empty sea, cropped around one item.
 const world = el('canvas'); world.width = 480 * ratio; world.height = 850 * ratio;
 const wc = world.getContext('2d');
-function scene(stageId, items, time = 1.2) {
+function scene(stageId, items, time = 1.2, extra = {}) {
   const stage = STAGES.findIndex(s => s.id === stageId);
   const game = createGame(() => .5, stage);
   game.items = items; game.decor = null; game.nextEncounter = Infinity;
+  Object.assign(game, extra);
   Object.assign(game.player, { x: -600, y: 265, wet: false, breath: WORLD.breath });
   wc.setTransform(ratio, 0, 0, ratio, 0, 0);
   drawWorld(wc, game, 'playing', time, 'classic', [], false, null);
 }
-function crop(title, note, stageId, items, [x, y, w, h], time) {
-  scene(stageId, items, time);
+function crop(title, note, stageId, items, [x, y, w, h], time, extra, target = 'world') {
+  scene(stageId, items, time, extra);
   const out = el('canvas'); out.width = w * ratio; out.height = h * ratio;
   out.getContext('2d').drawImage(world, x * ratio, y * ratio, w * ratio, h * ratio, 0, 0, w * ratio, h * ratio);
-  $('world').append(card(title, note, el('div', { className: 'crop' }, out)));
+  $(target).append(card(title, note, el('div', { className: 'crop' }, out)));
 }
 const describe = id => { const e = ontology.entities.find(x => x.id === id); return e ? `${e.concept}${e.properties?.contactDamage ? ` · −${e.properties.contactDamage} energy` : ''}` : ''; };
 const seeds = Array.from({ length: 22 }, (_, i) => (i * .618034 + .13) % 1);
@@ -164,6 +173,51 @@ const seeds = Array.from({ length: 22 }, (_, i) => (i * .618034 + .13) % 1);
   ['Current', 'current', 'bay', [{ kind: 'current', x: 90, y: 535, length: 300, entered: false }], [70, 470, 340, 130]],
   ['Nest', 'nest', 'bay', [{ kind: 'nest', final: true, x: 240, y: 360, served: false, celebration: 0 }], [150, 250, 180, 150]],
 ].forEach(([title, id, stage, items, rect]) => crop(title, `${id} · ${describe(id)}`, stage, items, rect));
+
+// Telegraph states: the same items in their announcing phase.
+const lead = id => { const tg = ontology.entities.find(e => e.id === id)?.properties?.telegraph; return tg ? `${tg.channels.join('; ')} · lead ≥ ${tg.leadSeconds} s` : ''; };
+[
+  ['Shark · cruising', 'shark', 'bay', [{ kind: 'shark', x: 240, y: 535, baseY: 535, lane: 'middle', phase: 'cruise' }], [110, 470, 260, 130]],
+  ['Shark · warn (jitter, squash)', 'shark', 'bay', [{ kind: 'shark', x: 240, y: 535, baseY: 535, lane: 'middle', phase: 'warn' }], [110, 470, 260, 130]],
+  ['Shark · dash', 'shark', 'bay', [{ kind: 'shark', x: 240, y: 535, baseY: 535, lane: 'middle', phase: 'dash' }], [110, 470, 260, 130]],
+  ['Great white · stalking fin (harmless)', 'whiteshark', 'harbor', [{ kind: 'whiteshark', x: 120, y: 535, phase: 'stalk', timer: 0 }], [130, 280, 260, 130]],
+  ['Diver · aiming', 'diver', 'harbor', [{ kind: 'diver', x: 300, y: 560, phase: 'aim', timer: .5, aimX: 150, aimY: 520 }], [130, 480, 260, 140]],
+  ['Diver · aim locked (warning)', 'diver', 'harbor', [{ kind: 'diver', x: 300, y: 560, phase: 'locked', timer: .3, aimX: 150, aimY: 520 }], [130, 480, 260, 140]],
+  ['Boat · announce and wind-up', 'boat', 'harbor', [{ kind: 'boat', x: 300, y: 360, cast: .5, look: 2 }], [130, 230, 280, 190]],
+  ['Boat · net in flight', 'boat', 'harbor', [{ kind: 'boat', x: 330, y: 360, cast: 1.2, look: 2 }], [130, 200, 300, 230]],
+  ['Pufferfish · startled', 'puffer', 'reef', [{ kind: 'puffer', x: 240, y: 620, phase: 'startle', timer: .3 }], [170, 550, 140, 140]],
+  ['Pufferfish · inflating (harmless)', 'puffer', 'reef', [{ kind: 'puffer', x: 240, y: 620, phase: 'inflate', timer: .2 }], [170, 550, 140, 140]],
+  ['Pufferfish · puffed (dangerous)', 'puffer', 'reef', [{ kind: 'puffer', x: 240, y: 620, phase: 'puffed', timer: 1 }], [170, 550, 140, 140]],
+].forEach(([title, id, stage, items, rect]) => crop(title, lead(id), stage, items, rect, 1.2, {}, 'telegraphs'));
+
+// Rare moments, shows and the storm as whole scenes (real drawWorld, scaled).
+function thumb(title, note, stageId, extra, time) {
+  const stage = STAGES.findIndex(s => s.id === stageId), game = createGame(() => .5, stage);
+  Object.assign(game, { items: [], decor: null, nextEncounter: Infinity, time }, extra);
+  const [node, c] = canvas(200, 354); c.scale(200 / 480, 354 / 850);
+  drawWorld(c, game, 'playing', time, 'classic', [], false, null);
+  $('moments').append(card(title, note, node));
+}
+const describeId = id => ontology.entities.find(e => e.id === id)?.description || '';
+[['ducklings', 'bay', 5], ['manateeCalf', 'harbor', 9], ['otters', 'lagoon', 4.5], ['manta', 'reef', 7.5]].forEach(([name, stage, age]) => thumb(`Rare · ${name}`, describeId(name), stage, { rareShow: { name, start: 0 } }, age));
+[['rainbow', 'bay', 4], ['whale', 'bay', 6], ['goldenHour', 'harbor', 5], ['trawler', 'harbor', 5], ['shootingStars', 'reef', 3.7], ['dolphins', 'reef', 1.2]].forEach(([name, stage, age]) => thumb(`Show · ${name}`, describeId(name), stage, { show: { name, start: 0 } }, age));
+let flashTime = 0; while (!flashAt(flashTime) || flashAt(flashTime) < .6) flashTime += .01;
+thumb('Storm · rain and breaker', describeId('breakers'), 'storm', { rollers: [300] }, 1);
+thumb('Storm · lightning', describeId('lightning'), 'storm', { rollers: [] }, flashTime);
+
+// Residents through drawWorld's decor.
+const anchors = { crab: 826, starfish: 832, octopus: 806, seahorse: 690, bottle: 360, flamingo: 360, mudskipper: 360, fiddler: 826, manatee: 700 };
+for (const stage of STAGES) for (const kind of stage.residents) {
+  if (document.getElementById(`resident-${kind}`)) continue;
+  if (kind === 'cat') {
+    // The roof cat is drawn with the harbour houses; show the real roofCat() on its own, enlarged.
+    const [node, c] = canvas(200, 150); c.fillStyle = '#d9806a'; c.fillRect(0, 95, 200, 55); c.fillStyle = '#f7e9c6'; c.fillRect(0, 0, 200, 95); c.save(); c.scale(2.4, 2.4); roofCat(c, 42, 42, 1.5); c.restore();
+    $('residents').append(card(kind, `${describeId(kind)} · harbor`, node)); $('residents').lastElementChild.id = 'resident-cat'; continue;
+  }
+  const rect = kind === 'cat' ? [0, 180, 480, 200] : [130, Math.min(850 - 150, anchors[kind] - 90), 200, 150];
+  crop(kind, `${describeId(kind)} · ${STAGES.filter(s => s.residents.includes(kind)).map(s => s.id).join(', ')}`, stage.id, [], rect, 1.5, { decor: { residents: [kind], offsets: [300], sleepy: false, catHouse: 0 } }, 'residents');
+  $('residents').lastElementChild.id = `resident-${kind}`;
+}
 
 // Stages: the real world with Pip gliding.
 STAGES.forEach((stage, index) => {
@@ -208,10 +262,36 @@ $('components').append(
   specimen('#play · start screen', 'sea', el('div', { className: 'stack' }, (() => { const b = button('primary', ''); b.id = 'play'; b.append(el('span', { id: 'play-label', textContent: 'Let’s go!' })); return b; })(), el('div', { className: 'stage-picker' }, el('div', { className: 'stage-row' }, button('stage-step', '‹'), el('select', {}, el('option', { textContent: 'Sheltered Bay' })), button('stage-step', '›')), el('small', { textContent: 'Record: 1,240 points' })), el('div', { className: 'language-picker' }, button('', '🇩🇪', { ariaPressed: 'true' }), button('', '🇬🇧', { ariaPressed: 'false' }), button('', '🇪🇸', { ariaPressed: 'false' })))),
   specimen('.icon-button / .close', '', el('div', { className: 'row' }, button('icon-button', 'Ⅱ'), button('icon-button close', '×', { style: 'position:static' }))),
   specimen('.toast / .toast.hint', 'sea', el('div', { className: 'toast', textContent: 'Dolphins! Follow the fish arc ✦' }), el('div', { className: 'toast hint', textContent: 'Hold to dive ↓ · Release to fly ↑' })),
-  specimen('.coach', 'sea', el('div', { className: 'coach' }, el('span', { id: 'coach-step', textContent: '1/4' }), el('strong', { textContent: 'Hold – Pip dives ↓' }), button('', 'Skip', { id: 'coach-skip' }))),
-  specimen('HUD · .score-row / .energy-track', 'sea tall', el('div', { className: 'score-row', style: 'top:40px' }, el('div', {}, el('strong', { textContent: '1,240' })), el('div', { className: 'timer' }, el('span', { textContent: '◷' }), ' ', el('span', { textContent: '1:05' }))), el('div', { className: 'status-panel', style: 'top:90px' }, el('div', { className: 'energy-track' }, el('div', { id: 'energy', style: 'width:72%' }))), el('div', { className: 'status-panel low-energy', style: 'top:120px' }, el('div', { className: 'energy-track' }, el('div', { id: 'energy', style: 'width:18%;background:#d78560' })))),
-  specimen('dialog · result', 'tall', (() => { const d = el('dialog'); d.setAttribute('open', ''); d.append(el('span', { className: 'dialog-kicker', textContent: 'NEST REACHED' }), el('h2', { textContent: 'Welcome to the nest!' }), el('div', { className: 'result-score', textContent: '1,240' }), el('div', { className: 'result-stats' }, el('div', {}, el('strong', { textContent: '42' }), el('span', { textContent: 'Fish' })), el('div', {}, el('strong', { textContent: '17' }), el('span', { textContent: 'in a row' }))), button('primary', 'To the next nest', { id: 'next-stage' }), button('quiet-button', 'This nest again', { id: 'again' }), el('div', { className: 'result-links' }, button('quiet-button', '📸 Souvenir photo'), button('quiet-button', 'To the beach'))); return d; })()),
-  specimen('dialog · settings switch', '', (() => { const d = el('dialog'); d.setAttribute('open', ''); const on = el('input', { type: 'checkbox', checked: true }), off = el('input', { type: 'checkbox' }); d.append(el('span', { className: 'dialog-kicker', textContent: 'AT YOUR OWN PACE' }), el('h2', { textContent: 'How does your sea sound?' }), el('label', { className: 'setting' }, el('span', { textContent: 'Music' }), on), el('label', { className: 'setting' }, el('span', { textContent: 'Vibration' }), off)); return d; })()),
+);
+// The real HUD and dialogs, cloned from index.html and translated (en) with the game's i18n.
+setLocale('en');
+const page = new DOMParser().parseFromString(await (await fetch('/index.html')).text(), 'text/html');
+function real(id, setup) {
+  const node = document.importNode(page.getElementById(id), true);
+  node.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
+  node.querySelectorAll('[data-i18n-html]').forEach(n => { n.innerHTML = t(n.dataset.i18nHtml); });
+  setup?.(node, sel => node.querySelector(`#${sel}`));
+  return node;
+}
+const hud = real('hud', (node, q) => {
+  node.classList.remove('hidden'); node.style.position = 'relative'; node.style.height = '560px';
+  q('score').textContent = '1,240'; q('time').textContent = '1:05';
+  q('coach').classList.remove('hidden'); q('coach-step').textContent = '2/4'; q('coach-text').textContent = t('coachFish');
+  q('energy').style.width = '72%';
+});
+const result = real('result-dialog', (node, q) => {
+  node.setAttribute('open', '');
+  q('result-kicker').textContent = t('nestReached'); q('result-title').textContent = t('reasons.complete');
+  q('result-score').textContent = '1,240'; q('result-fish').textContent = '42'; q('result-combo').textContent = '17'; q('result-time').textContent = '1:05';
+  q('next-stage').classList.remove('hidden'); q('again').textContent = t('again'); q('again').className = 'quiet-button';
+});
+const pauseDialog = real('pause-dialog', node => node.setAttribute('open', ''));
+const settings = real('settings-dialog', node => { node.setAttribute('open', ''); node.querySelector('#music').checked = true; node.querySelector('#sound').checked = true; node.querySelector('details')?.remove(); });
+$('components').append(
+  specimen('#hud · score, time, energy, coach (index.html)', 'sea tall', hud),
+  specimen('#result-dialog · after a nest (index.html)', 'tall', result),
+  specimen('#pause-dialog (index.html)', 'tall', pauseDialog),
+  specimen('#settings-dialog (index.html)', 'tall', settings),
 );
 const tokenTable = el('table', {}, el('tr', {}, el('th', { textContent: 'Component' }), el('th', { textContent: 'Selector' }), el('th', { textContent: 'Tokens' }), el('th', { textContent: 'Variants' })));
 for (const component of tokensFile.components) {
