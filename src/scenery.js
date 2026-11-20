@@ -463,6 +463,26 @@ export function drawRare(c, game, water, motion, reducedMotion) {
     if (Math.sin(motion * 1.7) > .3) fill(c, '#ff9fb0aa', p => { const hx = x + 52, hy = 640 - 26 - wrap(motion * 14, 20); p.moveTo(hx, hy + 3); p.bezierCurveTo(hx - 5, hy - 1, hx - 2, hy - 5, hx, hy - 2); p.bezierCurveTo(hx + 2, hy - 5, hx + 5, hy - 1, hx, hy + 3); });
   }
   if (name === 'manta') manta(c, 640 - age * 52, 560 + Math.sin(age * .8) * 30, motion);
+  if (name === 'ducklings') ducklings(c, 600 - age * 46, water, motion);
+}
+// A mother duck paddles across the bay with her ducklings in a bobbing line; the last one hurries.
+function ducklings(c, x, water, t) {
+  const duck = (dx, size, phase, mother) => {
+    const bob = Math.sin(t * 3 + phase) * 1.6, px = x + dx, py = water - 2 + bob;
+    c.save(); c.translate(px, py); c.scale(size, size);
+    fill(c, '#00000014', p => p.ellipse(2, 9, 16, 3, 0, 0, TAU));
+    fill(c, mother ? '#c9a27a' : '#ffd96a', p => { p.moveTo(-14, 0); p.quadraticCurveTo(-14, 9, 2, 9); p.quadraticCurveTo(16, 9, 17, -2); p.quadraticCurveTo(12, 0, 10, -4); p.quadraticCurveTo(2, -8, -14, 0); p.closePath(); });
+    fill(c, mother ? '#a8835e' : '#ffc94a', p => p.ellipse(4, 0, 7, 3.5, -.2, 0, TAU));
+    fill(c, mother ? '#c9a27a' : '#ffd96a', p => p.arc(-10, -9, 7, 0, TAU));
+    fill(c, '#f29a3a', p => p.ellipse(-18, -8, 4.5, 2.2, .1, 0, TAU));
+    cuteEye(c, -12, -11, 1.9, blink(t, phase), '#2b2b2b');
+    fill(c, '#ff9aa266', p => p.ellipse(-9, -6.5, 2, 1.2, 0, 0, TAU));
+    c.restore();
+    stroke(c, '#ffffff88', 1.4, p => { p.moveTo(px + 16 * size, water + 3); p.quadraticCurveTo(px + 26 * size, water + 1, px + 34 * size, water + 4); });
+  };
+  duck(0, 2, 0, true);
+  [44, 76, 108, 146 + Math.max(0, Math.sin(t * 2)) * 8].forEach((dx, i) => duck(dx, 1.05, i + 1, false));
+  if (Math.sin(t * 1.3) > .4) fill(c, '#ff9fb0bb', p => { const hx = x - 4, hy = water - 44 - wrap(t * 12, 18); p.moveTo(hx, hy + 3); p.bezierCurveTo(hx - 5, hy - 1, hx - 2, hy - 5, hx, hy - 2); p.bezierCurveTo(hx + 2, hy - 5, hx + 5, hy - 1, hx, hy + 3); });
 }
 function otters(c, x, water, t) {
   const bob = Math.sin(t * 1.6) * 2;
@@ -599,3 +619,45 @@ export function drawJuice(c, fx, game, water, motion, reducedMotion) {
   if (fx.flash > 0) { c.fillStyle = fx.flashColour; c.globalAlpha = clamp(fx.flash, 0, 1); c.fillRect(-30, -30, 540, 910); c.globalAlpha = 1; }
 }
 export const WATERLINE = WORLD.water;
+
+// Each later stage gets one signature touch. Lagoon: fireflies over the water and drifting lily pads,
+// growing with the dusk. Reef: glowing plankton that lights up around Pip as she swims through it.
+export function drawStageHighlight(c, stage, water, d, motion, game, reducedMotion) {
+  const id = STAGES[stage].id, t = reducedMotion ? 0 : motion;
+  if (id === 'lagoon') {
+    const dusk = .35 + .65 * daylight(stage, game).u;
+    for (let i = 0; i < 4; i++) {
+      // Lily pads ride the surface with the play layer; every other one has a flower.
+      const x = wrap(i * 260 + hash(i) * 120 - d * .8, 1040) - 80, y = water + 4 + Math.sin(t * 1.2 + i) * 1.5;
+      if (x < -60 || x > 540) continue;
+      fill(c, '#00000014', p => p.ellipse(x, y + 4, 26, 6, 0, 0, TAU));
+      fill(c, i % 2 ? '#6faa6a' : '#7fbb72', p => { p.moveTo(x, y); p.ellipse(x, y, 24, 6.5, 0, .25, TAU - .25); p.closePath(); });
+      stroke(c, '#5a9258', 1, p => { p.moveTo(x, y); p.lineTo(x - 16, y - 2); p.moveTo(x, y); p.lineTo(x - 10, y + 4); });
+      if (i % 2 === 0) {
+        for (let k = 0; k < 6; k++) { const a = k * TAU / 6; fill(c, '#ffc7d8', p => p.ellipse(x + 4 + Math.cos(a) * 5, y - 6 + Math.sin(a) * 2.5, 5, 2.6, a, 0, TAU)); }
+        fill(c, '#ffe08a', p => p.arc(x + 4, y - 7, 2.6, 0, TAU));
+      }
+    }
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 16; i++) {
+      const x = wrap(hash(i) * 600 - d * .3 + Math.sin(t * .5 + i) * 18, 600) - 60, y = water - 20 - hash(i + 5) * 110 + Math.sin(t * .8 + i * 2) * 10;
+      const on = Math.max(0, Math.sin(t * (1.2 + hash(i + 9)) + i * 3)) * dusk;
+      if (on < .05) continue;
+      fill(c, `rgba(255,232,120,${.16 * on})`, p => p.arc(x, y, 9, 0, TAU));
+      fill(c, `rgba(255,246,190,${.9 * on})`, p => p.arc(x, y, 1.8, 0, TAU));
+    }
+    c.globalCompositeOperation = 'source-over';
+  }
+  if (id === 'reef') {
+    const p = game?.player;
+    c.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 70; i++) {
+      const x = wrap(hash(i) * 560 - d * .9 + Math.sin(t * .3 + i) * 10, 560) - 40, y = water + 30 + hash(i + 3) * 440 + Math.sin(t * .5 + i * 1.3) * 8;
+      const near = p && p.wet ? clamp(1 - Math.hypot(x - p.x, y - p.y) / 110, 0, 1) : 0;
+      const glow = .12 + Math.max(0, Math.sin(t * 1.5 + i * 2.1)) * .12 + near * .85;
+      fill(c, `rgba(110,240,230,${.18 * glow})`, q => q.arc(x, y, 5 + near * 7, 0, TAU));
+      fill(c, `rgba(200,255,250,${glow})`, q => q.arc(x, y, 1.3 + near, 0, TAU));
+    }
+    c.globalCompositeOperation = 'source-over';
+  }
+}

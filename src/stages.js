@@ -8,7 +8,7 @@ export const STAGES = [
     pairPatterns: { 4: 'staggered', 8: 'staggered' },
     residents: ['crab', 'starfish', 'bottle'],
     setPieces: { calm: ['current'], shows: ['rainbow', 'whale'], count: 1 },
-    rareMoment: null, // the hatchlings were removed; a cuter bay moment is still open
+    rareMoment: 'ducklings',
     theme: {
       sky: [[0, '#a9dbe0'], [.6, '#d9ecd9'], [1, '#f7e9c6']], glow: '#efb68a3d', far: '#9cc7bd', tint: null,
       water: ['#6fc4b6', '#256068'], surface: '#f8dfad40', rays: '#fbf8c4', rayAlpha: .13, mote: '#e8f3cc35',

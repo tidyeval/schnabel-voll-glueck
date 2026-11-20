@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
-import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare } from './scenery.js';
+import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawStageHighlight, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -370,6 +370,22 @@ function mangrove(c, item, water, t, night) {
     const a = i * 2.4, lx = x + Math.cos(a) * (40 + (i % 3) * 14), ly = 274 + Math.sin(a) * 26;
     ellipse(c, lx, ly, 5, 2.4, night ? '#6a9a7a55' : '#c9e39a88', a);
   }
+  // Little residents: barnacles and a snail on the prop roots, a crab clinging to a root below.
+  for (let i = 0; i < 5; i++) { ellipse(c, x - 48 + i * 24, water - 4 - (i % 2) * 6, 2.6, 2.1, '#efe6d0'); ellipse(c, x - 48 + i * 24, water - 4.5 - (i % 2) * 6, 1, .8, '#8a8f86'); }
+  ellipse(c, x + 30, 336, 5.5, 4.5, '#e7b07a'); path(c, null, p => p.arc(x + 30, 336, 2.6, 0, Math.PI * 1.5), '#b97a4a', 1.2);
+  ellipse(c, x + 25, 340, 5, 2.2, '#cfc0a0'); path(c, null, p => { p.moveTo(x + 22, 339); p.lineTo(x + 20, 334); }, '#cfc0a0', 1); ellipse(c, x + 20, 333.5, 1.1, 1.1, '#3a2a20');
+  const crabY = water + 92 + Math.sin(t * .9) * 3;
+  ellipse(c, x - 33, crabY, 9, 6, '#f08a70');
+  for (const dx of [-3, 3]) { path(c, null, p => { p.moveTo(x - 33 + dx, crabY - 4); p.lineTo(x - 33 + dx, crabY - 9); }, '#d9705c', 1.6); cuteEye(c, x - 33 + dx, crabY - 10, 2, blink(t, x * .03 + dx), '#2b3b3b'); }
+  for (const side of [-1, 1]) path(c, '#f08a70', p => p.arc(x - 33 + side * 11, crabY - 3, 3.5, 0, TAU));
+  // Fireflies blink in the crown as the evening deepens.
+  c.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 9; i++) {
+    const fx = x + Math.cos(i * 2.3 + t * .3) * (30 + (i % 3) * 18), fy = 266 + Math.sin(i * 1.7 + t * .4) * 26, on = Math.max(0, Math.sin(t * 1.7 + i * 2.6));
+    if (on < .05) continue;
+    ellipse(c, fx, fy, 8, 8, `rgba(255,232,120,${.2 * on})`); ellipse(c, fx, fy, 1.8, 1.8, `rgba(255,248,200,${on})`);
+  }
+  c.globalCompositeOperation = 'source-over';
   // A kingfisher keeps watch from the crown.
   c.save(); c.translate(x + 22, 232);
   ellipse(c, 0, 0, 8, 7, '#3f8fb8'); ellipse(c, 1, 3, 6, 4, '#f2a35e'); ellipse(c, -4, -6, 6, 5.5, '#4aa0c8');
@@ -377,6 +393,56 @@ function mangrove(c, item, water, t, night) {
   path(c, '#3f8fb8', p => { p.moveTo(6, 1); p.lineTo(15, 6); p.lineTo(6, 5); p.closePath(); });
   cuteEye(c, -5, -7, 2.3, blink(t, x * .01), '#1d2a30'); ellipse(c, -2, -3, 1.8, 1.1, '#ff8f9a66');
   c.restore();
+}
+// A friendly harbour buoy: striped tower with a sleepy face and a blinking lamp, a round float
+// below the surface with weed and barnacles, and a chain to the seabed. Inside the collision box.
+function buoy(c, item, water, t, night) {
+  const x = item.x, bob = Math.sin(t * 1.5 + x * .01) * 1.5;
+  // Chain to the seabed.
+  for (let y = 468; y < 830; y += 13) ellipse(c, x + Math.sin(y * .02 + t * .6) * 3, y, 3.4, 5.5, night ? '#3d5560aa' : '#5e7a7a99');
+  c.save(); c.translate(0, bob);
+  // Float below the surface.
+  path(c, gradient(c, water - 10, 462, '#e98a78', '#a9575a'), p => { p.moveTo(x - 30, water - 8); p.quadraticCurveTo(x - 33, 452, x, 460); p.quadraticCurveTo(x + 33, 452, x + 30, water - 8); p.closePath(); }, '#7f4a4f', 2);
+  path(c, '#fff1d488', p => p.ellipse(x, water + 34, 30, 9, 0, 0, TAU));
+  for (let i = 0; i < 6; i++) { const bx = x - 20 + (i * 37) % 40, by = water + 55 + (i * 23) % 40; ellipse(c, bx, by, 3.2, 2.6, '#efe6d0'); ellipse(c, bx, by - .5, 1.2, 1, '#8a8f86'); }
+  for (const side of [-1, 1]) {
+    const swing = Math.sin(t * 1.4 + side) * 5;
+    path(c, null, p => { p.moveTo(x + side * 14, 452); p.quadraticCurveTo(x + side * (20 + swing), 470, x + side * (12 + swing * 1.5), 492); }, '#6fae86', 4);
+  }
+  // Striped tower above the surface.
+  const tower = p => p.roundRect(x - 21, 268, 42, water - 262, 12);
+  path(c, gradient(c, 268, water, '#f28f7a', '#d0645e'), tower, '#8c4d4f', 2);
+  c.save(); c.beginPath(); tower(c); c.clip();
+  for (const y of [288, 330]) path(c, '#fff3da', p => p.rect(x - 22, y, 44, 18));
+  ellipse(c, x - 10, 300, 6, 40, '#ffffff33');
+  c.restore();
+  // Sleepy-happy face on the upper cream stripe.
+  happyEye(c, x - 7, 296, 2.6, '#5a3b3b'); happyEye(c, x + 7, 296, 2.6, '#5a3b3b');
+  ellipse(c, x - 13, 301, 3, 1.8, '#ff9aa277'); ellipse(c, x + 13, 301, 3, 1.8, '#ff9aa277');
+  path(c, null, p => { p.moveTo(x - 2.5, 301); p.quadraticCurveTo(x, 303.5, x + 2.5, 301); }, '#5a3b3b', 1.4);
+  // Lamp with a soft blink.
+  path(c, '#5b6f72', p => p.roundRect(x - 12, 258, 24, 12, 4));
+  const glow = .55 + Math.max(0, Math.sin(t * 2.2)) * .45;
+  c.globalCompositeOperation = 'lighter'; ellipse(c, x, 250, 22, 22, `rgba(255,214,120,${.18 * glow})`); c.globalCompositeOperation = 'source-over';
+  path(c, `rgba(255,236,170,${.7 + glow * .3})`, p => p.roundRect(x - 8, 244, 16, 15, 7), '#c99a52', 1.5);
+  ellipse(c, x - 3, 249, 2.5, 3, '#ffffffcc');
+  c.restore();
+  ellipse(c, x, water + 4, 44, 7, '#e9f5df66');
+  path(c, null, p => { p.moveTo(x - 40, water + 2); p.quadraticCurveTo(x, water + 10 + Math.sin(t * 2) * 2, x + 40, water + 2); }, '#ffffffaa', 2);
+}
+// Coral in the same soft-stone style as the rocks, but pink with a polyp cap;
+// an anemone with a peeking clownfish. The collision polygon stays the coral's silhouette.
+function coral(c, item, water, t, night) {
+  const b = terrainBlocks(item)[0], x = item.x;
+  rock(c, b, item, 0, water, t, night, true);
+  const ax = x + 50, ay = b.y + 120;
+  for (let k = 0; k < 9; k++) { const a = -Math.PI * .95 + k * Math.PI * .11, sway = Math.sin(t * 2 + k) * .12; path(c, null, p => { p.moveTo(ax, ay); p.quadraticCurveTo(ax + Math.cos(a + sway) * 14, ay + Math.sin(a + sway) * 14, ax + Math.cos(a + sway * 2) * 24, ay + Math.sin(a + sway * 2) * 22); }, '#ffb3d1', 4); }
+  const peek = Math.max(0, Math.sin(t * .9)) * 7;
+  c.save(); c.translate(ax - 4, ay - 14 - peek);
+  ellipse(c, 0, 0, 9, 6, '#ff8a3d'); path(c, '#ffffff', p => p.rect(-3, -6, 3, 12)); path(c, '#ff8a3d', p => { p.moveTo(8, 0); p.lineTo(14, -5); p.lineTo(14, 5); p.closePath(); });
+  cuteEye(c, -4, -1, 2.3, blink(t, x * .02), '#2b2b2b');
+  c.restore();
+  ellipse(c, ax, ay + 4, 12, 5, '#d98aaa');
 }
 // Every stage has its own spot for the nest: a grassy islet, a harbour piling,
 // a mangrove crown (where real brown pelicans nest) or a moonlit rock.
@@ -406,16 +472,16 @@ function nestBase(c, x, water, stage, t) {
 // Rounded boulders inside the shared collision silhouette: smooth outline, stacked stones,
 // a mossy cap, swaying weed and a few small residents. Purely visual; collisions use the polygon.
 const hashOf = i => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
-function rock(c, b, item, index, water, t, night) {
+function rock(c, b, item, index, water, t, night, pink = false) {
   const pts = b.points, mid = (a, z) => ({ x: (a.x + z.x) / 2, y: (a.y + z.y) / 2 });
   const outline = p => {
     const start = mid(pts[pts.length - 1], pts[0]); p.moveTo(start.x, start.y);
     pts.forEach((point, i) => { const next = mid(point, pts[(i + 1) % pts.length]); p.quadraticCurveTo(point.x, point.y, next.x, next.y); });
     p.closePath();
   };
-  const seed = item.kind === 'island' ? 3 : 7 + index * 5;
+  const seed = item.kind === 'island' ? 3 : item.kind === 'coral' ? 11 : 7 + index * 5;
   c.save(); c.lineJoin = 'round';
-  path(c, gradient(c, b.y, b.y + b.height, night ? '#6f9a92' : '#a3c3a4', night ? '#2e5560' : '#4d7f76'), outline);
+  path(c, gradient(c, b.y, b.y + b.height, pink ? (night ? '#9a7aa0' : '#e8b4aa') : night ? '#6f9a92' : '#a3c3a4', pink ? (night ? '#4e4466' : '#9b7890') : night ? '#2e5560' : '#4d7f76'), outline);
   c.beginPath(); outline(c); c.clip();
   // Stacked round stones, each with a lit top and a soft shadow.
   const rows = Math.max(1, Math.round(b.height / 60)), rowH = b.height / rows;
@@ -424,23 +490,23 @@ function rock(c, b, item, index, water, t, night) {
     for (let k = -1; k <= cols; k++) {
       const h = hashOf(seed * 31 + r * 7 + k), h2 = hashOf(h * 99), cx = b.x + shift + (k + .5) * colW + (h - .5) * 22, cy = b.y + (r + .55) * rowH + (h2 - .5) * 14;
       const rx = colW * (.42 + h * .3), ry = rowH * (.42 + h2 * .25);
-      const tone = ['#9dbf9f', '#8db497', '#a9c7a2', '#86ad95'][Math.floor(h * 4)];
+      const tone = (pink ? ['#f0b8b0', '#e6a8b8', '#f3c4a8', '#d9a0b4'] : ['#9dbf9f', '#8db497', '#a9c7a2', '#86ad95'])[Math.floor(h * 4)];
       ellipse(c, cx, cy + 3, rx, ry, night ? '#24485233' : '#3f6f6a40');
-      ellipse(c, cx, cy, rx * .94, ry * .9, night ? '#5f8d88' : tone);
+      ellipse(c, cx, cy, rx * .94, ry * .9, night ? (pink ? '#8a6f99' : '#5f8d88') : tone);
       ellipse(c, cx - rx * .25, cy - ry * .38, rx * .45, ry * .26, night ? '#86aaa333' : '#e6eccb55', -.2);
     }
   }
   // Depth shading: stones darken where light no longer reaches.
   c.fillStyle = gradient(c, Math.max(b.y, water), b.y + b.height, '#1f4d5800', night ? '#0f2c4066' : '#24586060'); c.fillRect(b.x - 5, Math.max(b.y, water), b.width + 10, b.height);
   c.restore();
-  path(c, null, outline, night ? '#2c5260' : '#3e6d68', 2.5);
+  path(c, null, outline, pink ? (night ? '#3e3858' : '#8c6a7f') : night ? '#2c5260' : '#3e6d68', 2.5);
   // Mossy cap with a sandy rim; underwater caps get pink weed instead of grass.
   const top = b.y, wet = top > water;
   for (let i = 0; i < Math.round(b.width / 16); i++) {
     const x = b.x + 8 + i * (b.width - 16) / Math.max(1, Math.round(b.width / 16) - 1);
-    ellipse(c, x, top + 5 + Math.sin(i * 1.7) * 2, 11, 6, wet ? (i % 2 ? '#8fbf8a' : '#7cae86') : i % 2 ? '#9ccc8c' : '#86bb85');
+    ellipse(c, x, top + 5 + Math.sin(i * 1.7) * 2, 11, 6, pink ? (i % 2 ? '#ffb7c6' : '#ffc79e') : wet ? (i % 2 ? '#8fbf8a' : '#7cae86') : i % 2 ? '#9ccc8c' : '#86bb85');
   }
-  if (wet) for (let i = 0; i < 4; i++) {
+  if (wet && !pink) for (let i = 0; i < 4; i++) {
     const x = b.x + b.width * (.18 + i * .22), sway = Math.sin(t * 1.6 + i + index) * 5;
     path(c, null, p => { p.moveTo(x, top + 2); p.quadraticCurveTo(x + sway, top - 14, x + sway * 1.6 - 2, top - 26 - (i % 2) * 8); }, i % 2 ? '#e79bb0' : '#83c08f', 4);
   }
@@ -530,6 +596,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   path(c, theme.seabed, p => { p.moveTo(-30, 833); p.bezierCurveTo(120, 807, 172, 852, 282, 832); p.quadraticCurveTo(398, 803, 510, 825); p.lineTo(510, 880); p.lineTo(-30, 880); });
   drawCaustics(c, stage, d, motion, reducedMotion);
   drawSeabedLife(c, stage, d, motion, menu ? null : game, reducedMotion);
+  drawStageHighlight(c, stage, water, d, motion, menu ? null : game, reducedMotion);
   for (let side = 0; side < 2; side++) {
     for (let i = 0; i < 8; i++) { const x = side ? 475 - i * 9 : i * 9 - 15; const h = 37 + (i * 31) % 112;
       path(c, theme.grass[i % 2 ? 0 : 1], p => { p.moveTo(x - 4, 850); p.bezierCurveTo(x - 18, 800, x + Math.sin(motion + i) * 12, 850 - h, x + 12, 840 - h); p.bezierCurveTo(x + 2, 820 - h, x + 20, 805, x + 5, 850); }, '#386f63', .7);
@@ -579,27 +646,9 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     });
   } else {
     for (const item of game.items) {
-      if (item.kind === 'buoy') {
-        const b = terrainBlocks(item)[0];
-        const outline = p => { b.points.forEach((v, i) => i ? p.lineTo(v.x, v.y) : p.moveTo(v.x, v.y)); p.closePath(); };
-        path(c, gradient(c, b.y, b.y + b.height, '#edb17a', '#bc6555'), outline, '#785950', 2);
-        c.save(); c.beginPath(); outline(c); c.clip();
-        for (const y of [278, 340, 402]) path(c, '#fff0cf', p => p.rect(b.x, y, b.width, 24));
-        c.restore();
-        ellipse(c, item.x, 260, 7, 7, '#fff2b9');
-        ellipse(c, item.x, water + 5, 42, 7, '#e9f5df66');
-      }
+      if (item.kind === 'buoy') buoy(c, item, water, motion, night);
       if (item.kind === 'mangrove') mangrove(c, item, water, motion, night);
-      if (item.kind === 'coral') {
-        const b = terrainBlocks(item)[0];
-        path(c, gradient(c, b.y, 850, '#e7a28e', '#98738b'), p => { b.points.forEach((v, i) => i ? p.lineTo(v.x, v.y) : p.moveTo(v.x, v.y)); p.closePath(); }, '#855f79', 2);
-        // Branches stay inside the shared collision silhouette.
-        for (let i = 0; i < 5; i++) {
-          const x = item.x - 55 + i * 27, top = 629 + (i % 2) * 20;
-          path(c, null, p => { p.moveTo(x, 830); p.quadraticCurveTo(x - 8, 740, x, top); p.moveTo(x - 2, top + 65); p.quadraticCurveTo(x - 19, top + 50, x - 14, top + 29); p.moveTo(x - 3, top + 105); p.quadraticCurveTo(x + 17, top + 88, x + 13, top + 66); }, i % 2 ? '#f4c0a3' : '#c98199', 9);
-          ellipse(c, x, top, 5, 5, '#ffe0b8');
-        }
-      }
+      if (item.kind === 'coral') coral(c, item, water, motion, night);
       if (['island', 'reef'].includes(item.kind)) {
         for (const [index, b] of terrainBlocks(item).entries()) rock(c, b, item, index, water, motion, night);
         if (item.kind === 'island') {
@@ -774,7 +823,9 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     if (!menu && (p.wet || p.breath < WORLD.breath)) {
       // Air left, as a thin arc above Pip; warm and pulsing when it is time to surface.
       const { level, urgency } = airState(p, game.cargo), share = clamp(p.breath / WORLD.breath, 0, 1);
-      const cx = p.feedX ?? p.x, cy = p.y - 46, r = 13, pulse = level && !reducedMotion ? 1 + Math.sin(motion * (8 + urgency * 8)) * .15 : 1;
+      const back = { x: -36 * .76, y: -44 * .76 }, tilt = playerTilt(p);
+      // Sits above Pip's back (in Pip's own frame), so it follows the tilt instead of hovering over the head.
+      const cx = (p.feedX ?? p.x) + back.x * Math.cos(tilt) - back.y * Math.sin(tilt), cy = p.y + back.x * Math.sin(tilt) + back.y * Math.cos(tilt), r = 13, pulse = level && !reducedMotion ? 1 + Math.sin(motion * (8 + urgency * 8)) * .15 : 1;
       c.lineCap = 'round';
       c.strokeStyle = '#ffffff55'; c.lineWidth = 4; c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.stroke();
       c.strokeStyle = level ? '#ffb070' : '#eafff8'; c.lineWidth = 4 * pulse; c.beginPath(); c.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + share * TAU); c.stroke();
