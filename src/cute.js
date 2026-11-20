@@ -165,7 +165,7 @@ export function manatee(c, x, y, t, seed, size = .8) {
 }
 // The harbour cat naps on a roof; drawn with the houses so it scrolls with them.
 export function roofCat(c, x, y, t) {
-  c.save(); c.translate(x, y);
+  c.save(); c.translate(x, y); c.scale(.5, .5); // half size: a small cat on a big roof
   path(c, null, p => { p.moveTo(9, 2); p.quadraticCurveTo(22, 2 + Math.sin(t * 2) * 4, 18, -8 + Math.sin(t * 2) * 3); }, '#e2955a', 3.4);
   ellipse(c, 0, -3, 12, 8, '#f0a868');
   ellipse(c, -9, -10, 7.5, 6.5, '#f0a868');

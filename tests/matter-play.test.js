@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, step, paceAt } from '../src/game.js';
+import { createGame, step, paceAt, ENERGY } from '../src/game.js';
 import { physicsSnapshot, releasePhysics } from '../src/physics.js';
 import { STAGES } from '../src/stages.js';
 
@@ -42,9 +42,11 @@ test('an island bounces Pip and costs speed instead of ending the run', () => {
 test('a buoy bounces a surface swimmer, who then dives under it', () => {
   const buoy = { kind: 'buoy', x: 250 };
   const g = bay(g => { Object.assign(g.player, { y: 400, wet: true }); g.items = [buoy]; });
-  const { events } = run(g, 3, (g, t) => t > .9);
+  const before = g.energy, { events } = run(g, 3, (g, t) => t > .9);
+  const bounces = events.filter(e => e.kind === 'bounce').length;
   assert.equal(g.ended, false);
-  assert.equal(events.filter(e => e.kind === 'bounce').length >= 1, true);
+  assert.equal(bounces >= 1, true);
+  assert.ok(g.energy <= before - bounces * ENERGY.bounce + 1, 'every bounce costs energy');
   assert.ok(buoy.x < g.player.x, 'Pip got past the buoy');
 });
 

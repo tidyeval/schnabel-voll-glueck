@@ -9,8 +9,7 @@ for (const [name,engine] of [['chromium',chromium],['webkit',webkit]]) {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.clock.install();await page.goto(process.env.PELICAN_URL||'http://localhost:4173');await page.locator('#play').waitFor();await page.clock.runFor(3100);
   assert.equal(await page.locator('#play-label').innerText(),'Los gehts!');
   assert.equal(await page.locator('.control-hint').count(),0);
-  for(const selector of ['#play','#wardrobe','#settings','#stages','#install','#update']) {if(!await page.locator(selector).isVisible())continue;const r=await page.locator(selector).boundingBox();assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=width&&r.y+r.height<=height,selector+' fits');}
-  const play=await page.locator('#play').boundingBox(),wardrobe=await page.locator('#wardrobe').boundingBox();if(wardrobe)assert.ok(play.y+play.height<=wardrobe.y);
+  for(const selector of ['#play','#settings','#stages','#stage-prev','#stage-next','#install','#update']) {if(!await page.locator(selector).isVisible())continue;const r=await page.locator(selector).boundingBox();assert.ok(r.x>=0&&r.y>=0&&r.x+r.width<=width&&r.y+r.height<=height,selector+' fits');}
   await page.screenshot({path:`test-results/polish/ui/${name}-${width}-${reducedMotion}-start.png`});
   await page.locator('#play').click();await page.clock.runFor(500);await page.screenshot({path:`test-results/polish/ui/${name}-${width}-${reducedMotion}-hud.png`});
   await page.locator('#pause').click();const before=await page.locator('#world').evaluate(c=>c.toDataURL());await page.clock.runFor(1000);assert.equal(await page.locator('#world').evaluate(c=>c.toDataURL()),before,'pause freezes canvas');
@@ -24,12 +23,12 @@ for (const [name,engine] of [['chromium',chromium],['webkit',webkit]]) {
    await page.locator('#resume').click();await page.keyboard.down('Space');await page.clock.runFor(6500);
    assert.ok(await page.locator('#air').evaluate(e=>e.classList.contains('low-air')));
    assert.equal(await page.locator('#combo').count(),0,'combo badge is absent');
-   const panel=await page.locator('#status-panel').boundingBox();const score=await page.locator('.score-row').boundingBox();assert.ok(panel.x>=0&&panel.x+panel.width<=width&&panel.height<=64,'shared status panel stays compact');
-   assert.ok(score.y+score.height+8<=panel.y,`score and status panel need breathing room: ${JSON.stringify({score,panel})}`);
-   assert.equal(await page.locator('#status-panel').evaluate(panel=>[...panel.querySelectorAll('span,strong,.energy-track,.air-track')].every(child=>{const p=panel.getBoundingClientRect(),c=child.getBoundingClientRect();return c.left>=p.left&&c.right<=p.right&&c.top>=p.top&&c.bottom<=p.bottom;})),true,'status content stays inside its panel');
+   // Minimal HUD: one line with score and time, a thin energy line below it; air is drawn at Pip.
+   const energy=await page.locator('.energy-track').boundingBox();const score=await page.locator('.score-row').boundingBox();assert.ok(energy.x>=0&&energy.x+energy.width<=width&&energy.height<=8,'energy line stays thin');
+   assert.ok(score.y+score.height<=energy.y,`score and energy line do not overlap: ${JSON.stringify({score,energy})}`);
    assert.equal(await page.locator('#toast').textContent().then(t=>t.includes('Luft wird knapp')),false);
    await page.screenshot({path:`test-results/polish/ui/${name}-low-air-${reducedMotion}.png`});
-   await page.locator('#pause').click();const shadow=await page.locator('#status-panel').evaluate(e=>e.style.boxShadow);await page.clock.runFor(500);assert.equal(await page.locator('#status-panel').evaluate(e=>e.style.boxShadow),shadow);await page.keyboard.up('Space');const breath=Number.parseFloat(await page.locator('#air-value').textContent());await page.locator('#resume').click();await page.clock.runFor(200);assert.ok(Math.abs(Number.parseFloat(await page.locator('#air-value').textContent())-breath)<.4,'resume does not skip warning');
+   await page.locator('#pause').click();await page.keyboard.up('Space');const breath=Number.parseFloat(await page.locator('#air-value').textContent());await page.locator('#resume').click();await page.clock.runFor(200);assert.ok(Math.abs(Number.parseFloat(await page.locator('#air-value').textContent())-breath)<.4,'resume does not skip warning');
   }
   assert.deepEqual(errors,[]);await page.close();
  }

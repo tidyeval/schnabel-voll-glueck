@@ -43,7 +43,8 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.mouse.up();
     await page.clock.runFor(1000);
     await page.screenshot({ path: `test-results/${name}-playing.png` });
-    await page.locator('#settings').click();
+    assert.equal(await page.locator('#settings').isVisible(), false, 'settings live in the pause menu during play');
+    await page.locator('#pause').click(); await page.locator('#pause-settings').click();
     const settingsTime = await page.locator('#time').textContent();
     await page.clock.runFor(1000);
     assert.equal(await page.locator('#time').textContent(), settingsTime);

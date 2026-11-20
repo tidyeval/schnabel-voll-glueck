@@ -73,10 +73,13 @@ function refreshMenu() {
     option.disabled = i > prefs.completed; return option;
   }));
   $('stages').value = selectedStage;
-  text('stage-best', t('best', { score: formatNumber(prefs.bests[selectedStage]) }));
+  text('stage-best', prefs.bests[selectedStage] ? t('best', { score: formatNumber(prefs.bests[selectedStage]) }) : '');
+  $('stage-prev').disabled = selectedStage === 0; $('stage-next').disabled = selectedStage >= Math.min(prefs.completed, STAGES.length - 1);
   text('play-label', prefs.completed ? t('continue') : t('play'));
 }
 $('stages').onchange = () => { selectedStage = Number($('stages').value); refreshMenu(); };
+// Arrows step through the unlocked stages; the select still opens the full list.
+for (const [id, step] of [['stage-prev', -1], ['stage-next', 1]]) $(id).onclick = () => { selectedStage = Math.max(0, Math.min(selectedStage + step, prefs.completed, STAGES.length - 1)); refreshMenu(); };
 document.querySelectorAll('[data-locale]').forEach(button => button.onclick = () => {
   prefs.language = button.dataset.locale;
   refreshLocale(); persistSettings('language');
@@ -132,14 +135,12 @@ function updateHud() {
   if (game.score > shownScore) { const score = $('score'); score.classList.remove('pop'); void score.offsetWidth; score.classList.add('pop'); }
   shownScore = game.score;
   text('score', formatNumber(game.score)); text('time', clock(Math.floor(game.time)));
-  const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79';
+  const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79'; $('status-panel').classList.toggle('low-energy', energy < 25);
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
   const p = game.player;
   $('air').classList.toggle('hidden', !p.wet && p.breath >= WORLD.breath);
-  const { level, urgency } = airState(p, game.cargo);
+  const { level } = airState(p, game.cargo);
   $('air').classList.toggle('low-air', level > 0);
-  const pulse = reducedMotion ? 2 : 2 + (1 + Math.sin(animation * (5 + urgency * 5))) * 2;
-  $('status-panel').style.boxShadow = level ? `0 0 0 ${pulse}px #ffd59a66` : '';
   text('air-label', level ? t('surface') : t('air'));
   text('air-value', `${p.breath.toFixed(1)} s`);
   $('air-fill').style.width = `${p.breath / WORLD.breath * 100}%`;
@@ -152,6 +153,7 @@ $('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGE
 $('pause').onclick = () => pause(); $('resume').onclick = resume;
 $('quit').onclick = finish;
 $('settings').onclick = () => { pause(false); $('settings-dialog').showModal(); };
+$('pause-settings').onclick = () => { $('pause-dialog').close(); $('settings-dialog').showModal(); };
 function afterSettings() { $('settings-dialog').close(); if (mode === 'paused') $('pause-dialog').showModal(); }
 $('settings-dialog').querySelector('.close').onclick = afterSettings;
 $('settings-dialog').querySelector('.close-settings').onclick = afterSettings;

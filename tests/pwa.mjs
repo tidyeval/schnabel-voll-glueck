@@ -35,6 +35,7 @@ const browser = await chromium.launch();
 try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto(url);
+  await page.locator('#settings').click(); // install and update live in settings
   await page.locator('#install').click(); await page.locator('#install-help[open]').waitFor();
   await page.locator('#install-help button').click();
   await page.evaluate(() => { const e = new Event('beforeinstallprompt'); e.prompt = async () => { window.installClicked = true; }; dispatchEvent(e); });
@@ -46,8 +47,8 @@ try {
   });
   await page.reload(); await page.locator('#play').waitFor();
   deployment = 1;
-  await page.locator('#update').click();
   await page.locator('#settings').click();
+  await page.locator('#update').click();
   await page.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration()).installing));
   assert.ok(!(await page.locator('#toast').textContent()).includes('Kein neues Update'), 'never claim no update while it is downloading');
   await page.waitForFunction(() => document.querySelector('#update').textContent === 'Update verfügbar · neu laden');

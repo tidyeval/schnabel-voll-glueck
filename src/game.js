@@ -207,7 +207,7 @@ function nearMissZone(item, p) {
 }
 export const LEAP = { from: WORLD.water + 40, height: 125, duration: 1.1, at: 430 };
 export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 0, 1) * Math.PI) * LEAP.height; }
-export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2 };
+export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2, bounce: 10 };
 /*
  * Matter play: Pip has momentum and the camera follows him.
  * Terrain is solid: a bump bounces Pip back and costs speed instead of ending the run.
@@ -459,7 +459,8 @@ function moveBody(game, dt, events) {
   const result = movePlayerSolid(game, dt, p.vx, p.vy, terrain, (x, y) => wet ? flowAt(game, x, y) : { x: 0, y: 0 });
   game.distance += result.moved; game.speed = dt ? result.moved / dt : 0;
   p.y = result.y; p.vx = result.vx; p.vy = result.vy;
-  if (result.bumped && !p.bump) { p.bump = .6; events.push({ kind: 'bounce', x: result.bumped.x, y: result.bumped.y }); }
+  // Every bounce off terrain costs energy (once per bump; p.bump keeps one contact from counting twice).
+  if (result.bumped && !p.bump) { p.bump = .6; game.energy = Math.max(0, game.energy - ENERGY.bounce); events.push({ kind: 'bounce', x: result.bumped.x, y: result.bumped.y }); }
 }
 
 function movePlayer(game, dt, holding, previousAir, events) {

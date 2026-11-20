@@ -718,17 +718,20 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
         path(c, '#719b78', p => { p.moveTo(item.x - 16, item.y - 7); p.quadraticCurveTo(item.x - 10, item.y - 21, item.x - 2, item.y - 8); p.closePath(); });
       }
       if (item.kind === 'whirlpool') {
-        // A soft funnel with spiral arms, and bubbles and sparkles circling in.
+        // Swirling water, not a hole: a faint light shimmer with short swirl strokes turning around it.
         const spin = motion * 1.6, squash = .42;
-        const funnel = c.createRadialGradient(item.x, item.y, 4, item.x, item.y, 120);
-        funnel.addColorStop(0, '#1d4f60aa'); funnel.addColorStop(.45, '#2b6a7455'); funnel.addColorStop(1, '#2b6a7400');
+        const shimmer = c.createRadialGradient(item.x, item.y, 4, item.x, item.y, 115);
+        shimmer.addColorStop(0, '#e8fff433'); shimmer.addColorStop(.6, '#c9efe41c'); shimmer.addColorStop(1, '#c9efe400');
         c.save(); c.translate(item.x, item.y); c.scale(1, squash); c.translate(-item.x, -item.y);
-        c.fillStyle = funnel; c.beginPath(); c.arc(item.x, item.y, 120, 0, TAU); c.fill();
-        for (let arm = 0; arm < 3; arm++) {
-          c.beginPath();
-          for (let k = 0; k <= 40; k++) { const u = k / 40, r = 112 * (1 - u) + 6, a = spin + arm * TAU / 3 + u * 5.2; const x = item.x + Math.cos(a) * r, y = item.y + Math.sin(a) * r; k ? c.lineTo(x, y) : c.moveTo(x, y); }
-          c.strokeStyle = ['#d9f6ecbb', '#b9e8dc99', '#f2f6d0aa'][arm]; c.lineWidth = 4; c.lineCap = 'round'; c.stroke();
-        }
+        c.fillStyle = shimmer; c.beginPath(); c.arc(item.x, item.y, 115, 0, TAU); c.fill();
+        c.lineCap = 'round';
+        [[96, .7, 3, '#e3faf0cc'], [66, 1.1, 3, '#f0fff8dd'], [38, 1.7, 2, '#fffbe0ee']].forEach(([r, speed, count, color], ring) => {
+          c.strokeStyle = color; c.lineWidth = 3.5 - ring * .5;
+          for (let k = 0; k < count; k++) {
+            const a = spin * speed + k * TAU / count + ring;
+            c.beginPath(); c.arc(item.x, item.y, r, a, a + .9); c.stroke();
+          }
+        });
         c.restore();
         for (let i = 0; i < 12; i++) {
           const u = ((reducedMotion ? 0 : motion * .35) + i / 12) % 1, r = 110 * (1 - u) + 6, a = spin + i * 2.1 + u * 6;
@@ -736,7 +739,6 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
           if (i % 3) { c.strokeStyle = '#eafff8cc'; c.lineWidth = 1.2; c.beginPath(); c.arc(x, y, 2.5 + (1 - u) * 2.5, 0, TAU); c.stroke(); }
           else star(c, x, y, 3 + (1 - u) * 2, '#fff6c8', motion * 2 + i);
         }
-        ellipse(c, item.x, item.y, 14, 6, '#163f4fcc');
       }
       if (item.kind === 'bubble') {
         ellipse(c, item.x, item.y, 18, 18, gradient(c, item.y - 18, item.y + 18, '#e5fff5aa', '#83d7cf33'));
@@ -769,6 +771,14 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       },
     });
     c.restore();
+    if (!menu && (p.wet || p.breath < WORLD.breath)) {
+      // Air left, as a thin arc above Pip; warm and pulsing when it is time to surface.
+      const { level, urgency } = airState(p, game.cargo), share = clamp(p.breath / WORLD.breath, 0, 1);
+      const cx = p.feedX ?? p.x, cy = p.y - 46, r = 13, pulse = level && !reducedMotion ? 1 + Math.sin(motion * (8 + urgency * 8)) * .15 : 1;
+      c.lineCap = 'round';
+      c.strokeStyle = '#ffffff55'; c.lineWidth = 4; c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.stroke();
+      c.strokeStyle = level ? '#ffb070' : '#eafff8'; c.lineWidth = 4 * pulse; c.beginPath(); c.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + share * TAU); c.stroke();
+    }
   }
   const swell = menu ? 1 : swellOf(game, stage, reducedMotion);
   for (let i = 0; i < 4; i++) {

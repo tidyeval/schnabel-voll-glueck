@@ -12,7 +12,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.clock.install();
     await page.goto(process.env.PELICAN_URL || 'http://localhost:4173');
     await page.locator('#play').waitFor();
-    await page.evaluate(() => localStorage.setItem('pelican-phaser-matter-v1', JSON.stringify({ completed: 2, totalFish: 90, outfit: 'sailor', bests: [123, 456, 789], music: false, sound: false })));
+    await page.evaluate(() => localStorage.setItem('pelican-phaser-matter-v1', JSON.stringify({ layout: 4, completed: 2, totalFish: 90, outfit: 'sailor', bests: [123, 456, 789, 0], music: false, sound: false })));
     await page.reload(); await page.locator('#play').waitFor();
     assert.equal(await page.locator('[name=difficulty]').count(), 0);
     assert.equal(await page.locator('#result-difficulty').count(), 0);
@@ -36,12 +36,9 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     assert.equal(await page.locator('#combo').count(), 0, 'in-play combo badge is absent');
     await page.keyboard.down('Space'); await page.clock.runFor(1000); await page.keyboard.up('Space');
     assert.equal(await page.locator('.air-track').getAttribute('aria-valuemax'), String(WORLD.breath));
-    const sizes = await page.evaluate(() => ({
-      energy: Number.parseFloat(getComputedStyle(document.querySelector('.energy-row')).fontSize),
-      airLabel: Number.parseFloat(getComputedStyle(document.querySelector('#air-label')).fontSize),
-      airValue: Number.parseFloat(getComputedStyle(document.querySelector('#air-value')).fontSize),
-    }));
-    assert.ok(sizes.energy >= 10 && sizes.airLabel >= 10 && sizes.airValue >= 12, JSON.stringify(sizes));
+    // Minimal HUD: a readable score and a visible energy line; air is drawn at Pip, its bar stays for screen readers.
+    const sizes = await page.evaluate(() => ({ score: Number.parseFloat(getComputedStyle(document.querySelector('#score')).fontSize), energy: document.querySelector('.energy-track').getBoundingClientRect().height }));
+    assert.ok(sizes.score >= 16 && sizes.energy >= 2, JSON.stringify(sizes));
     await page.locator('#pause').click();
     const air = await page.locator('#air-value').textContent(); await page.clock.runFor(2000);
     assert.equal(await page.locator('#air-value').textContent(), air);

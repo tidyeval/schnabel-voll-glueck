@@ -39,22 +39,27 @@ h1 em{color:#e78c57;font-style:normal}
 .language-picker button[aria-pressed=true]{border-color:#ffdb86;background:#fff8db;box-shadow:0 0 0 2px #d5975a88;color:#214d4d}
 .hidden{display:none!important}
 #hud{position:absolute;inset:0;z-index:3;pointer-events:none}
-.score-row{position:absolute;top:12%;left:7%;right:7%;display:flex;justify-content:space-between;align-items:center}
-.score-row .eyebrow{color:#658a80;font-size:1.9cqw}
-.score-row strong{display:block;font-size:10cqw;line-height:1.1;letter-spacing:-.05em}
-.score-row strong{transform-origin:left 70%}
+/* Minimal HUD: one quiet line (score, time), a thin energy line; air is drawn as an arc at Pip. */
+.score-row{position:absolute;top:4.2%;left:7%;right:calc(6% + 12cqw);height:9cqw;display:flex;justify-content:space-between;align-items:center}
+.score-row .eyebrow{display:none}
+.score-row strong{display:block;font-size:7cqw;line-height:1;letter-spacing:-.05em;transform-origin:left 70%}
 .score-row strong.pop{animation:score-pop .32s cubic-bezier(.3,1.8,.5,1)}
 @keyframes score-pop{0%{transform:scale(1)}35%{transform:scale(1.28) rotate(-3deg)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.score-row strong.pop{animation:none}}
 .night .score-row strong{color:#fff4dc;text-shadow:0 .3cqw 1.2cqw #10294a88}
-.night .score-row .eyebrow{color:#c9d6f0}
-.timer{background:#fff9e7b0;padding:2cqw 3cqw;border-radius:8cqw;font-size:3cqw;font-weight:700;font-variant-numeric:tabular-nums;align-self:flex-start}
-.timer>span:first-child{color:#d99056;font-size:4cqw}
-.status-panel{position:absolute;top:clamp(136px,20%,180px);left:7%;right:7%;padding:2cqw 2.5cqw;border:1px solid #fffdf066;border-radius:3cqw;background:#fff9e7b8;backdrop-filter:blur(5px);transition:box-shadow .15s}
-.vital-row{display:grid;grid-template-columns:minmax(72px,9ch) 1fr minmax(38px,5ch);align-items:center;gap:2cqw;font-size:clamp(10px,1.7cqw,12px);font-weight:800;letter-spacing:.1em}
-.vital-row strong{text-align:right;font-size:clamp(12px,2.3cqw,15px);font-variant-numeric:tabular-nums;letter-spacing:0;white-space:nowrap}
-.energy-track{height:1.8cqw;flex:1;background:#84b7a933;border-radius:2cqw;overflow:hidden}
+.timer{font-size:3.6cqw;font-weight:700;font-variant-numeric:tabular-nums;opacity:.8}
+.night .timer{color:#fff4dc}
+.timer>span:first-child{display:none}
+.status-panel{position:absolute;top:calc(4.2% + 9.5cqw);left:7%;width:28cqw}
+/* Labels, numbers and the air bar stay for screen readers only. */
+.vital-row>span,.vital-row>strong,#air{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.energy-track{height:.9cqw;background:#2b5a5022;border-radius:2cqw;overflow:hidden}
+.night .energy-track{background:#ffffff2a}
+.low-energy .energy-track{animation:energy-low 1s ease-in-out infinite}
+@keyframes energy-low{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.low-energy .energy-track{animation:none}}
 #energy{height:100%;background:#5c9e79;border-radius:2cqw;transition:width .12s linear,background .3s}
+#app:has(#pause:not(.hidden)) #settings{display:none}
 .toast{position:absolute;top:30%;left:10%;right:10%;z-index:8;background:#fff0c6;color:#775532;border-radius:4cqw;padding:3cqw;text-align:center;font-size:3cqw;font-weight:700;box-shadow:0 8px 30px #2a503326;pointer-events:none}
 dialog{position:absolute;inset:0;align-self:center;width:86%;max-height:90%;margin:auto;padding:8cqw 6cqw 5cqw;border:1px solid #fffdf2;border-radius:7cqw;background:#fff9e9;color:#264f48;text-align:center;box-shadow:0 20px 70px #123d3b40;overflow:auto}
 dialog::backdrop{background:#1a46475e;backdrop-filter:blur(7px)}
@@ -93,13 +98,8 @@ canvas{object-fit:fill}
 .desktop-footer{display:none}
 dialog{position:fixed;max-height:85svh}
 }
-@media(prefers-reduced-motion:reduce){button,input:after,#energy,.status-panel{transition:none}
+@media(prefers-reduced-motion:reduce){button,input:after,#energy{transition:none}
 }
-.air{margin-top:1.5cqw;padding-top:1.5cqw;border-top:1px solid #5b8d7b33;color:#35716d}
-.air-track{height:1.2cqw;background:#8bb9ae55;border-radius:1cqw;overflow:hidden}
-#air-fill{height:100%;background:#b7e9d8;border-radius:1cqw}
-.air.low-air{color:#b45f39;border-color:#e1a15b88}
-.low-air #air-fill{background:#ffc47f}
 [hidden]{display:none!important}
 #install-help p{line-height:1.5}
 .top-actions{margin-left:auto}
@@ -164,3 +164,14 @@ dialog{position:fixed;max-height:85svh}
 .rotate-icon{font-size:40px}
 /* Round-start control hint sits in open water, clear of Pip, the boat and the first fish arc. */
 .toast.hint{top:48%}
+/* Start screen: stage as "‹ name ›" with its best score underneath; install/update live in settings. */
+.stage-picker{align-items:center;text-align:center;gap:.5cqw}
+.stage-row{display:flex;align-items:center;justify-content:center;gap:2cqw;width:100%}
+.stage-picker select{appearance:none;-webkit-appearance:none;width:auto;max-width:70%;border:0;background:none;padding:1cqw 2cqw;color:#fff8e4;font-size:clamp(16px,4.6cqw,22px);font-weight:800;text-align:center;text-align-last:center;text-shadow:0 1px 3px #103f40,0 0 6px #103f40;cursor:pointer}
+.stage-picker select option{color:#254f4b}
+.stage-step{display:grid;place-items:center;width:10cqw;height:10cqw;min-width:40px;min-height:40px;padding:0;border:0;border-radius:50%;background:#164a4955;color:#fff8e4;font-size:clamp(20px,6cqw,30px);line-height:1;pointer-events:auto}
+.stage-step:disabled{opacity:.25}
+#settings-dialog .app-actions{border-top:0;padding-top:0;margin:2cqw 0}
+#settings-dialog .app-actions .quiet-button{background:#e9f1e3;color:#264f48}
+/* The overall run record stays in the save; the start screen shows only the chosen stage's record. */
+.start-bottom .record{display:none}
