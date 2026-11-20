@@ -6,7 +6,8 @@ import { readFileSync } from 'node:fs';
 import { checkDesignFiles, formatDesignErrors } from '@tidyeval/game-platform/design';
 import { STAGES } from '../src/stages.js';
 import { locales, translations } from '../src/i18n.js';
-import { createGame, hazardShape, rollRare, step } from '../src/game.js';
+import * as GAME from '../src/game.js';
+import { CONTACT_DAMAGE, ENERGY, FLOW, WORLD, createGame, hazardShape, netShape, paceAt, rollRare, step, terrainBlocks } from '../src/game.js';
 import { createJuice } from '../src/juice.js';
 import { drawStorm } from '../src/scenery.js';
 
@@ -16,6 +17,9 @@ const { errors, ontology, tokens } = await checkDesignFiles(root);
 const entities = ontology?.entities ?? [];
 const entity = id => entities.find(e => e.id === id);
 const sorted = values => [...new Set(values)].sort();
+const conceptParent = new Map((ontology?.concepts ?? []).map(c => [c.id, c.parent]));
+const isA = (concept, ancestor) => { for (let id = concept; id; id = conceptParent.get(id)) if (id === ancestor) return true; return false; };
+const ofConcept = ancestor => entities.filter(e => isA(e.concept, ancestor));
 const css = source('src/style.css');
 
 test('design files pass the shared validator', () => {
@@ -149,17 +153,21 @@ test('next nest carries the journey score and time, a menu start begins at zero'
   assert.match(main, /\$\('play'\)\.onclick = \(\) => start\(\);/);
 });
 
-test('reduced motion disables flashes and shakes', () => {
+test('reduced motion disables flashes and shakes for every event', () => {
   const game = { player: { x: 100, y: 300 }, speed: 0 };
-  const view = reduced => {
+  // Every event kind juice.js reacts to, with the strongest payload it can carry.
+  const kinds = sorted([...source('src/juice.js').matchAll(/event\.kind === '(\w+)'/g)].map(m => m[1]));
+  assert.ok(kinds.length >= 12, `found ${kinds.length} juice event kinds`);
+  const after = (reduced, kind) => {
     const juice = createJuice(reduced);
-    juice.onEvent({ kind: 'frenzy', x: 100, y: 300 }, game);
-    juice.onEvent({ kind: 'hurt', x: 100, y: 300 }, game);
+    juice.onEvent({ kind, x: 100, y: 300, power: 1, golden: true, combo: 10, points: 50 }, game);
     return { ...juice.view(), timeScale: juice.timeScale(.01) };
   };
-  assert.ok(view(false).flash > 0 && view(false).timeScale === 0, 'without reduced motion the frenzy flashes and a hurt stops time briefly');
-  const calm = view(true);
-  assert.deepEqual({ flash: calm.flash, shakeX: calm.shakeX, shakeY: calm.shakeY, timeScale: calm.timeScale }, { flash: 0, shakeX: 0, shakeY: 0, timeScale: 1 });
+  assert.ok(after(false, 'frenzy').flash > 0 && after(false, 'hurt').timeScale === 0 && after(false, 'breach').shakeX !== undefined, 'without reduced motion juice flashes and stops time');
+  for (const kind of kinds) {
+    const view = after(true, kind);
+    assert.deepEqual({ flash: view.flash, shakeX: view.shakeX, shakeY: view.shakeY, timeScale: view.timeScale }, { flash: 0, shakeX: 0, shakeY: 0, timeScale: 1 }, `reduced motion still flashes, shakes or changes time on '${kind}'`);
+  }
   // Lightning: the storm fills the sky with light during a flash, but not with reduced motion.
   const fills = (time, reduced) => {
     let count = 0;
@@ -197,21 +205,151 @@ test('rare surface moments get the surface to themselves', () => {
   assert.ok(source('src/cute.js').includes("if (['bottle', 'flamingo', 'mudskipper'].includes(kind) && rareActive(game)) return;"), 'surface residents step aside during a rare moment');
 });
 
-test('every danger is harmless or announced before it can hurt', () => {
-  // The great white only shows its fin while stalking; a puffer is harmless until fully puffed.
-  assert.equal(hazardShape({ kind: 'whiteshark', x: 0, y: 500, phase: 'stalk' }), null);
-  for (const phase of ['idle', 'startle', 'inflate', 'deflate', 'rest']) assert.equal(hazardShape({ kind: 'puffer', x: 0, y: 600, phase, timer: 0 }), null, `puffer ${phase}`);
-  // Gulls, surfers and terrain announce themselves while still well ahead of Pip.
-  for (const item of [{ kind: 'gull', x: 700, y: 285, phase: 0 }, { kind: 'surfer', x: 700, y: 360, escaping: false }, { kind: 'reef', x: 1100 }, { kind: 'island', x: 1100 }]) {
-    const game = createGame(() => .5, 1);
-    game.nextEncounter = Infinity; game.items = [item];
-    let announced = null;
-    for (let t = 0; t < 8 && !announced; t += 1 / 60) {
-      Object.assign(game.player, { y: 600, wet: true, breath: 8 }); game.energy = 100;
-      const events = step(game, 1 / 60, false);
-      assert.ok(!events.some(e => e.kind === 'hurt'), `${item.kind} hurt Pip before announcing itself`);
-      if (events.some(e => ['warning', 'reefWarning', 'islandWarning'].includes(e.kind))) announced = item.x - game.player.x;
+// Simulates one obstacle from properties.telegraph.probe with Pip held at probe.pipY and
+// returns when it was announced, when it could first hurt (danger) and when it hurt.
+function simulateTelegraph({ announce, danger, probe }) {
+  const game = createGame(() => .5, STAGES.findIndex(stage => stage.id === 'reef'));
+  game.nextEncounter = Infinity;
+  if (probe.spawn === 'chase') { game.items = []; game.chaseWave = 0; game.wave = 0; } else { game.items = [structuredClone(probe.item)]; game.chaseWave = Infinity; }
+  const kind = probe.spawn === 'chase' ? 'whiteshark' : probe.item.kind, p = game.player, result = { announce: null, danger: null, hurt: null };
+  const [how, arg] = announce.split(':'), [what, detail] = danger.split(':');
+  const dangerous = item => {
+    if (what === 'spawn') return game.items.some(i => i.kind === detail);
+    if (!item) return false;
+    if (what === 'phase') return item.phase === detail;
+    if (what === 'net') return !!netShape(item);
+    if (what === 'fisher') return item.x - 30 <= p.x + 18;
+    if (what === 'pull') return item.x - FLOW.whirlRadius <= p.x;
+    if (what === 'terrain') return Math.min(...terrainBlocks(item).map(b => b.x)) <= p.x + 18;
+    if (what === 'contact') { const s = hazardShape(item); return !!s && (s.type === 'box' ? s.left : s.x - s.rx) <= p.x; }
+    throw new Error(`unknown telegraph danger ${danger}`);
+  };
+  for (let t = 0; t < 12 && !game.ended; t += 1 / 60) {
+    Object.assign(p, { y: probe.pipY, vy: 0, wet: probe.pipWet, breath: WORLD.breath }); game.energy = 100;
+    const events = step(game, 1 / 60, false), item = game.items.find(i => i.kind === kind);
+    const announced = how === 'event' ? events.some(e => arg.split('|').includes(e.kind)) : how === 'phase' ? item?.phase === arg : how === 'visible' ? !!item && item.x - (probe.halfWidth ?? 0) < WORLD.width : null;
+    assert.notEqual(announced, null, `unknown telegraph announce ${announce}`);
+    if (result.announce === null && announced) result.announce = game.time;
+    if (result.danger === null && dangerous(item)) result.danger = game.time;
+    if (result.hurt === null && events.some(e => e.kind === 'hurt')) result.hurt = game.time;
+  }
+  return result;
+}
+test('every obstacle is telegraphed with its declared lead time', () => {
+  const obstacles = ofConcept('Obstacle');
+  assert.ok(obstacles.length >= 17, `found ${obstacles.length} obstacles`);
+  for (const obstacle of obstacles) {
+    const telegraph = obstacle.properties?.telegraph;
+    assert.ok(telegraph?.probe && telegraph.announce && telegraph.danger && telegraph.leadSeconds > 0 && telegraph.channels?.length, `${obstacle.id} needs properties.telegraph { channels, announce, danger, leadSeconds, probe }`);
+    const result = simulateTelegraph(telegraph);
+    assert.notEqual(result.announce, null, `${obstacle.id} is never announced (${telegraph.announce})`);
+    assert.ok(result.hurt === null || result.announce < result.hurt, `${obstacle.id} hurt Pip before it was announced`);
+    const first = Math.min(result.danger ?? Infinity, result.hurt ?? Infinity);
+    assert.ok(first < Infinity, `${obstacle.id}: the probe never reached its danger (${telegraph.danger}); fix the probe`);
+    assert.ok(first - result.announce >= telegraph.leadSeconds - 1e-9, `${obstacle.id}: announced only ${(first - result.announce).toFixed(2)} s before it can hurt; declared lead ${telegraph.leadSeconds} s`);
+  }
+});
+
+test('ontology constants equal the exported game constants', () => {
+  let checked = 0;
+  for (const entity of entities) for (const [name, value] of Object.entries(entity.properties?.constants ?? {})) {
+    assert.ok(name in GAME, `${entity.id}: game.js exports no ${name}`);
+    assert.deepEqual(value, GAME[name], `${entity.id}: properties.constants.${name} differs from game.js`); checked++;
+  }
+  assert.ok(checked >= 12, `checked ${checked} constants`);
+  for (const entity of entities.filter(e => e.properties?.contactDamage !== undefined)) assert.equal(entity.properties.contactDamage, CONTACT_DAMAGE[entity.id], `${entity.id}: contactDamage differs from CONTACT_DAMAGE`);
+  for (const kind of Object.keys(CONTACT_DAMAGE)) assert.ok(entity(kind) && isA(entity(kind).concept, 'Hazard'), `CONTACT_DAMAGE.${kind} has no Hazard entity`);
+});
+
+test('contact damage stays within each hazard class band', () => {
+  const contract = entity('contract.hazard').properties;
+  for (const hazard of ofConcept('EnergyHazard')) {
+    const damage = CONTACT_DAMAGE[hazard.id];
+    assert.ok(damage >= contract.energyHazardDamage.min && damage <= contract.energyHazardDamage.max, `${hazard.id}: contact damage ${damage} outside ${contract.energyHazardDamage.min}–${contract.energyHazardDamage.max}`);
+  }
+  assert.deepEqual(sorted(ofConcept('FatalHazard').map(e => e.id)), sorted(contract.fatalKinds));
+  const fatalLine = source('src/game.js').match(/const fatalHit = ([^;]+);/)[1];
+  for (const kind of contract.fatalKinds.filter(kind => kind !== 'fisher')) assert.ok(fatalLine.includes(`item.kind === '${kind}'`), `${kind} is not fatal in resolveHazard`);
+  assert.equal(contract.terrainBounceCost, ENERGY.bounce);
+  for (const force of ofConcept('Force')) assert.equal(hazardShape(force.properties.telegraph.probe.item), null, `${force.id} is a Force but has a contact shape`);
+});
+
+test('stages follow the pacing contract', () => {
+  const pacing = entity('contract.pacing').properties;
+  for (const [seconds, speed, spacing] of pacing.pacePoints) assert.deepEqual(paceAt(seconds), { speed, spacing }, `paceAt(${seconds})`);
+  assert.deepEqual(pacing.startElapsed, STAGES.map(s => s.startElapsed));
+  assert.deepEqual(pacing.sharkWarning, STAGES.map(s => s.sharkWarning));
+  assert.deepEqual(pacing.pairPatterns, STAGES.map(s => s.pairPatterns));
+  STAGES.forEach((stage, i) => {
+    if (i) assert.ok(stage.startElapsed > STAGES[i - 1].startElapsed, `${stage.id} must start later in the journey than ${STAGES[i - 1].id}`);
+    assert.equal(stage.encounters.length, pacing.encountersPerStage, `${stage.id} encounters`);
+    assert.ok(stage.sharkWarning >= pacing.minSharkWarning, `${stage.id} sharkWarning ${stage.sharkWarning} below ${pacing.minSharkWarning}`);
+    for (const [wave, form] of Object.entries(stage.pairPatterns)) {
+      assert.ok(['staggered', 'parallel'].includes(form), `${stage.id} pair pattern ${form}`);
+      assert.equal(stage.encounters[wave], 'shark-shark', `${stage.id} pairPatterns[${wave}] must sit on a shark pair`);
     }
-    assert.ok(announced > 150, `${item.kind} must be announced more than 150 px ahead (was ${announced})`);
+  });
+});
+
+test('every stage satisfies the stage contract and has theme tokens', () => {
+  const contract = entity('contract.stage').properties;
+  for (const stage of STAGES) {
+    for (const field of contract.fields) assert.ok(field in stage, `${stage.id} lacks ${field}`);
+    for (const field of Object.keys(stage)) assert.ok([...contract.fields, ...contract.optionalFields].includes(field), `${stage.id} has an undocumented field ${field}`);
+    assert.deepEqual(sorted(Object.keys(stage.theme)), sorted(contract.themeFields), `${stage.id} theme fields`);
+    assert.deepEqual(sorted(Object.keys(stage.setPieces)), sorted(contract.setPieceFields));
+    for (const locale of locales) assert.ok(stage.names[locale]?.trim(), `${stage.id} has no ${locale} name`);
+    for (const r of stage.residents) assert.equal(entity(r)?.concept, 'Resident', `${stage.id} resident ${r}`);
+    for (const piece of [...stage.setPieces.calm, ...stage.setPieces.shows]) assert.ok(entity(piece) && isA(entity(piece).concept, 'SetPiece'), `${stage.id} set piece ${piece}`);
+    if (stage.rareMoment) assert.equal(entity(stage.rareMoment)?.concept, 'RareMoment');
+    const value = id => { const token = tokens.tokens[id]; assert.ok(token, `missing token ${id}`); return token.value; };
+    for (const [field, expected] of Object.entries(stage.theme)) {
+      const id = `stage.${stage.id}.${field}`;
+      if (field === 'sky') assert.deepEqual(value(id).map(s => [s.at, s.color]), expected, id);
+      else if (field === 'water') assert.deepEqual(value(id).map(s => s.color), expected, id);
+      else if (field === 'grass') assert.deepEqual([value(`${id}.light`), value(`${id}.dark`)], expected, id);
+      else if (field === 'tint' && expected === null) assert.equal(value(id), 'none', id);
+      else assert.equal(value(id), expected, id);
+    }
+  }
+  const relations = sorted(ontology.relations.filter(r => r.type === 'hasResident').map(r => `${r.from} > ${r.to}`));
+  assert.deepEqual(relations, sorted(STAGES.flatMap(s => s.residents.map(r => `stage.${s.id} > ${r}`))), 'hasResident relations');
+});
+
+test('events, end reasons and haptics match the code', () => {
+  const game = source('src/game.js');
+  const union = game.match(/@property \{([^}]+)\} kind\n \*\/\n\nexport const WORLD|@typedef \{object\} GameEvent[\s\S]*?@property \{([^}]+)\} kind/)[2].split('|').map(k => k.replace(/'/g, ''));
+  const pushed = game.split('\n').filter(line => /events\.push\(|return \[(\{|\.\.\.events)/.test(line)).flatMap(line => [...line.matchAll(/kind: ([^,}]+)/g)].flatMap(m => [...m[1].matchAll(/(?<!=== )'(\w+)'/g)].map(q => q[1])));
+  for (const kind of pushed) assert.ok(union.includes(kind), `event '${kind}' is emitted but missing from the GameEvent typedef`);
+  assert.deepEqual(sorted(entities.filter(e => e.concept === 'GameEvent').map(e => e.id.slice(6))), sorted(union), 'GameEvent entities');
+  const fatal = game.match(/const fatalHit = ([^;]+);/)[1], reasons = [...game.matchAll(/endReason = '(\w+)'/g)].map(m => m[1]);
+  const reachable = sorted([...reasons, 'fisher', ...[...fatal.matchAll(/item\.kind === '(\w+)'/g)].map(m => m[1] === 'whiteshark' ? 'shark' : m[1])]);
+  assert.deepEqual(sorted(entities.filter(e => e.concept === 'EndReason').map(e => e.id.slice(10))), reachable, 'EndReason entities');
+  for (const reason of reachable) for (const locale of locales) assert.ok(translations[locale].reasons[reason], `${locale} has no reasons.${reason}`);
+  const haptics = Object.fromEntries([...source('src/audio.js').matchAll(/^  (\w+): \{ web: (\[[^\]]*\]|\d+)(?:, native: ImpactStyle\.(\w+))?(?:, success: (true))? \},$/gm)].map(([, name, web, native, success]) => [name, { web: JSON.parse(web), ...(native ? { native } : {}), ...(success ? { nativeSuccess: true } : {}) }]));
+  assert.ok(Object.keys(haptics).length >= 10);
+  assert.deepEqual(Object.fromEntries(entities.filter(e => e.concept === 'Haptic').map(e => [e.id.slice(7), e.properties])), haptics, 'Haptic entities equal the HAPTICS table');
+});
+
+test('every entity has a description', () => {
+  assert.deepEqual(entities.filter(e => !e.description?.trim()).map(e => e.id), []);
+});
+
+// Rules whose selector list contains a selector exactly; used for component checks.
+const cssRules = [...css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{/g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ selectors: m[1].split(',').map(x => x.trim()), body: m[2] }));
+test('component selectors exist and their colour tokens are the colours in that CSS', () => {
+  const resolve = value => { for (let i = 0; i < 10 && /^\{.+\}$/.test(value); i++) value = tokens.tokens[value.slice(1, -1)].value; return value; };
+  for (const component of tokens.components) {
+    for (const part of [component, ...(component.variants ?? []).map(v => ({ ...v, id: `${component.id}/${v.id}` }))]) {
+      if (!part.selector) continue;
+      const rules = cssRules.filter(rule => rule.selectors.some(s => s === part.selector || s.startsWith(`${part.selector} `) || s.startsWith(`${part.selector}:`) || s.startsWith(`${part.selector}[`) || s.startsWith(`${part.selector}.`)));
+      assert.ok(rules.some(rule => rule.selectors.includes(part.selector)), `${part.id}: selector ${part.selector} has no rule in style.css`);
+      const body = rules.map(rule => rule.body).join(';').toLowerCase();
+      for (const [prop, ref] of Object.entries(part.tokens ?? {})) {
+        const token = tokens.tokens[ref.slice(1, -1)];
+        const colours = token.type === 'color' ? [resolve(ref)] : token.type === 'gradient' ? resolve(ref).map(stop => resolve(stop.color)) : [];
+        for (const colour of colours) assert.ok(body.includes(colour.toLowerCase()), `${part.id}.${prop}: ${colour} is not set in the CSS for ${part.selector}`);
+      }
+    }
   }
 });

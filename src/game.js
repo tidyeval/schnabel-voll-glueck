@@ -24,7 +24,7 @@ import { STAGES } from './stages.js';
  * Events are returned in simulation order; presentation consumers only read state.
  * Position/payload fields are present only when relevant to that event.
  * @typedef {object} GameEvent
- * @property {'end'|'delivery'|'bounce'|'rare'|'show'|'airWarning'|'splash'|'breach'|'islandWarning'|'reefWarning'|'sardine'|'feast'|'current'|'warning'|'chase'|'netSplash'|'outsmart'|'airBonus'|'fishLeap'|'catch'|'airCatch'|'frenzy'|'mission'|'nearMiss'|'kick'|'hurt'|'trick'} kind
+ * @property {'end'|'delivery'|'bounce'|'rare'|'show'|'airWarning'|'splash'|'breach'|'islandWarning'|'reefWarning'|'sardine'|'feast'|'current'|'warning'|'chase'|'netSplash'|'outsmart'|'airBonus'|'fishLeap'|'catch'|'airCatch'|'frenzy'|'mission'|'nearMiss'|'kick'|'hurt'|'trick'|'thunder'|'roller'|'waveRide'} kind
  * @property {number} [x]
  * @property {number} [y]
  * @property {string} [name]
@@ -280,7 +280,9 @@ export function flowAt(game, x, y) {
   return { x: ax, y: ay };
 }
 
-const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
+// Energy lost on contact; kinds in FATAL end the run instead (see resolveHazard).
+export const CONTACT_DAMAGE = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
+const contactDamage = CONTACT_DAMAGE;
 
 // Includes continued descent during reaction time and the turn from diving to rising.
 export function airState(player, cargo = 0) {
