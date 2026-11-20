@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkDesignFiles, formatDesignErrors } from '@tidyeval/game-platform/design';
+import { checkComponents, checkDesignFiles, colourEvidence, constantsMatch, cssColourInventory, entitiesOf, formatDesignErrors, localeParity, relationPairs, requireDescriptions, setEquals } from '@tidyeval/game-platform/design';
 import { STAGES } from '../src/stages.js';
 import { locales, translations } from '../src/i18n.js';
 import * as GAME from '../src/game.js';
@@ -13,32 +13,30 @@ import { drawStorm } from '../src/scenery.js';
 
 const root = new URL('../', import.meta.url);
 const source = path => readFileSync(new URL(path, root), 'utf8');
-const { errors, ontology, tokens } = await checkDesignFiles(root);
+const { errors, warnings, stats, ontology, tokens } = await checkDesignFiles(root);
 const entities = ontology?.entities ?? [];
 const entity = id => entities.find(e => e.id === id);
+const ids = list => list.map(e => e.id);
+const built = list => list.filter(e => (e.status ?? 'built') === 'built');
 const sorted = values => [...new Set(values)].sort();
-const conceptParent = new Map((ontology?.concepts ?? []).map(c => [c.id, c.parent]));
-const isA = (concept, ancestor) => { for (let id = concept; id; id = conceptParent.get(id)) if (id === ancestor) return true; return false; };
-const ofConcept = ancestor => entities.filter(e => isA(e.concept, ancestor));
 const css = source('src/style.css');
+const none = (messages, hint) => assert.deepEqual(messages, [], hint ? `${hint}\n${messages.join('\n')}` : messages.join('\n'));
 
-test('design files pass the shared validator', () => {
+test('design files pass the shared validator', t => {
   assert.deepEqual(errors, [], formatDesignErrors(errors));
+  t.diagnostic(`entities ${stats.entities} ${JSON.stringify(stats.byStatus)}; rules ${JSON.stringify(stats.rules)}; tokens ${stats.tokens}; warnings ${warnings.length}`);
+  // Manual rules are allowed only where automation is impossible (feel, device orientation).
+  assert.ok(stats.rules.manual <= 2, `${stats.rules.manual} manual rules; automate new principles instead`);
 });
 
 test('every encounter kind and combination in STAGES is an ontology entity and vice versa', () => {
   const entries = STAGES.flatMap(stage => stage.encounters);
-  const kinds = sorted(entries.flatMap(entry => entry.split('-')));
-  const declared = sorted(entities.filter(e => e.properties?.encounterKind === true).map(e => e.id));
-  assert.deepEqual(declared, kinds, 'entities with properties.encounterKind must be exactly the kinds used in STAGES encounters');
-  const patterns = sorted(entries.filter(entry => entry.includes('-')));
-  const declaredPatterns = sorted(entities.filter(e => e.concept === 'EncounterPattern').map(e => e.id));
-  assert.deepEqual(declaredPatterns, patterns, 'EncounterPattern entities must be exactly the combination entries in STAGES');
+  none(setEquals(entries.flatMap(entry => entry.split('-')), ids(entities.filter(e => e.properties?.encounterKind === true)), 'entities with properties.encounterKind (kinds used in STAGES encounters)'));
+  none(setEquals(entries.filter(entry => entry.includes('-')), ids(entitiesOf(ontology, 'EncounterPattern')), 'EncounterPattern entities (combination entries in STAGES)'));
 });
 
 test('stage entities, introductions, appearances, set pieces and rare moments match STAGES', () => {
   const seen = new Set();
-  const relations = type => sorted(ontology.relations.filter(r => r.type === type).map(r => `${r.from} > ${r.to}`));
   const appears = [], pieces = [], rare = [];
   STAGES.forEach((stage, order) => {
     const node = entity(`stage.${stage.id}`);
@@ -53,65 +51,46 @@ test('stage entities, introductions, appearances, set pieces and rare moments ma
     for (const piece of [...stage.setPieces.calm, ...stage.setPieces.shows]) pieces.push(`stage.${stage.id} > ${piece}`);
     if (stage.rareMoment) rare.push(`stage.${stage.id} > ${stage.rareMoment}`);
   });
-  assert.equal(entities.filter(e => e.concept === 'Stage').length, STAGES.length, 'one Stage entity per stage');
+  none(setEquals(STAGES.map(s => `stage.${s.id}`), ids(entitiesOf(ontology, 'Stage')), 'Stage entities'));
   const encounterIds = new Set(entities.filter(e => e.properties?.encounterKind || e.concept === 'EncounterPattern').map(e => e.id));
-  assert.deepEqual(relations('appearsIn').filter(edge => encounterIds.has(edge.split(' > ')[0])), sorted(appears), 'appearsIn relations of encounter kinds');
-  assert.deepEqual(relations('offersSetPiece'), sorted(pieces), 'offersSetPiece relations');
-  assert.deepEqual(relations('hasRareMoment'), sorted(rare), 'hasRareMoment relations');
+  none(setEquals(appears, relationPairs(ontology, 'appearsIn').filter(edge => encounterIds.has(edge.split(' > ')[0])), 'appearsIn relations of encounter kinds'));
+  none(setEquals(pieces, relationPairs(ontology, 'offersSetPiece'), 'offersSetPiece relations'));
+  none(setEquals(rare, relationPairs(ontology, 'hasRareMoment'), 'hasRareMoment relations'));
 });
 
 test('every stage has a name in every locale', () => {
   for (const stage of STAGES) for (const locale of locales) assert.ok(stage.names[locale]?.trim(), `${stage.id} has no ${locale} name`);
 });
 
-const keyPaths = (value, prefix = '') => Object.entries(value).flatMap(([key, child]) => typeof child === 'object' ? keyPaths(child, `${prefix}${key}.`) : [`${prefix}${key}`]);
-const lookup = (locale, path) => path.split('.').reduce((entry, part) => entry?.[part], translations[locale]);
-
 test('every translation key exists in de, en and es and every referenced key is defined', () => {
-  assert.deepEqual(sorted(Object.keys(translations)), sorted(locales));
-  const all = sorted(locales.flatMap(locale => keyPaths(translations[locale])));
-  for (const locale of locales) {
-    for (const path of all) {
-      const value = lookup(locale, path);
-      assert.ok(typeof value === 'string' && value.trim(), `${locale} is missing translation ${path}`);
-      const placeholders = text => sorted(text.match(/\{\w+\}/g) || []);
-      assert.deepEqual(placeholders(value), placeholders(lookup('de', path) ?? ''), `${locale}.${path} must use the same {placeholders} as de`);
-    }
-  }
-  const html = source('index.html'), code = ['src/main.js', 'src/i18n.js'].map(source).join('\n');
+  none(setEquals(locales, Object.keys(translations), 'translation locales'));
+  const html = source('index.html'), code = ['src/main.js', 'src/i18n.js', 'src/art.js'].map(source).join('\n');
   const referenced = [
     ...[...html.matchAll(/data-i18n(?:-html|-aria-label)?="([^"]+)"/g)].map(m => m[1]),
-    ...[...code.matchAll(/\bt\('([\w.]+)'/g)].map(m => m[1]),
+    ...[...code.matchAll(/\b(?:t|translate)\('([\w.]+)'/g)].map(m => m[1]),
     ...[...code.matchAll(/'(fx\w+|show[A-Z]\w+)'/g)].map(m => m[1]),
   ];
   assert.ok(referenced.length > 50, `found ${referenced.length} referenced keys`);
-  for (const key of new Set(referenced)) for (const locale of locales) assert.ok(typeof lookup(locale, key) === 'string', `${key} is used but missing in ${locale}`);
+  none(localeParity(translations, { reference: 'de', keys: referenced }));
 });
 
-// One-off shades in style.css that are not design tokens (mostly translucent shadows and
-// desktop-only frame text). A new colour must become a token in design/tokens.json or be added here.
-const CSS_COLOUR_EXCEPTIONS = [
-  '#00000055', '#10294a88', '#123d3b33', '#123d3b40', '#164a4938', '#164f4920', '#164f4930', '#1d3a3a33', '#21575008', '#254c4920',
-  '#275e4b15', '#275e4b23', '#28565c', '#2a503326', '#347c7033', '#47746a', '#5e8881', '#65897b', '#668b7c', '#6e9e7c', '#7ca49960',
-  '#82948a', '#83968a', '#d1f3df33', '#d6975c', '#e5edd0', '#e9e5c2', '#eaf0dd', '#effef0', '#fff6d7', '#fff6dc',
-  '#fff6df', '#fff8d8', '#ffffff2a',
-];
+// One-off shades in style.css that are not design tokens. A new colour must become a token in
+// design/tokens.json or be added here with its reason.
+const shadow = 'translucent shadow or overlay, tuned per element';
+const CSS_COLOUR_EXCEPTIONS = {
+  '#00000055': shadow, '#10294a88': shadow, '#123d3b33': shadow, '#123d3b40': shadow, '#164a4938': 'install/update button fill (.app-actions)', '#164f4920': shadow, '#164f4930': shadow,
+  '#1d3a3a33': shadow, '#21575008': shadow, '#254c4920': shadow, '#275e4b15': shadow, '#275e4b23': shadow, '#2a503326': shadow, '#347c7033': shadow, '#7ca49960': 'thin intro rule',
+  '#d1f3df33': '.app-actions divider', '#ffffff2a': 'night energy track', '#28565c': 'test-edition label', '#47746a': "hero label 'Hey, I'm Pip'",
+  '#5e8881': 'intro eyebrow text', '#65897b': 'desktop-only .tiny-bird', '#668b7c': 'hero label arrow', '#6e9e7c': 'outfit picker (dormant)', '#82948a': 'desktop-only frame',
+  '#83968a': 'desktop-only frame', '#d6975c': 'outfit picker (dormant)', '#e5edd0': 'outfit picker (dormant)', '#eaf0dd': 'outfit picker (dormant)', '#e9e5c2': 'stage select border, overridden by the later borderless rule',
+  '#effef0': 'run record label (hidden on the start screen)', '#fff6d7': 'install/update button text (.app-actions)', '#fff6dc': 'stage picker text, overridden by color.ink.on-sea later', '#fff6df': 'stage select background, overridden by the later transparent rule', '#fff8d8': 'run record number (hidden on the start screen)',
+};
 test('colours in style.css come from design tokens or are listed exceptions', () => {
-  const tokenColours = new Set(Object.values(tokens.tokens).filter(token => token.type === 'color' && !String(token.value).startsWith('{')).map(token => token.value.toLowerCase()));
-  const used = sorted([...css.matchAll(/#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)/g)].map(m => m[0].toLowerCase()));
-  const unknown = used.filter(colour => !tokenColours.has(colour) && !CSS_COLOUR_EXCEPTIONS.includes(colour));
-  assert.deepEqual(unknown, [], 'add these colours to design/tokens.json (or to CSS_COLOUR_EXCEPTIONS with a reason)');
-  const stale = CSS_COLOUR_EXCEPTIONS.filter(colour => !used.includes(colour) || tokenColours.has(colour));
-  assert.deepEqual(stale, [], 'remove exceptions that are unused or already tokens');
+  none(cssColourInventory(css, tokens, CSS_COLOUR_EXCEPTIONS), 'add these colours to design/tokens.json (or to CSS_COLOUR_EXCEPTIONS with a reason)');
 });
 
 test('literal colour tokens match the colour in their evidence', () => {
-  for (const [id, token] of Object.entries(tokens.tokens)) {
-    const colours = token.type === 'color' ? [token.value] : token.type === 'gradient' ? token.value.map(stop => stop.color) : [];
-    for (const colour of colours.filter(value => !value.startsWith('{'))) {
-      assert.ok(token.evidence.some(e => e.contains.toLowerCase().includes(colour.toLowerCase())), `${id}: ${colour} does not occur in its evidence strings`);
-    }
-  }
+  none(colourEvidence(tokens));
 });
 
 // Declarations of the first rule whose selector list is exactly `selector`.
@@ -236,7 +215,7 @@ function simulateTelegraph({ announce, danger, probe }) {
   return result;
 }
 test('every obstacle is telegraphed with its declared lead time', () => {
-  const obstacles = ofConcept('Obstacle');
+  const obstacles = entitiesOf(ontology, 'Obstacle');
   assert.ok(obstacles.length >= 17, `found ${obstacles.length} obstacles`);
   for (const obstacle of obstacles) {
     const telegraph = obstacle.properties?.telegraph;
@@ -251,27 +230,23 @@ test('every obstacle is telegraphed with its declared lead time', () => {
 });
 
 test('ontology constants equal the exported game constants', () => {
-  let checked = 0;
-  for (const entity of entities) for (const [name, value] of Object.entries(entity.properties?.constants ?? {})) {
-    assert.ok(name in GAME, `${entity.id}: game.js exports no ${name}`);
-    assert.deepEqual(value, GAME[name], `${entity.id}: properties.constants.${name} differs from game.js`); checked++;
-  }
-  assert.ok(checked >= 12, `checked ${checked} constants`);
-  for (const entity of entities.filter(e => e.properties?.contactDamage !== undefined)) assert.equal(entity.properties.contactDamage, CONTACT_DAMAGE[entity.id], `${entity.id}: contactDamage differs from CONTACT_DAMAGE`);
-  for (const kind of Object.keys(CONTACT_DAMAGE)) assert.ok(entity(kind) && isA(entity(kind).concept, 'Hazard'), `CONTACT_DAMAGE.${kind} has no Hazard entity`);
+  none(constantsMatch(ontology, GAME, { min: 12 }));
+  for (const e of entities.filter(e => e.properties?.contactDamage !== undefined)) assert.equal(e.properties.contactDamage, CONTACT_DAMAGE[e.id], `${e.id}: contactDamage differs from CONTACT_DAMAGE`);
+  const hazards = new Set(ids(entitiesOf(ontology, 'Hazard')));
+  for (const kind of Object.keys(CONTACT_DAMAGE)) assert.ok(hazards.has(kind), `CONTACT_DAMAGE.${kind} has no Hazard entity`);
 });
 
 test('contact damage stays within each hazard class band', () => {
   const contract = entity('contract.hazard').properties;
-  for (const hazard of ofConcept('EnergyHazard')) {
+  for (const hazard of entitiesOf(ontology, 'EnergyHazard')) {
     const damage = CONTACT_DAMAGE[hazard.id];
     assert.ok(damage >= contract.energyHazardDamage.min && damage <= contract.energyHazardDamage.max, `${hazard.id}: contact damage ${damage} outside ${contract.energyHazardDamage.min}–${contract.energyHazardDamage.max}`);
   }
-  assert.deepEqual(sorted(ofConcept('FatalHazard').map(e => e.id)), sorted(contract.fatalKinds));
+  none(setEquals(contract.fatalKinds, ids(entitiesOf(ontology, 'FatalHazard')), 'FatalHazard entities (contract.hazard.fatalKinds)'));
   const fatalLine = source('src/game.js').match(/const fatalHit = ([^;]+);/)[1];
   for (const kind of contract.fatalKinds.filter(kind => kind !== 'fisher')) assert.ok(fatalLine.includes(`item.kind === '${kind}'`), `${kind} is not fatal in resolveHazard`);
   assert.equal(contract.terrainBounceCost, ENERGY.bounce);
-  for (const force of ofConcept('Force')) assert.equal(hazardShape(force.properties.telegraph.probe.item), null, `${force.id} is a Force but has a contact shape`);
+  for (const force of entitiesOf(ontology, 'Force')) assert.equal(hazardShape(force.properties.telegraph.probe.item), null, `${force.id} is a Force but has a contact shape`);
 });
 
 test('stages follow the pacing contract', () => {
@@ -292,7 +267,7 @@ test('stages follow the pacing contract', () => {
 });
 
 test('every stage satisfies the stage contract and has theme tokens', () => {
-  const contract = entity('contract.stage').properties;
+  const contract = entity('contract.stage').properties, setPieces = new Set(ids(entitiesOf(ontology, 'SetPiece')));
   for (const stage of STAGES) {
     for (const field of contract.fields) assert.ok(field in stage, `${stage.id} lacks ${field}`);
     for (const field of Object.keys(stage)) assert.ok([...contract.fields, ...contract.optionalFields].includes(field), `${stage.id} has an undocumented field ${field}`);
@@ -300,7 +275,7 @@ test('every stage satisfies the stage contract and has theme tokens', () => {
     assert.deepEqual(sorted(Object.keys(stage.setPieces)), sorted(contract.setPieceFields));
     for (const locale of locales) assert.ok(stage.names[locale]?.trim(), `${stage.id} has no ${locale} name`);
     for (const r of stage.residents) assert.equal(entity(r)?.concept, 'Resident', `${stage.id} resident ${r}`);
-    for (const piece of [...stage.setPieces.calm, ...stage.setPieces.shows]) assert.ok(entity(piece) && isA(entity(piece).concept, 'SetPiece'), `${stage.id} set piece ${piece}`);
+    none(setEquals([], [...stage.setPieces.calm, ...stage.setPieces.shows].filter(piece => !setPieces.has(piece)), `${stage.id} set pieces without a SetPiece entity`));
     if (stage.rareMoment) assert.equal(entity(stage.rareMoment)?.concept, 'RareMoment');
     const value = id => { const token = tokens.tokens[id]; assert.ok(token, `missing token ${id}`); return token.value; };
     for (const [field, expected] of Object.entries(stage.theme)) {
@@ -312,8 +287,7 @@ test('every stage satisfies the stage contract and has theme tokens', () => {
       else assert.equal(value(id), expected, id);
     }
   }
-  const relations = sorted(ontology.relations.filter(r => r.type === 'hasResident').map(r => `${r.from} > ${r.to}`));
-  assert.deepEqual(relations, sorted(STAGES.flatMap(s => s.residents.map(r => `stage.${s.id} > ${r}`))), 'hasResident relations');
+  none(setEquals(STAGES.flatMap(s => s.residents.map(r => `stage.${s.id} > ${r}`)), relationPairs(ontology, 'hasResident'), 'hasResident relations'));
 });
 
 test('events, end reasons and haptics match the code', () => {
@@ -321,35 +295,23 @@ test('events, end reasons and haptics match the code', () => {
   const union = game.match(/@property \{([^}]+)\} kind\n \*\/\n\nexport const WORLD|@typedef \{object\} GameEvent[\s\S]*?@property \{([^}]+)\} kind/)[2].split('|').map(k => k.replace(/'/g, ''));
   const pushed = game.split('\n').filter(line => /events\.push\(|return \[(\{|\.\.\.events)/.test(line)).flatMap(line => [...line.matchAll(/kind: ([^,}]+)/g)].flatMap(m => [...m[1].matchAll(/(?<!=== )'(\w+)'/g)].map(q => q[1])));
   for (const kind of pushed) assert.ok(union.includes(kind), `event '${kind}' is emitted but missing from the GameEvent typedef`);
-  assert.deepEqual(sorted(entities.filter(e => e.concept === 'GameEvent').map(e => e.id.slice(6))), sorted(union), 'GameEvent entities');
+  none(setEquals(union, ids(entitiesOf(ontology, 'GameEvent')).map(id => id.slice(6)), 'GameEvent entities'));
   const fatal = game.match(/const fatalHit = ([^;]+);/)[1], reasons = [...game.matchAll(/endReason = '(\w+)'/g)].map(m => m[1]);
   const reachable = sorted([...reasons, 'fisher', ...[...fatal.matchAll(/item\.kind === '(\w+)'/g)].map(m => m[1] === 'whiteshark' ? 'shark' : m[1])]);
-  assert.deepEqual(sorted(entities.filter(e => e.concept === 'EndReason').map(e => e.id.slice(10))), reachable, 'EndReason entities');
+  const endReasons = entitiesOf(ontology, 'EndReason');
+  none(setEquals(reachable, ids(built(endReasons)).map(id => id.slice(10)), 'built EndReason entities (reasons a run can end with)'));
+  // Translated reasons no run can reach are documented as status "unused".
+  none(setEquals(Object.keys(translations.de.reasons).filter(r => !reachable.includes(r) && !['final', 'fallback'].includes(r)), ids(endReasons.filter(e => e.status === 'unused')).map(id => id.slice(10)), 'unused EndReason entities'));
   for (const reason of reachable) for (const locale of locales) assert.ok(translations[locale].reasons[reason], `${locale} has no reasons.${reason}`);
   const haptics = Object.fromEntries([...source('src/audio.js').matchAll(/^  (\w+): \{ web: (\[[^\]]*\]|\d+)(?:, native: ImpactStyle\.(\w+))?(?:, success: (true))? \},$/gm)].map(([, name, web, native, success]) => [name, { web: JSON.parse(web), ...(native ? { native } : {}), ...(success ? { nativeSuccess: true } : {}) }]));
   assert.ok(Object.keys(haptics).length >= 10);
-  assert.deepEqual(Object.fromEntries(entities.filter(e => e.concept === 'Haptic').map(e => [e.id.slice(7), e.properties])), haptics, 'Haptic entities equal the HAPTICS table');
+  assert.deepEqual(Object.fromEntries(entitiesOf(ontology, 'Haptic').map(e => [e.id.slice(7), e.properties])), haptics, 'Haptic entities equal the HAPTICS table');
 });
 
-test('every entity has a description', () => {
-  assert.deepEqual(entities.filter(e => !e.description?.trim()).map(e => e.id), []);
+test('every entity and concept has a description', () => {
+  none(requireDescriptions(ontology));
 });
 
-// Rules whose selector list contains a selector exactly; used for component checks.
-const cssRules = [...css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/@media[^{]*\{/g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ selectors: m[1].split(',').map(x => x.trim()), body: m[2] }));
 test('component selectors exist and their colour tokens are the colours in that CSS', () => {
-  const resolve = value => { for (let i = 0; i < 10 && /^\{.+\}$/.test(value); i++) value = tokens.tokens[value.slice(1, -1)].value; return value; };
-  for (const component of tokens.components) {
-    for (const part of [component, ...(component.variants ?? []).map(v => ({ ...v, id: `${component.id}/${v.id}` }))]) {
-      if (!part.selector) continue;
-      const rules = cssRules.filter(rule => rule.selectors.some(s => s === part.selector || s.startsWith(`${part.selector} `) || s.startsWith(`${part.selector}:`) || s.startsWith(`${part.selector}[`) || s.startsWith(`${part.selector}.`)));
-      assert.ok(rules.some(rule => rule.selectors.includes(part.selector)), `${part.id}: selector ${part.selector} has no rule in style.css`);
-      const body = rules.map(rule => rule.body).join(';').toLowerCase();
-      for (const [prop, ref] of Object.entries(part.tokens ?? {})) {
-        const token = tokens.tokens[ref.slice(1, -1)];
-        const colours = token.type === 'color' ? [resolve(ref)] : token.type === 'gradient' ? resolve(ref).map(stop => resolve(stop.color)) : [];
-        for (const colour of colours) assert.ok(body.includes(colour.toLowerCase()), `${part.id}.${prop}: ${colour} is not set in the CSS for ${part.selector}`);
-      }
-    }
-  }
+  none(checkComponents(tokens, css));
 });

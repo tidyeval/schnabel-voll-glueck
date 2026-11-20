@@ -559,7 +559,7 @@ test('mangroves block the sky lane, so Pip dives under the root curtain', () => 
   assert.equal(g.ended, false); assert.ok(events.some(e => e.kind === 'bounce'), 'flying into the canopy bounces');
 });
 
-test('every run meets its stage\'s special moment once, at a random wave in the middle', () => {
+test("every run meets its stage's special moment once, at a random wave in the middle", () => {
   let seed = 3; const random = () => (seed = seed * 16807 % 2147483647) / 2147483647;
   for (let stage = 0; stage < STAGES.length; stage++) {
     let hits = 0;
