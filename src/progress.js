@@ -11,9 +11,9 @@ export function readProgress(raw) {
   try { saved = JSON.parse(raw); } catch { /* Old or unavailable storage starts fresh. */ }
   saved = saved && typeof saved === 'object' ? saved : {};
   if (saved.layout !== LAYOUT) saved = { ...saved, bests: legacyBests(saved.bests), difficultyBests: Object.fromEntries(Object.entries(saved.difficultyBests || {}).map(([id, list]) => [id, legacyBests(list)])) };
-  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', music: true, sound: true, haptics: true, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
+  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))) };
-  for (const key of ['music', 'sound', 'haptics']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
+  for (const key of ['music', 'sound', 'haptics', 'tutorial']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
   if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;
   return prefs;
 }

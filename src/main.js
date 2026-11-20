@@ -131,19 +131,57 @@ function closePhoto() { photoRun++; $('photo-dialog').close(); $('result-dialog'
 $('share-photo').onclick = openPhoto; $('photo-share').onclick = sharePhoto; $('photo-close').onclick = closePhoto;
 $('photo-dialog').addEventListener('cancel', event => { event.preventDefault(); closePhoto(); });
 function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
+// Screen changes happen at once (state stays exact); a soft sea-coloured veil then fades away over them.
+function reveal() {
+  if (reducedMotion) return;
+  const veil = $('veil'); veil.classList.remove('fade'); void veil.offsetWidth; veil.classList.add('fade');
+}
+// First-run coach in the bay: four short, playable steps, each advancing on what Pip actually does.
+const TERRAIN_KINDS = ['island', 'reef', 'buoy', 'coral', 'mangrove'];
+const COACH = [
+  { key: 'coachDive', done: g => g.player.wet },
+  { key: 'coachFish', done: g => g.fish >= 1 },
+  { key: 'coachAir', done: g => !g.player.wet },
+  { key: 'coachRock', wait: g => g.items.some(i => TERRAIN_KINDS.includes(i.kind) && i.x < 470), hold: 4 },
+];
+let coach = null;
+function endCoach(learned) {
+  coach = null; $('coach').classList.add('hidden');
+  if (learned && !prefs.tutorial) { prefs.tutorial = true; persistSettings('tutorial'); }
+}
+function updateCoach() {
+  if (!coach || mode !== 'playing') return;
+  const step = COACH[coach.step], now = game.time;
+  if (step.wait && !coach.shown) {
+    // The rock step waits for a rock; if none comes soon, the coach is done.
+    if (step.wait(game)) coach.shown = now; else if (now - coach.since > 30) return endCoach(true);
+  }
+  const visible = !step.wait || coach.shown !== undefined;
+  $('coach').classList.toggle('hidden', !visible);
+  if (visible) { text('coach-text', t(step.key)); text('coach-step', `${coach.step + 1}/${COACH.length}`); }
+  if (step.done?.(game) || (step.hold && coach.shown !== undefined && now - coach.shown > step.hold)) {
+    if (coach.step === COACH.length - 1) return endCoach(true);
+    coach = { step: coach.step + 1, since: now };
+    // The basics are learned once Pip has dived, fished and surfaced; the rock tip is a bonus.
+    if (COACH[coach.step].wait && !prefs.tutorial) { prefs.tutorial = true; persistSettings('tutorial'); }
+  }
+}
+$('coach-skip').onclick = () => endCoach(true);
 function start(elapsed) {
   if (savePending || selectedStage > prefs.completed) return;
   phaserScene?.scene.resume();
   closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
-  toast(t('holdHint')); $('toast').classList.add('hint'); startHint = true; audio.start(); updateHud(); canvas.focus();
+  coach = !prefs.tutorial && game.stage === 0 ? { step: 0, since: 0 } : null; $('coach').classList.add('hidden');
+  if (!coach) { toast(t('holdHint')); $('toast').classList.add('hint'); startHint = true; }
+  audio.start(); updateHud(); canvas.focus(); reveal();
 }
 function home() {
   if (savePending) return;
   phaserScene?.scene.resume();
   selectedStage = Math.min(prefs.completed, STAGES.length - 1);
   closeDialogs(); mode = 'menu'; holding = false; effects = []; juice.reset(); audio.start('menu');
-  $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); refreshMenu(); $('play').focus();
+  $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); refreshMenu(); $('play').focus(); reveal();
 }
 function pause(showDialog = true) {
   if (mode !== 'playing') return;
@@ -153,6 +191,7 @@ function pause(showDialog = true) {
 function resume() { phaserScene?.scene.resume(); closeDialogs(); holding = false; mode = 'playing'; audio.start(game.feeding || game.settling ? 'menu' : 'playing'); canvas.focus(); }
 async function finish() {
   if (mode === 'ended') return;
+  if (coach) endCoach(false);
   const record = game.score > prefs.bests[game.stage];
   game.ended = true; const attempt = attemptFromGame(game, game.attemptId); recordAttempt(prefs, game, game.attemptId);
   const complete = game.endReason === 'complete';
@@ -169,7 +208,7 @@ async function finish() {
   text('result-score', formatNumber(game.score)); text('result-fish', formatNumber(game.fish)); text('result-combo', formatNumber(game.bestCombo)); text('result-time', clock(game.time));
   const resultMessage = complete ? (final ? t('finalMission') : t('nextMission', { stage: stageName(game.stage + 1) })) : game.mission ? t('mission') : t('nextGoal');
   text('result-mission', resultMessage);
-  closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.start('menu'); audio.effect('end');
+  closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.start('menu'); audio.effect('end'); if (record) audio.effect('record');
   const saved = await pendingSave;
   $('retry-save').classList.toggle('hidden', saved);
   text('result-mission', `${resultMessage} ${saved ? t('saved') : t('saveFailed')}`);
@@ -178,6 +217,7 @@ async function finish() {
 }
 let shownScore = 0;
 function updateHud() {
+  updateCoach();
   if (game.score > shownScore) { const score = $('score'); score.classList.remove('pop'); void score.offsetWidth; score.classList.add('pop'); }
   shownScore = game.score;
   text('score', formatNumber(game.score)); text('time', clock(Math.floor(game.time)));
@@ -270,7 +310,10 @@ function frame(now, seconds) {
   const dt = Math.min(.05, seconds);
   if (mode === 'playing' || mode === 'menu') animation += dt;
   if (mode === 'menu' && !document.querySelector('dialog[open]')) applyPendingUpdate();
-  if (mode === 'playing') {
+  // On the very first run the sea waits for the first dive, so there is time to read the first tip.
+  const waitingForFirstDive = mode === 'playing' && coach?.step === 0 && game.time === 0 && !holding;
+  if (waitingForFirstDive) updateHud();
+  if (mode === 'playing' && !waitingForFirstDive) {
     const wasFeeding = game.feeding > 0;
     for (const event of step(game, dt * juice.timeScale(dt), holding)) {
       if (event.kind === 'end') { finish(); break; }
@@ -279,7 +322,7 @@ function frame(now, seconds) {
       const label = labels[event.kind];
       if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
       if (event.kind === 'show' && showLabels[event.name]) toast(t(showLabels[event.name]));
-      audio.effect(event.kind, event.name);
+      audio.effect(event.kind, event.golden ? 'golden' : event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }
     if (!wasFeeding && game.feeding > 0) audio.start('menu');

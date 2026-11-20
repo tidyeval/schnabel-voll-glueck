@@ -1,7 +1,23 @@
 import menuMusicURL from './assets/menu-music.mp3?url';
 import musicURL from './assets/soundtrack.mp3?url';
 import { Capacitor } from '@capacitor/core';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+
+// Graded haptics: a light tick for a fish up to a long happy pattern for a record.
+// Web: vibration patterns in ms (Android browsers; Safari offers none). Native: Taptic styles.
+const HAPTICS = {
+  catch: { web: 8, native: ImpactStyle.Light },
+  golden: { web: [10, 40, 18], native: ImpactStyle.Medium },
+  airCatch: { web: [10, 30, 10], native: ImpactStyle.Medium },
+  nearMiss: { web: 6, native: ImpactStyle.Light },
+  bounce: { web: 28, native: ImpactStyle.Medium },
+  hurt: { web: [45, 35, 70], native: ImpactStyle.Heavy },
+  mission: { web: [12, 40, 12, 40, 24], success: true },
+  frenzy: { web: [12, 30, 12, 30, 12], success: true },
+  feast: { web: [12, 40, 24], success: true },
+  record: { web: [20, 50, 20, 50, 60], success: true },
+  shutter: { web: 14, native: ImpactStyle.Light },
+};
 
 export function createAudio(settings) {
   let context, master, sea, seaGain, active = false, scene = 'playing';
@@ -90,9 +106,10 @@ export function createAudio(settings) {
         if (kind === 'hurt') { tone(160, .22, .08, 'triangle'); tone(120, .22, .05, 'triangle', .12); }
         if (kind === 'mission' || kind === 'trick' || kind === 'delivery' || kind === 'end') [523, 659, 784, 1046].forEach((f, i) => tone(f, .4, .08, 'sine', i * .1));
       }
-      if (settings.haptics && ['catch', 'hurt', 'bounce', 'mission', 'nearMiss', 'frenzy', 'feast', 'shutter'].includes(kind)) {
-        if (Capacitor.isNativePlatform()) Haptics.impact({ style: kind === 'hurt' ? ImpactStyle.Medium : ImpactStyle.Light }).catch(() => {});
-        else if (navigator.vibrate) navigator.vibrate(kind === 'hurt' ? 60 : 10);
+      const feel = settings.haptics && HAPTICS[kind === 'catch' && detail === 'golden' ? 'golden' : kind];
+      if (feel) {
+        if (Capacitor.isNativePlatform()) (feel.success ? Haptics.notification({ type: NotificationType.Success }) : Haptics.impact({ style: feel.native })).catch(() => {});
+        else navigator.vibrate?.(feel.web);
       }
     },
   };
