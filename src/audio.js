@@ -9,6 +9,7 @@ const HAPTICS = {
   catch: { web: 8, native: ImpactStyle.Light },
   golden: { web: [10, 40, 18], native: ImpactStyle.Medium },
   airCatch: { web: [10, 30, 10], native: ImpactStyle.Medium },
+  waveRide: { web: [14, 30, 20], native: ImpactStyle.Medium },
   nearMiss: { web: 6, native: ImpactStyle.Light },
   bounce: { web: 28, native: ImpactStyle.Medium },
   hurt: { web: [45, 35, 70], native: ImpactStyle.Heavy },
@@ -101,6 +102,8 @@ export function createAudio(settings) {
         if (kind === 'splash' || kind === 'netSplash') tone(190, .2, kind === 'netSplash' ? .09 : .05, 'triangle');
         if (kind === 'breach') { tone(392, .18, .06); tone(587, .25, .04, 'sine', .08); }
         if (kind === 'warning' || kind === 'airWarning' || kind === 'chase') { tone(660, .13, .07, 'triangle'); tone(520, .18, .05, 'triangle', .15); }
+        if (kind === 'thunder') { tone(64, 1.6, .1, 'triangle', .35, 34); tone(48, 2.2, .08, 'sine', .45, 28); }
+        if (kind === 'waveRide') { tone(330, .5, .08, 'triangle', 0, 990); [784, 1046, 1318].forEach((f, i) => tone(f, .25, .05, 'sine', .2 + i * .07)); }
         if (kind === 'bounce') tone(300, .22, .08, 'sine', 0, 520);
         if (kind === 'shutter') { tone(2400, .025, .07, 'square'); tone(1100, .05, .06, 'square', .05); }
         if (kind === 'hurt') { tone(160, .22, .08, 'triangle'); tone(120, .22, .05, 'triangle', .12); }

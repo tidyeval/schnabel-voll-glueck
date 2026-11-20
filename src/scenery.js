@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 // Stage atmosphere, set-piece scenery and game-feel overlays. Everything here is
 // presentation only: nothing in this file is used for collisions or scoring.
-import { WORLD, clamp, sardinePositions, currentSpan, RARE } from './game.js';
+import { WORLD, clamp, sardinePositions, currentSpan, RARE, STORM, flashAt } from './game.js';
 import { blink, cuteEye, happyEye, manatee } from './cute.js';
 const TAU = Math.PI * 2;
 const SHOW_TIME = 13;
@@ -86,6 +86,12 @@ export function drawSky(c, stage, water, d, motion, game, reducedMotion, drawSce
       fill(c, '#fff8e0', p => p.arc(hash(i + 1) * 480, hash(i + 2) * (water - 110), hash(i + 3) > .8 ? 1.6 : 1, 0, TAU));
     }
     c.globalAlpha = 1;
+  } else if (STAGES[stage].id === 'storm') {
+    // Heavy, low storm clouds hurry across the sky (painted behind the scenery clouds).
+    for (let i = 0; i < 7; i++) {
+      const x = wrap(i * 97 - d * .03 - motion * (9 + i * 2), 680) - 100, y = 30 + (i % 3) * 38, r = 46 + (i % 4) * 12;
+      fill(c, i % 2 ? '#4b5566' : '#59636f', p => { p.ellipse(x, y, r * 1.6, r * .62, 0, 0, TAU); p.ellipse(x + r * .7, y - r * .3, r * .9, r * .6, 0, 0, TAU); p.ellipse(x - r * .8, y + r * .1, r, r * .5, 0, 0, TAU); });
+    }
   } else if (STAGES[stage].id === 'lagoon') {
     // A low evening sun.
     fill(c, '#ffc98a', p => p.arc(light.sunX, light.sunY, 34, 0, TAU));
@@ -660,4 +666,56 @@ export function drawStageHighlight(c, stage, water, d, motion, game, reducedMoti
     }
     c.globalCompositeOperation = 'source-over';
   }
+}
+
+// Storm breakers: a steep hump of water that rolls toward Pip, its crest white with foam.
+// Surfacing under the crest gives a wave ride (see STORM in game.js).
+export function drawRollers(c, game, water, motion, reducedMotion) {
+  const th = STAGES[game.stage].theme, p = game.player;
+  for (const x of game.rollers || []) {
+    const h = 50, back = 150, front = 80;
+    fill(c, vertical(c, water - h, water + 30, [[0, '#9cc6c4'], [.5, th.water[0]], [1, th.water[0] + '00']]), q => {
+      q.moveTo(x - front, water + 4); q.bezierCurveTo(x - front * .55, water + 2, x - 16, water - h, x + 6, water - h);
+      q.bezierCurveTo(x + 40, water - h, x + back * .6, water + 2, x + back, water + 4); q.lineTo(x + back, water + 30); q.lineTo(x - front, water + 30); q.closePath();
+    });
+    // Foam on the crest, brighter while Pip is underwater close enough to catch it.
+    const ready = p.wet && Math.abs(x - p.x) < 260 ? 1 : 0, glow = reducedMotion ? .6 : .6 + Math.sin(motion * 8) * .25 * ready;
+    stroke(c, `rgba(255,255,255,${.65 + glow * .35 * ready})`, 4 + ready * 2, q => { q.moveTo(x - 26, water - h * .7); q.quadraticCurveTo(x - 6, water - h - 4, x + 26, water - h + 2); });
+    for (let i = 0; i < 7; i++) {
+      const u = reducedMotion ? i / 7 : (motion * 1.7 + i / 7) % 1;
+      c.globalAlpha = (1 - u) * .8;
+      fill(c, '#f4fbff', q => q.arc(x - 18 - u * 40 + i * 5, water - h - 2 - Math.sin(u * Math.PI) * 18, 2.4, 0, TAU));
+    }
+    c.globalAlpha = 1;
+  }
+}
+
+// Wind-blown rain over everything above the sea, and now and then a lightning flash.
+export function drawStorm(c, game, water, motion, reducedMotion) {
+  c.strokeStyle = 'rgba(214,226,240,.38)'; c.lineWidth = 1.4; c.beginPath();
+  for (let i = 0; i < 90; i++) {
+    const fall = reducedMotion ? 0 : motion * (620 + hash(i) * 260);
+    const y = wrap(hash(i + 40) * 900 + fall, 900) - 40, x = wrap(hash(i + 80) * 560 - y * .35 - (reducedMotion ? 0 : motion * 40), 560) - 40;
+    if (y > water + 4) continue;
+    c.moveTo(x, y); c.lineTo(x - 6, y + 17);
+  }
+  c.stroke();
+  // Little rain rings dot the surface.
+  for (let i = 0; i < 8; i++) {
+    const u = reducedMotion ? .5 : wrap(motion * 1.3 + hash(i + 120), 1), x = wrap(hash(i + 140) * 520 - game.distance * .5, 520) - 20;
+    c.globalAlpha = (1 - u) * .5; stroke(c, '#e6f0f6', 1, q => q.ellipse(x, water + 3, 3 + u * 9, 1 + u * 2, 0, 0, TAU));
+  }
+  c.globalAlpha = 1;
+  if (reducedMotion) return;
+  const flash = flashAt(game.time);
+  if (!flash) return;
+  // The bolt strikes somewhere new each time.
+  const k = Math.floor(game.time / STORM.flash), bx = 60 + hash(k + 7) * 360;
+  c.save(); c.globalAlpha = flash; c.lineJoin = 'round';
+  for (const [width, colour] of [[7, '#cfe0ff55'], [2.5, '#ffffff']]) {
+    stroke(c, colour, width, q => { let x = bx, y = 0; q.moveTo(x, y); while (y < water - 60) { y += 22 + hash(k * 9 + y) * 18; x += (hash(k * 5 + y) - .5) * 46; q.lineTo(x, y); } });
+  }
+  c.globalAlpha = flash * .28; c.fillStyle = '#eef4ff'; c.fillRect(-30, -30, 540, water + 30);
+  c.globalAlpha = flash * .1; c.fillRect(-30, water, 540, 900);
+  c.restore();
 }

@@ -62,4 +62,19 @@ export const STAGES = [
       seabed: '#2f5f73', grass: ['#3f8a86', '#235a66'], rocks: '#173a56', swell: 1.1,
     },
   },
+  {
+    id: 'storm',
+    names: { de: 'Sturm', en: 'Storm', es: 'Tormenta' },
+    // Rain, lightning and big breakers; surfacing on a crest throws Pip high (see STORM in game.js).
+    startElapsed: 185, sharkWarning: .68, night: false, storm: true,
+    encounters: ['driftwood', 'shark', 'turtle-turtle-gull', 'jelly-shark', 'shark-shark', 'whirlpool', 'turtle-turtle-gull', 'driftwood-jelly-shark', 'shark-shark', 'puffer-shark', 'driftwood-shark', 'shark-shark'],
+    pairPatterns: { 4: 'staggered', 8: 'parallel', 11: 'staggered' },
+    residents: ['starfish', 'bottle', 'octopus'],
+    setPieces: { calm: ['baitball', 'current'], shows: ['whale'], count: 1 },
+    theme: {
+      sky: [[0, '#5d6878'], [.55, '#8590a0'], [1, '#aab3bc']], glow: '#d8e2ea44', far: '#5f6f74', tint: 'rgba(60,72,92,.38)',
+      water: ['#4f8a8e', '#173843'], surface: '#dfe8ee33', rays: '#dce8f0', rayAlpha: .05, mote: '#dfeef535',
+      seabed: '#3f6a6c', grass: ['#4f857a', '#2f6060'], rocks: '#2b4c58', swell: 3,
+    },
+  },
 ];

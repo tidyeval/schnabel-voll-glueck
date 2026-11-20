@@ -35,7 +35,7 @@ let selectedStage = Math.min(prefs.completed, STAGES.length - 1);
 const audio = createAudio(prefs);
 const juice = createJuice(reducedMotion);
 const showLabels = { dolphins: 'showDolphins', goldenHour: 'showGoldenHour', shootingStars: 'showShootingStars' };
-const labels = { airCatch: ['fxAirCatch', '#fff2b6', true], nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'] };
+const labels = { airCatch: ['fxAirCatch', '#fff2b6', true], nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'], waveRide: ['fxWaveRide', '#e3f6ff', true] };
 let phaserScene, cameraAhead = 0, savePending = false;
 let game = createGame(), mode = 'menu', holding = false, effects = [], animation = 0, toastUntil = 0, needsDraw = true, startHint = false;
 // Round-start control hint: shown until the first hold, so a new player sees how to dive before the first obstacle.
@@ -167,10 +167,11 @@ function updateCoach() {
   }
 }
 $('coach-skip').onclick = () => endCoach(true);
-function start(elapsed) {
+// `score` carries the journey's points into the next nest; a fresh start from the menu begins at 0.
+function start(elapsed, score = 0) {
   if (savePending || selectedStage > prefs.completed) return;
   phaserScene?.scene.resume();
-  closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
+  closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); game.score = game.startScore = score; attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
   $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
   coach = !prefs.tutorial && game.stage === 0 ? { step: 0, since: 0 } : null; $('coach').classList.add('hidden');
   if (!coach) { toast(t('holdHint')); $('toast').classList.add('hint'); startHint = true; }
@@ -237,8 +238,8 @@ function updateHud() {
   document.querySelector('.air-track').setAttribute('aria-valuenow', p.breath.toFixed(1));
 }
 canvas.tabIndex = 0;
-$('play').onclick = () => start(); $('again').onclick = () => { selectedStage = game.stage; start(); };
-$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(game.elapsed + game.time); }; $('back-home').onclick = home;
+$('play').onclick = () => start(); $('again').onclick = () => { selectedStage = game.stage; start(undefined, game.startScore); };
+$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(game.elapsed + game.time, game.score); }; $('back-home').onclick = home;
 $('pause').onclick = () => pause(); $('resume').onclick = resume;
 $('quit').onclick = finish;
 $('settings').onclick = () => { pause(false); $('settings-dialog').showModal(); };
@@ -326,6 +327,7 @@ function frame(now, seconds) {
       if (event.x !== undefined && !['warning', 'sardine'].includes(event.kind)) effects.push({ ...event, life: label ? 1.3 : 1, label: label && t(label[0], { points: event.points }), colour: label?.[1], big: label?.[2] });
       if (event.kind === 'show' && showLabels[event.name]) toast(t(showLabels[event.name]));
       if (event.kind === 'chase') toast(t('chaseHint'));
+      if (event.kind === 'roller') toast(t('rollerHint'));
       audio.effect(event.kind, event.golden ? 'golden' : event.name);
       if (event.kind === 'delivery') { holding = false; audio.start('menu'); }
     }

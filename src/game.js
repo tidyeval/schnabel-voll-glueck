@@ -185,6 +185,37 @@ export function rollDecor(stage, random) {
 }
 export const FRENZY = { combo: 15, duration: 6, interval: .24 };
 export const JUMP = { from: 430, range: 250, boost: 300, gravity: 700, ceiling: 150 };
+// Storm: breakers roll across the surface. Surfacing on a crest throws Pip high and far.
+export const STORM = { every: 6.5, first: 3, travel: 70, crest: 75, ride: 260, float: .75, ceiling: 95, points: 50, flash: 7,
+  // The swell reaches underwater: fish and Pip sway out of step, strongest near the surface.
+  surge: { speed: 1.6, wave: .006, fish: 18, drift: 12, pip: 22, lag: 1.7 } };
+const surgeDepth = y => clamp(1 - (y - WORLD.water) / 500, .35, 1);
+/** Underwater swell velocity on Pip (px/s, vertical) at a stage time and depth. */
+export const pipSurge = (time, y) => STORM.surge.pip * STORM.surge.speed * Math.cos(time * STORM.surge.speed + STORM.surge.lag) * surgeDepth(y);
+const stormHash = i => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+/** Lightning brightness (0..1) at a stage time: one double flash every few seconds. */
+export function flashAt(time) {
+  const k = Math.floor(time / STORM.flash), local = time - k * STORM.flash - 2 - stormHash(k) * 3;
+  if (local < 0 || local > .7) return 0;
+  return Math.max(Math.exp(-local * 9), local > .18 ? Math.exp(-(local - .18) * 7) * .7 : 0);
+}
+export const crestNear = (game, x) => !!game.rollers?.some(r => Math.abs(r - x) < STORM.crest);
+function updateStorm(game, dt, events) {
+  const before = game.time - dt;
+  if (flashAt(game.time) && !flashAt(before)) events.push({ kind: 'thunder' });
+  game.rollers = game.rollers.map(x => x - (game.speed + STORM.travel) * dt).filter(x => x > -200);
+  const { speed, wave, fish, drift } = STORM.surge;
+  for (const item of game.items) {
+    if (!['fish', 'jelly', 'bubble'].includes(item.kind) || item.leap !== undefined || item.y < WORLD.water + 20) continue;
+    const phase = game.time * speed - item.x * wave, depth = surgeDepth(item.y);
+    const dy = fish * Math.sin(phase) * depth, dx = drift * Math.cos(phase) * depth;
+    item.y += dy - (item.surgeY || 0); item.x += dx - (item.surgeX || 0); item.surgeY = dy; item.surgeX = dx;
+  }
+  if (game.time >= game.nextRoller && game.nextEncounter !== Infinity) {
+    game.rollers.push(640); game.nextRoller = game.time + STORM.every;
+    if (!game.rolled) { game.rolled = true; events.push({ kind: 'roller' }); }
+  }
+}
 export const NEAR_MISS = { margin: 26, points: 30 };
 export function sardinePositions(ball, time) {
   return ball.seeds.map((seed, i) => {
@@ -401,6 +432,7 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
       ...Array.from({ length: 5 }, (_, i) => ({ kind: 'fish', x: 340 + i * 48, y: 590 + Math.sin(i * .6) * 18, golden: false, calm: i % 2 === 0 })),
     ],
     frenzy: 0, frenzySpawn: 0, frenzyArmed: true, boost: 0, nearMisses: 0, show: null,
+    rollers: STAGES[stage].storm ? [] : null, nextRoller: STORM.first,
     chaseWave: stage >= CHASE.from ? Math.floor(STAGES[stage].encounters.length * CHASE.at) : Infinity, chased: false,
     nextEncounter: 100, wave: 0, boats: 1, lastPairBand: -1, encounterTrace: [], ended: false,
   };
@@ -439,6 +471,7 @@ export function step(game, dt, holding) {
     game.ended = true; game.endReason = 'air';
     return [...events, { kind: 'end' }];
   }
+  if (game.rollers) updateStorm(game, dt, events);
   movePlayer(game, dt, holding, previousAir, events);
   updateCombo(game, dt);
   const result = advanceWorld(game, dt, events);
@@ -486,19 +519,21 @@ function movePlayer(game, dt, holding, previousAir, events) {
   const target = holding ? (p.wet ? 240 + weight * 20 : 255) : (p.wet ? -210 + weight * 45 : -100 + weight * 25);
   if (p.jump && !p.wet && !holding) {
     // A deep dive launches Pip ballistically above his usual gliding height.
-    p.vy += JUMP.gravity * dt;
+    p.vy += JUMP.gravity * (p.ride ? STORM.float : 1) * dt;
     moveBody(game, dt, events);
-    if (p.y < JUMP.ceiling) { p.y = JUMP.ceiling; p.vy = Math.max(0, p.vy); }
+    const top = p.ride ? STORM.ceiling : JUMP.ceiling;
+    if (p.y < top) { p.y = top; p.vy = Math.max(0, p.vy); }
     if (p.y >= 265 && p.vy > 0) { p.y = 265; p.vy = 0; p.jump = false; }
     else if (p.y > 265 && p.vy >= -100) p.jump = false;
   } else {
     p.vy += (target - p.vy) * (1 - Math.exp(-dt * (p.wet ? 9 : 6)));
-    const ceiling = Math.min(265, p.y);
-    moveBody(game, dt, events);
+    const ceiling = Math.min(265, p.y), surge = p.wet && game.rollers ? pipSurge(game.time, p.y) : 0;
+    p.vy += surge; moveBody(game, dt, events); p.vy -= surge;
     p.y = clamp(p.y, ceiling, 710);
     if (p.y >= 265) p.jump = false;
     if (p.y === 265 || p.y === 710) p.vy = 0;
   }
+  if (!p.jump) p.ride = false;
   if (p.wet) p.deepest = Math.max(p.deepest || 0, p.y);
   p.relief = Math.max(0, (p.relief || 0) - dt); p.bump = Math.max(0, (p.bump || 0) - dt); p.confused = Math.max(0, (p.confused || 0) - dt); p.kick = Math.max(0, (p.kick || 0) - dt);
   p.gulp = Math.max(0, p.gulp - dt); p.breach = Math.max(0, p.breach - dt);
@@ -509,6 +544,10 @@ function movePlayer(game, dt, holding, previousAir, events) {
     if (wet) { game.diveFish = 0; p.turns = 0; p.spin = 0; p.kick = 0; p.trickUntil = -1; p.deepest = p.y; p.jump = false; }
     else {
       p.relief = previousAir.level ? 1.5 : .65; p.breach = .6; p.vy = -235 - lift * JUMP.boost; p.jump = lift > .3; p.lift = lift;
+      if (crestNear(game, p.x)) {
+        p.vy -= STORM.ride; p.jump = true; p.ride = true; game.score += STORM.points; game.comboTime = Math.max(game.comboTime, 2);
+        events.push({ kind: 'waveRide', x: p.x, y: p.y, points: STORM.points });
+      }
       p.trickUntil = game.time + 1.2 + lift * .5; p.taps = 0; p.tapAt = -10; p.trickUsed = false;
     }
     p.wet = wet;

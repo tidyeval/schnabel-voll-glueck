@@ -60,6 +60,7 @@ export function createJuice(reducedMotion) {
       if (event.kind === 'sardine') burst(event.x, event.y, 2, 80, '#e3f6ff');
       if (event.kind === 'feast' || event.kind === 'trick' || event.kind === 'kick' || event.kind === 'mission') burst(event.x, event.y, 16, 220, '#fff2b6');
       if (event.kind === 'frenzy') { if (!reducedMotion) { flash = .35; flashColour = '#ffd66e'; shake = .2; shakePower = 4; } burst(event.x, event.y, 22, 260, '#ffd66e'); }
+      if (event.kind === 'waveRide') { joy = 1.4; burst(event.x, event.y, 18, 240, '#e3f6ff'); }
       if (event.kind === 'current') burst(event.x, event.y, 8, 160, '#dffff6');
     },
     update(dt, game, playing) {

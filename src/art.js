@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
-import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawStageHighlight, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare } from './scenery.js';
+import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawStageHighlight, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare, drawRollers, drawStorm } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -641,7 +641,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     for (let i = 0; i < 3; i++) { const x = ((320 + i * 47 - d * .08) % 580 + 580) % 580; const y = water - 91 + Math.sin(i * 2) * 22; path(c, null, p => { p.moveTo(x - 7, y); p.quadraticCurveTo(x - 3, y - 5, x, y); p.quadraticCurveTo(x + 4, y - 5, x + 8, y); }, '#799d93', 1.3); }
   });
   drawWater(c, stage, water, d, motion, menu ? null : game, reducedMotion);
-  if (!menu) { drawWhale(c, game, motion, reducedMotion); drawDolphins(c, game, water, motion, reducedMotion); drawRare(c, game, water, motion, reducedMotion); }
+  if (!menu) { drawWhale(c, game, motion, reducedMotion); drawDolphins(c, game, water, motion, reducedMotion); drawRare(c, game, water, motion, reducedMotion); drawRollers(c, game, water, motion, reducedMotion); }
   if (!menu && STAGES[game.stage].id === 'reef') {
     for (let i = 0; i < 9; i++) {
       const x = ((i * 79 - d * .22) % 650 + 650) % 650 - 80;
@@ -933,6 +933,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     }
     c.globalCompositeOperation = 'source-over';
   }
+  if (!menu && STAGES[stage].storm) drawStorm(c, game, water, motion, reducedMotion);
   if (!menu) drawJuice(c, fx, game, water, motion, reducedMotion);
   for (const e of effects) {
     c.save(); c.globalAlpha = Math.min(1, e.life * 2);
