@@ -66,7 +66,7 @@ export const STAGES = [
     id: 'storm',
     names: { de: 'Sturm', en: 'Storm', es: 'Tormenta' },
     // Rain, lightning and big breakers; surfacing on a crest throws Pip high (see STORM in game.js).
-    startElapsed: 185, sharkWarning: .68, night: false, storm: true,
+    startElapsed: 185, sharkWarning: .95, night: false, storm: true,
     encounters: ['driftwood', 'shark', 'turtle-turtle-gull', 'jelly-shark', 'shark-shark', 'whirlpool', 'turtle-turtle-gull', 'driftwood-jelly-shark', 'shark-shark', 'puffer-shark', 'driftwood-shark', 'shark-shark'],
     pairPatterns: { 4: 'staggered', 8: 'parallel', 11: 'staggered' },
     residents: ['starfish', 'bottle', 'octopus'],

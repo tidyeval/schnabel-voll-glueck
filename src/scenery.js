@@ -668,23 +668,30 @@ export function drawStageHighlight(c, stage, water, d, motion, game, reducedMoti
   }
 }
 
-// Storm breakers: a steep hump of water that rolls toward Pip, its crest white with foam.
-// Surfacing under the crest gives a wave ride (see STORM in game.js).
+// Storm breakers: the sea surface itself swells into a smooth hump that rolls toward Pip,
+// steeper at its front, with foam spilling off the crest. Surfacing under the crest gives a
+// wave ride (see STORM in game.js). The surface lines in art.js follow the same shape.
+const ROLLER = { height: 46, front: 42, back: 105 };
+export function rollerLift(game, x) {
+  let lift = 0;
+  for (const r of game?.rollers || []) { const u = (x - r) / (x < r ? ROLLER.front : ROLLER.back); lift += ROLLER.height * Math.exp(-u * u); }
+  return lift;
+}
 export function drawRollers(c, game, water, motion, reducedMotion) {
   const th = STAGES[game.stage].theme, p = game.player;
-  for (const x of game.rollers || []) {
-    const h = 50, back = 150, front = 80;
-    fill(c, vertical(c, water - h, water + 30, [[0, '#9cc6c4'], [.5, th.water[0]], [1, th.water[0] + '00']]), q => {
-      q.moveTo(x - front, water + 4); q.bezierCurveTo(x - front * .55, water + 2, x - 16, water - h, x + 6, water - h);
-      q.bezierCurveTo(x + 40, water - h, x + back * .6, water + 2, x + back, water + 4); q.lineTo(x + back, water + 30); q.lineTo(x - front, water + 30); q.closePath();
+  for (const r of game.rollers || []) {
+    const from = r - ROLLER.front * 2.6, to = r + ROLLER.back * 2.6;
+    fill(c, vertical(c, water - ROLLER.height, water + 4, [[0, '#8fc3bf'], [1, th.water[0]]]), q => {
+      q.moveTo(from, water + 4);
+      for (let x = from; x <= to; x += 6) q.lineTo(x, water - rollerLift(game, x));
+      q.lineTo(to, water + 4); q.closePath();
     });
-    // Foam on the crest, brighter while Pip is underwater close enough to catch it.
-    const ready = p.wet && Math.abs(x - p.x) < 260 ? 1 : 0, glow = reducedMotion ? .6 : .6 + Math.sin(motion * 8) * .25 * ready;
-    stroke(c, `rgba(255,255,255,${.65 + glow * .35 * ready})`, 4 + ready * 2, q => { q.moveTo(x - 26, water - h * .7); q.quadraticCurveTo(x - 6, water - h - 4, x + 26, water - h + 2); });
-    for (let i = 0; i < 7; i++) {
-      const u = reducedMotion ? i / 7 : (motion * 1.7 + i / 7) % 1;
-      c.globalAlpha = (1 - u) * .8;
-      fill(c, '#f4fbff', q => q.arc(x - 18 - u * 40 + i * 5, water - h - 2 - Math.sin(u * Math.PI) * 18, 2.4, 0, TAU));
+    // Foam on the crest, livelier while Pip is underwater close enough to catch it.
+    const ready = p.wet && Math.abs(r - p.x) < 260 ? 1 : 0;
+    for (let i = 0; i < 9; i++) {
+      const u = reducedMotion ? i / 9 : (motion * 1.4 + i / 9) % 1, x = r + 8 - u * 46;
+      c.globalAlpha = (1 - u) * (.6 + ready * .35);
+      fill(c, '#f4fbff', q => q.arc(x, water - rollerLift(game, x) - 2 - Math.sin(u * Math.PI) * (6 + ready * 6), 2.6 - u, 0, TAU));
     }
     c.globalAlpha = 1;
   }

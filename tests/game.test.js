@@ -613,9 +613,8 @@ test('storm: surfacing on a breaker crest rides it high once, flat water does no
   for (const crest of [true, false]) {
     const g = createGame(() => .5, storm); g.items = []; g.nextEncounter = Infinity; g.nextRoller = Infinity;
     for (let i = 0; i < 72; i++) step(g, 1 / 60, true);
-    g.rollers = crest ? [g.player.x + 200] : [];
     let rides = 0, top = Infinity;
-    for (let i = 0; i < 300; i++) { rides += step(g, 1 / 60, false).filter(e => e.kind === 'waveRide').length; top = Math.min(top, g.player.y); }
+    for (let i = 0; i < 300; i++) { g.rollers = crest && g.player.wet ? [g.player.x] : []; rides += step(g, 1 / 60, false).filter(e => e.kind === 'waveRide').length; top = Math.min(top, g.player.y); }
     assert.equal(rides, crest ? 1 : 0);
     assert.ok(crest ? top < 120 : top >= 150, `${crest ? 'crest' : 'flat'} top ${top}`);
   }

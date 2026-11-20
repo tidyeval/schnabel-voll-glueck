@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
 import { blink, cuteEye, happyEye, star, drawResidents, roofCat } from './cute.js';
-import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawStageHighlight, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare, drawRollers, drawStorm } from './scenery.js';
+import { drawSky, drawWater, drawCaustics, drawSeabedLife, drawStageHighlight, drawWhale, drawDolphins, drawBaitball, drawCurrent, drawJuice, swellOf, drawRare, drawRollers, drawStorm, rollerLift } from './scenery.js';
 const TAU = Math.PI * 2;
 function ellipse(c, x, y, rx, ry, fill, rotation = 0) {
   c.beginPath(); c.ellipse(x, y, rx, ry, rotation, 0, TAU); c.fillStyle = fill; c.fill();
@@ -918,7 +918,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
   }
   const swell = menu ? 1 : swellOf(game, stage, reducedMotion);
   for (let i = 0; i < 4; i++) {
-    path(c, null, p => { for (let x = -30; x <= 510; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + motion * 1.6 + i * .3) * 3 * swell + Math.sin(x * .011 - motion * .9) * 2.2 * (swell - 1); if (x === -30) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#fff1c8cc', '#dceccf88', '#c3ead455', '#b7e4cc22'][i], i === 0 ? 2 : 1);
+    path(c, null, p => { for (let x = -30; x <= 510; x += 8) { const y = water + i * 4 + Math.sin(x * .025 + motion * 1.6 + i * .3) * 3 * swell + Math.sin(x * .011 - motion * .9) * 2.2 * (swell - 1) - (menu ? 0 : rollerLift(game, x) * (1 - i * .2)); if (x === -30) p.moveTo(x, y); else p.lineTo(x, y); } }, ['#fff1c8cc', '#dceccf88', '#c3ead455', '#b7e4cc22'][i], i === 0 ? 2 : 1);
   }
   if (!reducedMotion) for (let i = 0; i < 7; i++) {
     const x = ((i * 77 - d * .5) % 540 + 540) % 540 - 30, glint = Math.max(0, Math.sin(motion * 2.4 + i * 1.9));

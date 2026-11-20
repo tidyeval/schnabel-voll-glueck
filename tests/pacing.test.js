@@ -90,7 +90,7 @@ test('paired sharks progress from staggered to parallel with recovery encounters
   assert.deepEqual([...PAIR_PATTERNS.values()].sort(), forms.sort());
   assert.ok(PAIR_PATTERNS.has('0:4'), 'paired decisions begin by the middle of the bay');
   assert.deepEqual([0, 1, 2, 3, 4].map(stage => [...PAIR_PATTERNS.keys()].filter(key => key.startsWith(`${stage}:`)).length), [2, 3, 3, 5, 3]);
-  assert.deepEqual(warningTimes, [.95, .8, .74, .68, .68]);
+  assert.deepEqual(warningTimes, [.95, .8, .74, .68, .95]);
 });
 
 test('the buoy and coral combination keeps its middle passage clear of the fatal shark', () => {

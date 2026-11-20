@@ -188,7 +188,7 @@ export const JUMP = { from: 430, range: 250, boost: 300, gravity: 700, ceiling: 
 // Storm: breakers roll across the surface. Surfacing on a crest throws Pip high and far.
 export const STORM = { every: 6.5, first: 3, travel: 70, crest: 75, ride: 260, float: .75, ceiling: 95, points: 50, flash: 7,
   // The swell reaches underwater: fish and Pip sway out of step, strongest near the surface.
-  surge: { speed: 1.6, wave: .006, fish: 18, drift: 12, pip: 22, lag: 1.7 } };
+  surge: { speed: 1.6, wave: .006, fish: 13, drift: 9, pip: 12, lag: 1.7 } };
 const surgeDepth = y => clamp(1 - (y - WORLD.water) / 500, .35, 1);
 /** Underwater swell velocity on Pip (px/s, vertical) at a stage time and depth. */
 export const pipSurge = (time, y) => STORM.surge.pip * STORM.surge.speed * Math.cos(time * STORM.surge.speed + STORM.surge.lag) * surgeDepth(y);
