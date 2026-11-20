@@ -14,7 +14,7 @@ export default defineConfig({
     generateBundle(_, bundle) {
       const files = ['', 'index.html', ...publicFiles, ...Object.keys(bundle).filter(name => name !== 'index.html')].map(name => base + name);
       const version = offlineVersion(bundle, publicDir);
-      const source = serviceWorkerSource('schnabelglueck-phaser-matter', version, files);
+      const source = serviceWorkerSource('schnabel-voll-glueck', version, files);
       this.emitFile({ type: 'asset', fileName: 'sw.js', source });
     },
   }],
