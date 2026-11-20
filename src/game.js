@@ -163,10 +163,19 @@ export function rollSetPieces(stage, random) {
   return pieces;
 }
 // Every run holds one special moment per stage, a little wonder at a random point.
-export const RARE = { chance: 1 };
+export const RARE = { chance: 1, time: 15 };
+// Whether a rare moment is on screen right now (surface residents step aside for it).
+export const rareActive = game => !!game.rareShow && game.time - game.rareShow.start >= 0 && game.time - game.rareShow.start <= RARE.time;
+const SURFACE_MOMENTS = ['ducklings', 'otters'], SURFACE_KINDS = ['boat', 'driftwood', 'surfer', 'island', 'buoy', 'mangrove'];
 export function rollRare(stage, random) {
   if (random() >= RARE.chance || !STAGES[stage].rareMoment) return null;
-  return { name: STAGES[stage].rareMoment, wave: 2 + Math.floor(random() * (STAGES[stage].encounters.length - 4)) };
+  const { rareMoment: name, encounters } = STAGES[stage];
+  const waves = Array.from({ length: encounters.length - 4 }, (_, i) => i + 2);
+  // Moments at the surface (ducklings, otters) get waves with nothing else on the water around them.
+  const busy = wave => (encounters[wave] || '').split('-').some(kind => SURFACE_KINDS.includes(kind));
+  const quiet = ahead => waves.filter(wave => [-1, ...Array.from({ length: ahead + 1 }, (_, i) => i)].every(offset => !busy(wave + offset)));
+  const pool = SURFACE_MOMENTS.includes(name) ? [quiet(2), quiet(1), waves].find(list => list.length) : waves;
+  return { name, wave: pool[Math.floor(random() * pool.length)] };
 }
 // Background residents and small character moments, scattered differently every run.
 export function rollDecor(stage, random) {

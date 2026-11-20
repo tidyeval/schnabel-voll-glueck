@@ -197,7 +197,9 @@ async function finish() {
   const complete = game.endReason === 'complete';
   const final = complete && game.stage === STAGES.length - 1;
   $('next-stage').classList.toggle('hidden', !complete || final);
-  text('again', t('again'));
+  // One clear next step: onwards after a nest, otherwise straight back in. Replaying a finished nest stays a quiet option.
+  text('again', complete && !final ? t('again') : t('retryStage'));
+  $('again').className = complete && !final ? 'quiet-button' : 'primary';
   mode = 'ended'; holding = false; phaserScene?.scene.resume();
   const buttons = [...$('result-dialog').querySelectorAll('button')]; buttons.forEach(button => { button.disabled = true; });
   savePending = true;
@@ -206,12 +208,13 @@ async function finish() {
   text('result-title', game.endReason === 'complete' && final ? t('reasons.final') : t(`reasons.${game.endReason || 'fallback'}`));
   lastResult = { stage: game.stage, score: game.score, fish: game.fish, record, complete, final };
   text('result-score', formatNumber(game.score)); text('result-fish', formatNumber(game.fish)); text('result-combo', formatNumber(game.bestCombo)); text('result-time', clock(game.time));
-  const resultMessage = complete ? (final ? t('finalMission') : t('nextMission', { stage: stageName(game.stage + 1) })) : game.mission ? t('mission') : t('nextGoal');
+  const resultMessage = final ? t('finalMission') : '';
   text('result-mission', resultMessage);
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.start('menu'); audio.effect('end'); if (record) audio.effect('record');
   const saved = await pendingSave;
   $('retry-save').classList.toggle('hidden', saved);
-  text('result-mission', `${resultMessage} ${saved ? t('saved') : t('saveFailed')}`);
+  // Saving is only worth a word when it failed.
+  text('result-mission', `${resultMessage} ${saved ? '' : t('saveFailed')}`.trim());
   savePending = false;
   buttons.forEach(button => { button.disabled = false; });
 }

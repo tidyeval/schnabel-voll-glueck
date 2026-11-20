@@ -1,4 +1,5 @@
 import { STAGES } from './stages.js';
+import { rareActive } from './game.js';
 // Shared cuteness helpers and the small background residents of each stage.
 // Presentation only: residents never collide and never score.
 const TAU = Math.PI * 2;
@@ -185,6 +186,8 @@ export function drawResidents(c, game, stage, water, d, t, reducedMotion) {
   const night = STAGES[stage].night;
   decor.residents.forEach((kind, i) => {
     if (kind === 'cat') return;
+    // A rare moment on the water has the surface to itself.
+    if (['bottle', 'flamingo', 'mudskipper'].includes(kind) && rareActive(game)) return;
     // The bottle drifts by rarely (about twice a level); other residents repeat more often.
     const span = kind === 'bottle' ? 5000 : 1500 + i * 230, x = wrap(decor.offsets[i] - d * .92, span) - 80;
     if (x < -90 || x > 570) return;

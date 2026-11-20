@@ -1,8 +1,8 @@
-// The end-of-round press photo: a proud Pip holds a certificate with the score to the camera and
-// gives a wing's thumbs up. Drawn into a 4:5 Polaroid that can be shared as an image.
+// The end-of-round press photo: a proud Pip, drawn as in the game, cheers next to a certificate
+// with the score and gives a wing's thumbs up. Drawn into a 4:5 Polaroid that can be shared as an image.
 import { createGame } from './game.js';
-import { drawWorld } from './art.js';
-import { blink, star } from './cute.js';
+import { drawWorld, pelican } from './art.js';
+import { star } from './cute.js';
 
 export const PHOTO = { width: 1080, height: 1350 };
 const TAU = Math.PI * 2;
@@ -63,38 +63,16 @@ function thumbsUp(c) {
   for (const y of [-2, 7]) { c.beginPath(); c.moveTo(-18, y); c.quadraticCurveTo(0, y + 4, 18, y - 2); c.stroke(); }
 }
 
-// Pip seen from the front, looking straight into the camera: round body, big eyes, his tousled
-// crown and the long beak pointing down over the chest with the pouch below it.
-function frontPip(c, t) {
-  const outline = '#786f5d', ink = '#264240';
-  const shade = (y1, y2, a, b) => { const g = c.createLinearGradient(0, y1, 0, y2); g.addColorStop(0, a); g.addColorStop(1, b); return g; };
-  const shape = (fill, draw, stroke = outline, width = 3) => { c.beginPath(); draw(); c.fillStyle = fill; c.fill(); if (stroke) { c.strokeStyle = stroke; c.lineWidth = width; c.stroke(); } };
-  // Raised wing (viewer's left) ending in the thumbs up.
-  shape(shade(420, 720, '#fffbed', '#d8e4cf'), () => { c.moveTo(380, 690); c.quadraticCurveTo(270, 640, 262, 470); c.quadraticCurveTo(300, 450, 318, 480); c.quadraticCurveTo(350, 600, 420, 610); c.closePath(); });
-  c.save(); c.translate(282, 430); c.rotate(-.1); c.scale(2.3, 2.3); thumbsUp(c); c.restore();
-  // Body.
-  shape(shade(500, 960, '#fffcf2', '#d6e2cc'), () => c.ellipse(540, 740, 215, 235, 0, 0, TAU));
-  c.beginPath(); c.ellipse(560, 700, 120, 150, 0, 0, TAU); c.fillStyle = '#ffffff55'; c.fill();
-  // Other wing hangs down to hold the certificate (its tip is drawn over the certificate).
-  shape(shade(600, 900, '#f5f7e8', '#ccdcca'), () => { c.moveTo(690, 585); c.quadraticCurveTo(812, 650, 796, 840); c.quadraticCurveTo(770, 866, 744, 836); c.quadraticCurveTo(756, 700, 668, 640); c.quadraticCurveTo(664, 600, 690, 585); c.closePath(); });
-  // Head turned a little to the side and tilted, so the long beak reads in three-quarter view
-  // while both eyes still look into the camera.
-  c.save(); c.translate(540, 540); c.rotate(.14); c.translate(-540, -540);
-  shape(shade(270, 560, '#fffdf4', '#eeefdc'), () => c.ellipse(530, 420, 148, 138, 0, 0, TAU));
-  shape('#fffdf2', () => { c.moveTo(478, 300); c.quadraticCurveTo(448, 240, 484, 232); c.quadraticCurveTo(508, 236, 512, 268); c.quadraticCurveTo(512, 210, 546, 214); c.quadraticCurveTo(574, 228, 552, 300); }, outline, 2.6);
-  const open = blink(t, .5);
-  for (const [x, r] of [[468, 1], [574, .82]]) {
-    c.beginPath(); c.ellipse(x, 404, 24 * r, (30 * open + 2) * r, 0, 0, TAU); c.fillStyle = ink; c.fill();
-    if (open > .5) { c.beginPath(); c.arc(x + 7 * r, 392, 9 * r, 0, TAU); c.fillStyle = '#fff'; c.fill(); c.beginPath(); c.arc(x - 7 * r, 418, 4.5 * r, 0, TAU); c.fill(); }
-    c.beginPath(); c.moveTo(x - 26 * r, 364); c.quadraticCurveTo(x, 352, x + 24 * r, 362); c.strokeStyle = '#aa9271'; c.lineWidth = 3; c.stroke();
-  }
-  for (const [x, r] of [[430, 1], [606, .75]]) { c.beginPath(); c.ellipse(x, 456, 26 * r, 15 * r, 0, 0, TAU); c.fillStyle = '#f2a9a0aa'; c.fill(); }
-  // Pouch sagging under the bill, then the bill reaching forward and down to the side.
-  shape(shade(450, 660, '#f6c27e', '#e39a5e'), () => { c.moveTo(520, 468); c.quadraticCurveTo(560, 640, 660, 650); c.quadraticCurveTo(718, 640, 724, 590); c.lineTo(586, 452); c.closePath(); }, '#c07a4a', 2.6);
-  shape(shade(430, 600, '#ffd27a', '#f0a64e'), () => { c.moveTo(512, 450); c.quadraticCurveTo(540, 424, 590, 438); c.quadraticCurveTo(680, 520, 734, 584); c.quadraticCurveTo(740, 606, 718, 600); c.quadraticCurveTo(620, 540, 524, 480); c.quadraticCurveTo(506, 468, 512, 450); c.closePath(); }, '#c98550', 2.6);
-  c.beginPath(); c.moveTo(540, 452); c.quadraticCurveTo(640, 512, 716, 590); c.strokeStyle = '#d99a52'; c.lineWidth = 2; c.stroke();
-  shape('#e5874c', () => { c.moveTo(722, 584); c.quadraticCurveTo(744, 598, 730, 612); c.quadraticCurveTo(724, 600, 712, 596); c.closePath(); }, null);
-  c.restore();
+// Pip as he looks in the game, in profile with his chest out and a cheeky wink toward us,
+// both wings raised in a cheer and one wing tip giving a thumbs up.
+const PIP = { x: 470, y: 700, scale: 3.9 };
+function proudPip(c, t) {
+  pelican(c, { x: PIP.x, y: PIP.y, scale: PIP.scale, time: t, tilt: -.12, happy: true, cargo: 6,
+    expression: { cheer: true, wink: 1, look: -.08 } });
+  // Thumbs up at the tip of the near wing (wing tip in Pip's frame, rotated by his tilt).
+  const tip = { x: -64, y: -70 }, a = -.12;
+  const x = PIP.x + (tip.x * Math.cos(a) - tip.y * Math.sin(a)) * PIP.scale, y = PIP.y + (tip.x * Math.sin(a) + tip.y * Math.cos(a)) * PIP.scale;
+  c.save(); c.translate(x, y); c.rotate(-.25); c.scale(2.1, 2.1); thumbsUp(c); c.restore();
 }
 
 /** Draws the photo; `t` twinkles the stars around Pip. */
@@ -110,17 +88,13 @@ export function drawPhoto(c, card, t = 0, scene = backdrop(card.stage)) {
   const glow = c.createRadialGradient(540, 620, 40, 540, 620, 520);
   glow.addColorStop(0, '#fff6d855'); glow.addColorStop(1, '#fff6d800');
   c.fillStyle = glow; c.fillRect(FRAME.x, FRAME.y, FRAME.width, FRAME.height);
-  // Pip faces the camera, gives a thumbs up and holds up the certificate.
-  frontPip(c, t);
+  // Pip in profile, cheering, with the certificate held up in front of him.
+  proudPip(c, t);
   // He floats: the water closes over his lower body.
   c.fillStyle = '#5fb3a855'; c.fillRect(FRAME.x, 790, FRAME.width, FRAME.y + FRAME.height - 790);
   c.beginPath(); c.ellipse(540, 792, 250, 22, 0, 0, TAU); c.strokeStyle = '#ffffffaa'; c.lineWidth = 4; c.stroke();
   for (const [x, y, r, a] of [[190, 300, 16, 0], [330, 250, 10, 1], [860, 300, 14, 2], [900, 470, 9, 3]]) star(c, x, y, r + Math.sin(t * 3 + a) * 2, '#fff3b0', t + a);
   c.save(); c.translate(540, 905); c.scale(1.35, 1.35); certificate(c, card); c.restore();
-  // The holding wing tip over the certificate's right edge.
-  c.beginPath(); c.ellipse(772, 850, 30, 40, -.3, 0, TAU); c.fillStyle = '#f5f7e8'; c.fill(); c.strokeStyle = '#87957b'; c.lineWidth = 3; c.stroke();
-  c.strokeStyle = '#b7cbb2'; c.lineWidth = 2;
-  for (const y of [834, 850, 866]) { c.beginPath(); c.moveTo(752, y); c.quadraticCurveTo(772, y + 4, 792, y); c.stroke(); }
   if (card.record) {
     c.save(); c.translate(860, 190); c.rotate(.12);
     roundRect(c, -130, -36, 260, 72, 36, '#ff8f6b'); text(c, card.record, 0, 12, 30, '#fffaf0', 900, 'center', 230);

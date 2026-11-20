@@ -121,6 +121,8 @@ export function pelican(c, {
     if (joy) { wingLift = wingLift * (1 - joy) + Math.sin(t * 17) * .8 * joy; wingFold *= 1 - joy; }
     if (plunge) { wingLift = wingLift * (1 - plunge) - .45 * plunge; wingFold = wingFold * (1 - plunge) + plunge; }
   }
+  // A held cheering pose (souvenir photo): both wings raised high and open.
+  if (!wet && expression.cheer) { wingLift = 1.15; wingFold = 0; }
   const outline = '#786f5d';
   // A soft painted shadow and separated tail feathers keep Pip readable over sea and sky.
   ellipse(c, -5, 17, 47, 25, '#315e5a22', -.12);

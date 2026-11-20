@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 // Stage atmosphere, set-piece scenery and game-feel overlays. Everything here is
 // presentation only: nothing in this file is used for collisions or scoring.
-import { WORLD, clamp, sardinePositions, currentSpan } from './game.js';
+import { WORLD, clamp, sardinePositions, currentSpan, RARE } from './game.js';
 import { blink, cuteEye, happyEye, manatee } from './cute.js';
 const TAU = Math.PI * 2;
 const SHOW_TIME = 13;
@@ -449,13 +449,13 @@ export function drawCaustics(c, stage, d, motion, reducedMotion) {
   c.globalCompositeOperation = 'source-over';
 }
 // Special moments: a small wonder that crosses the screen once per run.
-const RARE_TIME = 15;
+const RARE_TIME = RARE.time;
 export function drawRare(c, game, water, motion, reducedMotion) {
   if (!game.rareShow || reducedMotion) return;
   const age = game.time - game.rareShow.start;
   if (age < 0 || age > RARE_TIME) return;
   const name = game.rareShow.name;
-  if (name === 'otters') { const ox = 580 - age * 42; c.save(); c.translate(ox, water); c.scale(1.5, 1.5); c.translate(-ox, -water); otters(c, ox, water, motion); c.restore(); }
+  if (name === 'otters') { const ox = 580 - age * 75; c.save(); c.translate(ox, water); c.scale(1.5, 1.5); c.translate(-ox, -water); otters(c, ox, water, motion); c.restore(); }
   if (name === 'manateeCalf') {
     const x = 620 - age * 44;
     manatee(c, x, 640, motion, 1, 1.05);
@@ -463,7 +463,7 @@ export function drawRare(c, game, water, motion, reducedMotion) {
     if (Math.sin(motion * 1.7) > .3) fill(c, '#ff9fb0aa', p => { const hx = x + 52, hy = 640 - 26 - wrap(motion * 14, 20); p.moveTo(hx, hy + 3); p.bezierCurveTo(hx - 5, hy - 1, hx - 2, hy - 5, hx, hy - 2); p.bezierCurveTo(hx + 2, hy - 5, hx + 5, hy - 1, hx, hy + 3); });
   }
   if (name === 'manta') manta(c, 640 - age * 52, 560 + Math.sin(age * .8) * 30, motion);
-  if (name === 'ducklings') ducklings(c, 600 - age * 46, water, motion);
+  if (name === 'ducklings') ducklings(c, 600 - age * 75, water, motion);
 }
 // A mother duck paddles across the bay with her ducklings in a bobbing line; the last one hurries.
 function ducklings(c, x, water, t) {

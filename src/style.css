@@ -28,7 +28,7 @@ h1 em{color:#e78c57;font-style:normal}
 .start-bottom{position:absolute;top:66.5%;left:8%;right:8%;text-align:center}
 .record{display:flex;gap:2cqw;align-items:center;justify-content:center;font-size:1.9cqw;letter-spacing:.13em;color:#effef0;margin-bottom:4cqw}
 .record strong{font-size:3.6cqw;letter-spacing:0;color:#fff8d8}
-.primary{width:100%;min-height:50px;padding:4cqw 6cqw;background:#ffdc86;border-radius:5cqw;box-shadow:0 1.2cqw 0 #cb9c52,0 2cqw 5cqw #254c4920;display:flex;align-items:center;justify-content:space-between;font-size:4.1cqw;font-weight:800;color:#3d5344;letter-spacing:-.025em}
+.primary{width:100%;min-height:50px;padding:4cqw 6cqw;background:#ffdc86;border-radius:5cqw;box-shadow:0 1.2cqw 0 #cb9c52,0 2cqw 5cqw #254c4920;display:flex;align-items:center;justify-content:center;text-align:center;font-size:4.1cqw;font-weight:800;color:#3d5344;letter-spacing:-.025em}
 .primary:hover{background:#ffe39e}
 .primary span{font-size:6cqw;font-weight:500;line-height:1}
 .quiet-button{background:none;display:flex;align-items:center;justify-content:center;gap:2cqw;width:100%;padding:4cqw 0;font-size:2.9cqw;font-weight:600}
@@ -80,10 +80,15 @@ dialog .small{font-size:2.6cqw;line-height:1.7}
 .outfits strong{font-size:2.4cqw}
 .outfits small{font-size:1.9cqw}
 .result-score{font-size:19cqw;letter-spacing:-.07em;line-height:1.1;color:#d88b50;font-weight:900}
-.result-stats{display:flex;justify-content:space-around;border-block:1px solid #e3e5d2;margin-top:5cqw;padding:4cqw 0}
-.result-stats div{display:flex;flex-direction:column;gap:1cqw}
-.result-stats strong{font-size:5cqw}
-.result-stats span{font-size:2cqw;color:#71877a}
+.result-stats{display:flex;justify-content:center;flex-wrap:wrap;gap:1cqw 4cqw;margin:3cqw 0 5cqw}
+.result-stats div{display:flex;align-items:baseline;gap:1.2cqw}
+.result-stats strong{font-size:3.6cqw}
+.result-stats span{font-size:3cqw;color:#71877a}
+#result-mission:empty{display:none}
+#result-dialog .primary{margin-top:2cqw}
+#again.quiet-button{font-size:3.4cqw;font-weight:700;padding:3.5cqw 0 1cqw}
+.result-links{display:flex;justify-content:center;gap:6cqw}
+.result-links .quiet-button{width:auto;padding:3cqw 0 0;color:#71877a}
 .desktop-note{position:absolute;left:max(4%,calc(50% - 550px));top:42%;color:#789086}
 .tiny-bird{display:inline-block;font-size:57px;font-weight:900;letter-spacing:-6px;color:#65897b;transform:rotate(-8deg)}
 .desktop-note p{font-size:20px;line-height:1.5;letter-spacing:-.5px}
@@ -112,7 +117,6 @@ dialog{position:fixed;max-height:85svh}
 .app-actions:has(button:not([hidden])){min-height:48px}
 .app-actions:not(:has(button:not([hidden]))){display:none}
 #play{position:relative;min-height:64px;padding:3cqw 4cqw 3cqw 7cqw;border:2px solid #fff0be;border-radius:7cqw;background:linear-gradient(165deg,#ffeaa8,#ffd17e 72%,#f5b86a);box-shadow:inset 0 2px 0 #fff9dc,0 5px 0 #c58d4b,0 9px 0 #347c7033,0 12px 22px #164f4930;color:#3d5944;font-size:clamp(21px,5.4cqw,28px);font-weight:900;letter-spacing:-.04em;text-shadow:0 1px #fff3c9;transition:transform .15s,box-shadow .15s}
-#play .play-arrow{display:grid;place-items:center;width:10cqw;height:10cqw;min-width:36px;min-height:36px;border-radius:50%;background:#fff8dcaa;box-shadow:inset 0 1px 0 #fffdf0,0 2px 0 #c8904840;color:#698755;transform:rotate(5deg)}
 #play svg{width:55%;height:55%}
 #play:hover{background:linear-gradient(165deg,#fff0bd,#ffdb91 72%,#f9c17b);transform:translateY(-2px)}
 #play:active{transform:translateY(4px);box-shadow:inset 0 2px 0 #fff9dc,0 1px 0 #c58d4b,0 4px 10px #164f4920}
@@ -176,7 +180,6 @@ dialog{position:fixed;max-height:85svh}
 /* The overall run record stays in the save; the start screen shows only the chosen stage's record. */
 .start-bottom .record{display:none}
 /* End-of-round press photo. */
-.share-photo{display:block;margin:0 auto 3cqw;padding:2cqw 4cqw;border-radius:6cqw;background:#e9f1e3;color:#264f48;font-size:3.2cqw;font-weight:800}
 .photo-dialog{padding:5cqw;width:90%;background:#1d3a3a;border-color:#1d3a3a}
 .photo-stage{position:relative;overflow:hidden;border-radius:2cqw}
 #photo-canvas{position:static;display:block;width:100%;height:auto;aspect-ratio:1080/1350}
