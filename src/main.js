@@ -31,6 +31,8 @@ try { await prepareProgress(); prefs = restoreProgress(); } catch {
 $('play').disabled = false;
 const app = $('app'), canvas = $('world'), ctx = canvas.getContext('2d');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Test shortcut on the dev server only (not in the published build): ?alle unlocks every stage.
+if (import.meta.env.DEV && new URLSearchParams(location.search).has('alle')) prefs.completed = Math.max(prefs.completed, STAGES.length - 1);
 let selectedStage = Math.min(prefs.completed, STAGES.length - 1);
 const audio = createAudio(prefs);
 const juice = createJuice(reducedMotion);
