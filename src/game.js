@@ -211,7 +211,7 @@ export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 
 /*
  * Once per stage from the harbour on, a great white comes up from behind and follows Pip's depth.
  * It is slower than Pip: changing depth shakes it off, and it cannot follow him out of the water.
- * A bite costs energy (contactDamage, not the run), then it swims off.
+ * A bite ends the run, like any shark.
  */
 export const CHASE = { from: 1, at: .55, closing: 42, follow: 1.3, duration: 7, giveUp: .7 };
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2, bounce: 10 };
@@ -240,7 +240,7 @@ export function flowAt(game, x, y) {
   return { x: ax, y: ay };
 }
 
-const contactDamage = { whiteshark: 35, shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
+const contactDamage = { shark: 35, boat: 30, diver: 20, harpoon: 25, surfer: 20, gull: 15, jelly: 20, driftwood: 15, puffer: 30 };
 
 // Includes continued descent during reaction time and the turn from diving to rising.
 export function airState(player, cargo = 0) {
@@ -656,7 +656,7 @@ function resolveHazard(game, item, events) {
   const fisherHit = item.kind === 'boat' && hitsFisher(p, item);
   const hit = item.kind === 'boat' ? hitsBoat(p, item) || netHit
     : touches(pipPoint(p), hazardShape(item));
-  const fatalHit = item.kind === 'shark' || item.kind === 'diver' || fisherHit;
+  const fatalHit = item.kind === 'shark' || item.kind === 'whiteshark' || item.kind === 'diver' || fisherHit;
   if (hit && item.kind === 'gull' && !p.wet && p.turns) {
     item.kicked = true; item.reaction = 1; item.reactionKind = 'kicked';
     p.kick = .45;
@@ -666,7 +666,7 @@ function resolveHazard(game, item, events) {
   if (hit && fatalHit) {
     item.hit = true; p.bump = .6; p.turns = 0; p.spin = 0;
     game.combo = 0; game.comboTime = 0; game.ended = true;
-    game.endReason = fisherHit ? 'fisher' : item.kind;
+    game.endReason = fisherHit ? 'fisher' : item.kind === 'whiteshark' ? 'shark' : item.kind;
     events.push({ kind: 'hurt', x: p.x, y: p.y }, { kind: 'end' });
     return;
   }

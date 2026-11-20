@@ -87,14 +87,14 @@ const chase = (stage = 1) => {
 test('the great white never appears in the bay', () => {
   const g = createGame(() => .5, 0); assert.equal(g.chaseWave, Infinity);
 });
-test('a great white that catches Pip at the same depth bites once and swims off', () => {
+test('a great white that catches Pip at the same depth ends the run', () => {
   const g = chase(), events = [];
   // Pip holds his depth: the shark closes in from behind.
   for (let t = 0; t < 8 && !g.ended; t += 1 / 60) { g.player.y = 560; g.player.vy = 0; g.player.breath = 10; g.energy = Math.max(g.energy, 60); events.push(...step(g, 1 / 60, false)); }
   assert.ok(events.some(e => e.kind === 'chase'), 'it is announced');
   assert.equal(events.filter(e => e.kind === 'hurt').length, 1, 'one bite');
-  assert.equal(g.ended, false, 'a bite costs energy, not the run');
-  assert.equal(g.chased, true);
+  assert.equal(g.ended, true, 'a bite ends the run');
+  assert.equal(g.endReason, 'shark');
 });
 test('surfacing shakes off the great white without a bite', () => {
   const g = chase(), events = [];
