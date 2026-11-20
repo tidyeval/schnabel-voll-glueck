@@ -22,8 +22,9 @@ export const STAGES = [
     encounters: ['coral', 'shark', 'driftwood', 'shark-shark', 'turtle-turtle-gull', 'surfer', 'shark-shark', 'diver', 'reef', 'shark-shark', 'turtle-turtle-gull', 'buoy-coral-shark'],
     pairPatterns: { 3: 'staggered', 6: 'parallel', 9: 'staggered' },
     residents: ['crab', 'cat', 'bottle'],
-    setPieces: { calm: ['baitball', 'current', 'dolphins'], shows: ['goldenHour', 'trawler', 'rainbow', 'whale'], count: 2 },
-    rareMoment: 'otters',
+    // Dolphins only out on the open reef, so they stay special.
+    setPieces: { calm: ['baitball', 'current'], shows: ['goldenHour', 'trawler', 'rainbow', 'whale'], count: 2 },
+    rareMoment: 'manateeCalf',
     theme: {
       sky: [[0, '#acdbe0'], [.6, '#f1e7c8'], [1, '#fbdcae']], glow: '#f7b77a55', far: '#a9c4b2', tint: null,
       water: ['#6fc4b6', '#256068'], surface: '#f8dfad4a', rays: '#fbf2c0', rayAlpha: .13, mote: '#f3eccc35',
@@ -37,8 +38,9 @@ export const STAGES = [
     encounters: ['mangrove', 'shark', 'turtle-turtle-gull', 'driftwood', 'shark-shark', 'mangrove', 'jelly', 'shark-shark', 'turtle-turtle-gull', 'whirlpool', 'shark-shark', 'mangrove'],
     pairPatterns: { 4: 'staggered', 7: 'staggered', 10: 'parallel' },
     residents: ['flamingo', 'mudskipper', 'fiddler', 'manatee'],
-    setPieces: { calm: ['baitball', 'current', 'dolphins'], shows: ['rainbow', 'whale'], count: 1 },
-    rareMoment: 'manateeCalf',
+    setPieces: { calm: ['baitball', 'current'], shows: ['rainbow', 'whale'], count: 1 },
+    // Otters fish among the mangrove roots.
+    rareMoment: 'otters',
     theme: {
       sky: [[0, '#9cc4d4'], [.45, '#f1c9b4'], [.8, '#f7ab8c'], [1, '#ffd29a']], glow: '#ff9e6a66', far: '#7f9e86', tint: 'rgba(255,160,110,.1)',
       water: ['#79bc9c', '#285c52'], surface: '#ffd09a55', rays: '#ffdcaa', rayAlpha: .12, mote: '#f8e4b035',
