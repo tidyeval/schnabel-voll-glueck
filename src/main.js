@@ -176,7 +176,7 @@ function start(elapsed, score = 0) {
   if (savePending || selectedStage > prefs.completed) return;
   phaserScene?.scene.resume();
   closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); game.score = game.startScore = score; attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
-  $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden');
+  $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden'); $('wardrobe').classList.add('hidden');
   coach = !prefs.tutorial && game.stage === 0 ? { step: 0, since: 0 } : null; $('coach').classList.add('hidden');
   if (!coach) { toast(t('holdHint')); $('toast').classList.add('hint'); startHint = true; }
   audio.start(); updateHud(); canvas.focus(); reveal();
@@ -186,7 +186,7 @@ function home() {
   phaserScene?.scene.resume();
   selectedStage = Math.min(prefs.completed, STAGES.length - 1);
   closeDialogs(); mode = 'menu'; holding = false; effects = []; juice.reset(); audio.start('menu');
-  $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); refreshMenu(); $('play').focus(); reveal();
+  $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); $('wardrobe').classList.remove('hidden'); refreshMenu(); $('play').focus(); reveal();
 }
 function pause(showDialog = true) {
   if (mode !== 'playing') return;

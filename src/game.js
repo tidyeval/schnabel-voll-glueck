@@ -254,7 +254,7 @@ export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 
  * the surface (CHASE.shallow) where the fish trail is: swimming up is always the escape.
  * A bite ends the run, like any shark.
  */
-export const CHASE = { from: 1, at: .55, closing: 42, follow: 1.3, duration: 7, giveUp: .7, shallow: 90 };
+export const CHASE = { from: 1, at: .55, closing: 30, follow: .7, duration: 7, giveUp: .7, shallow: 130 };
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2, bounce: 10 };
 /*
  * Matter play: Pip has momentum and the camera follows him.

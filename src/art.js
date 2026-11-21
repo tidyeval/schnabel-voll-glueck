@@ -44,9 +44,16 @@ function island(c, x, water, t) {
   c.fillStyle = '#ffe5a1'; c.fillRect(-44, -126, 6, 8);
   palm(c, 28, -30, .55, t); c.restore();
 }
+// Each fish keeps its own swim phase, so a school never wags in lockstep.
+const swimPhases = new WeakMap(); let nextSwimPhase = 0;
+function swimPhase(item) {
+  if (!swimPhases.has(item)) swimPhases.set(item, nextSwimPhase = (nextSwimPhase + 2.39996) % 100);
+  return swimPhases.get(item);
+}
 export function fish(c, x, y, scale = 1, golden = false, t = 0, scared = 0, tilt = 0) {
-  const swim = Math.sin(t * (tilt ? 16 : 7)) * .16;
-  c.save(); c.translate(x, y); c.scale(scale, scale); c.rotate(Math.sin(t * 3) * .035 + tilt);
+  // Tail beat and a little body sway; the body swings against the tail so the fish visibly swims.
+  const swim = Math.sin(t * (tilt ? 16 : 9)) * .3;
+  c.save(); c.translate(x, y + Math.sin(t * 2.3) * 1.8); c.scale(scale, scale); c.rotate(Math.sin(t * 3) * .05 - swim * .12 + tilt);
   const col = golden ? '#f6cd5f' : '#efa98e', edge = golden ? '#b9823e' : '#af6f66';
   c.save(); c.translate(10, 0); c.rotate(swim); c.translate(-10, 0);
   path(c, golden ? '#e6a94c' : '#d68172', p => { p.moveTo(9, 0); p.lineTo(28, -13); p.quadraticCurveTo(23, 0, 28, 13); p.closePath(); }, edge, 1); c.restore();
@@ -144,7 +151,8 @@ export function pelican(c, {
   c.save(); headPose();
   path(c, gradient(c, -57, 21, '#fffdf2', '#ecedd7'), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
   // Pip's tousled crown is his main character mark at every rendered scale.
-  path(c, '#fffdf2', p => { p.moveTo(4, -56); p.quadraticCurveTo(-5, -70, 4, -73); p.quadraticCurveTo(10, -70, 12, -61); p.quadraticCurveTo(10, -77, 18, -75); p.quadraticCurveTo(25, -68, 21, -59); }, outline, 1);
+  // (Under the sailor cap the crown is tucked away.)
+  if (outfit !== 'sailor') path(c, '#fffdf2', p => { p.moveTo(4, -56); p.quadraticCurveTo(-5, -70, 4, -73); p.quadraticCurveTo(10, -70, 12, -61); p.quadraticCurveTo(10, -77, 18, -75); p.quadraticCurveTo(25, -68, 21, -59); }, outline, 1);
   const pouch = p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(72, -15 + bite * 11, 57, 7 + bite * 15 + fullness * 46 + wobble, 40, -7); p.quadraticCurveTo(31, -18, 37, -40); };
   path(c, gradient(c, -35, 8, '#f3c574', '#dc9758'), pouch, '#bd774b', 1.1);
   path(c, '#f8d79055', p => { p.moveTo(42, -31); p.quadraticCurveTo(63, -23, 82, -23); p.quadraticCurveTo(64, -14, 47, -9); p.quadraticCurveTo(39, -18, 42, -31); });
@@ -214,9 +222,14 @@ export function pelican(c, {
     ellipse(c, 7, -61, 4, 4, '#f6cf76'); ellipse(c, 5.8, -62.3, 1.2, 1.2, '#fff2b5');
   }
   if (outfit === 'sailor') {
-    path(c, '#f8f5e7', p => { p.moveTo(1, -62); p.lineTo(-1, -74); p.quadraticCurveTo(21, -85, 35, -72); p.lineTo(32, -61); p.closePath(); }, outline, 1);
-    path(c, '#477884', p => { p.moveTo(0, -67); p.quadraticCurveTo(17, -62, 34, -66); p.lineTo(33, -61); p.quadraticCurveTo(17, -58, 0, -63); p.closePath(); });
-    ellipse(c, 20, -76, 2.3, 2.3, '#f1c56d');
+    // A low sailor cap that sits on the curve of the head (head top: (8,-55), (23,-60), (37,-55)), tipped back a little.
+    c.save(); c.translate(23, -56); c.rotate(-.14); c.translate(-23, 56);
+    path(c, '#f8f5e7', p => { p.moveTo(3, -51); p.bezierCurveTo(2, -78, 44, -80, 43, -51); p.quadraticCurveTo(23, -64, 3, -51); }, outline, 1);
+    path(c, '#477884', p => { p.moveTo(3, -51); p.quadraticCurveTo(23, -64, 43, -51); p.lineTo(43, -56); p.quadraticCurveTo(23, -69, 3, -56); p.closePath(); }, outline, .8);
+    path(c, '#f8f5e7', p => { p.moveTo(0, -48); p.quadraticCurveTo(23, -63, 46, -48); p.lineTo(45, -52); p.quadraticCurveTo(23, -66, 1, -52); p.closePath(); }, outline, .8);
+    path(c, null, p => { p.moveTo(10, -63); p.quadraticCurveTo(15, -71, 24, -73); }, '#ffffffcc', 1.6);
+    ellipse(c, 23, -73, 2.6, 2.6, '#f1c56d');
+    c.restore();
   }
   c.restore(); c.restore();
 }
@@ -881,7 +894,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
       if (item.kind === 'current') drawCurrent(c, item, motion, reducedMotion);
       if (item.kind === 'baitball') drawBaitball(c, item, game.time, night);
       if (night && (item.kind === 'fish' || item.kind === 'jelly')) { c.globalCompositeOperation = 'lighter'; ellipse(c, item.x, item.y - (item.kind === 'jelly' ? 12 : 0), item.kind === 'jelly' ? 44 : 25, item.kind === 'jelly' ? 40 : 17, item.kind === 'jelly' ? '#ff9ee01c' : item.golden ? '#ffd9701c' : '#ffc9a00e'); c.globalCompositeOperation = 'source-over'; }
-      if (item.kind === 'fish') { const gap = Math.hypot(item.x - game.player.x, item.y - game.player.y); fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion, gap < 120 ? 1 - gap / 120 : 0, item.leap > 0 && item.leap < LEAP.duration ? Math.cos(item.leap / LEAP.duration * Math.PI) * .8 : (item.heading || 0)); }
+      if (item.kind === 'fish') { const gap = Math.hypot(item.x - game.player.x, item.y - game.player.y); fish(c, item.x, item.y, item.golden ? .95 : .8, item.golden, motion && motion + swimPhase(item), gap < 120 ? 1 - gap / 120 : 0, item.leap > 0 && item.leap < LEAP.duration ? Math.cos(item.leap / LEAP.duration * Math.PI) * .8 : (item.heading || 0)); }
       if (item.kind === 'puffer') puffer(c, item, motion);
       if (item.kind === 'turtle') turtle(c, item, motion);
       if (item.kind === 'shark') shark(c, item, motion);
