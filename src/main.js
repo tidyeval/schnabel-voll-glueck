@@ -13,6 +13,7 @@ import { drawPhoto, photoFile, photoScene } from './photo.js';
 import { createJuice } from './juice.js';
 import { recordAttempt, attemptFromGame, unlocks, newOutfits } from './progress.js';
 import { PLUMAGES, BEAKS } from './looks.js';
+import { drawMap, areaAt, areaPoint } from './map.js';
 import { restoreProgress, readStoredProgress, prepareProgress, saveSetting, saveAttempt, isProgressKey } from './storage.js';
 import { setupPwa } from './pwa.js';
 import { keyAction } from './controls.js';
@@ -177,7 +178,7 @@ function start(elapsed, score = 0) {
   if (savePending || selectedStage > prefs.completed) return;
   phaserScene?.scene.resume();
   closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); game.score = game.startScore = score; attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;
-  $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden'); $('wardrobe').classList.add('hidden');
+  closeJourney(); $('start').classList.add('hidden'); $('hud').classList.remove('hidden'); $('pause').classList.remove('hidden'); $('wardrobe').classList.add('hidden'); $('map-open').classList.add('hidden');
   coach = !prefs.tutorial && game.stage === 0 ? { step: 0, since: 0 } : null; $('coach').classList.add('hidden');
   if (!coach) { toast(t('holdHint')); $('toast').classList.add('hint'); startHint = true; }
   audio.start(); updateHud(); canvas.focus(); reveal();
@@ -187,7 +188,7 @@ function home() {
   phaserScene?.scene.resume();
   selectedStage = Math.min(prefs.completed, STAGES.length - 1);
   closeDialogs(); mode = 'menu'; holding = false; effects = []; juice.reset(); audio.start('menu');
-  $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); $('wardrobe').classList.remove('hidden'); refreshMenu(); $('play').focus(); reveal();
+  $('start').classList.remove('hidden'); $('hud').classList.add('hidden'); $('pause').classList.add('hidden'); $('wardrobe').classList.remove('hidden'); $('map-open').classList.remove('hidden'); closeJourney(); refreshMenu(); $('play').focus(); reveal();
 }
 function pause(showDialog = true) {
   if (mode !== 'playing') return;
@@ -246,8 +247,8 @@ function updateHud() {
   document.querySelector('.air-track').setAttribute('aria-valuenow', p.breath.toFixed(1));
 }
 canvas.tabIndex = 0;
-$('play').onclick = () => start(); $('again').onclick = () => { selectedStage = game.stage; start(undefined, game.startScore); };
-$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(game.elapsed + game.time, game.score); }; $('back-home').onclick = home;
+$('play').onclick = () => { start(); showIntro(); }; $('again').onclick = () => { selectedStage = game.stage; start(undefined, game.startScore); };
+$('next-stage').onclick = () => { selectedStage = Math.min(game.stage + 1, STAGES.length - 1); start(game.elapsed + game.time, game.score); showIntro(); }; $('back-home').onclick = home;
 $('pause').onclick = () => pause(); $('resume').onclick = resume;
 $('quit').onclick = finish;
 $('settings').onclick = () => { pause(false); $('settings-dialog').showModal(); };
@@ -256,6 +257,66 @@ function afterSettings() { $('settings-dialog').close(); if (mode === 'paused') 
 $('settings-dialog').querySelector('.close').onclick = afterSettings;
 $('settings-dialog').querySelector('.close-settings').onclick = afterSettings;
 for (const key of ['music', 'sound', 'haptics']) { $(key).checked = prefs[key]; $(key).onchange = () => { prefs[key] = $(key).checked; persistSettings(key); }; }
+// Journey map: the chart of the five areas (from the menu) and the short flight before a stage.
+const JOURNEY = { flight: 1.6, intro: 2.6, introCalm: 1.8 };
+let journey = null;
+function journeyAreas(current) {
+  return STAGES.map((stage, i) => ({ id: stage.id, name: stageName(i), done: i < prefs.completed, current: i === current, locked: i > prefs.completed, best: prefs.bests[i] ? formatNumber(prefs.bests[i]) : '' }));
+}
+function refreshJourneyText() {
+  if (!journey) return;
+  if (journey.intro) {
+    text('journey-kicker', t('introKicker', { n: journey.to + 1, total: STAGES.length })); text('journey-title', stageName(journey.to)); text('journey-sub', t(`stageTag_${STAGES[journey.to].id}`));
+    return;
+  }
+  const done = Math.min(prefs.completed, STAGES.length), next = Math.min(prefs.completed, STAGES.length - 1);
+  text('journey-kicker', t('mapKicker')); text('journey-title', t('mapTitle', { done, total: STAGES.length }));
+  text('journey-sub', done >= STAGES.length ? t('mapAllDone') : t('mapNext', { stage: stageName(next) }));
+  text('journey-go', t(selectedStage === next && done < STAGES.length ? 'mapGo' : 'mapPlay', { stage: stageName(selectedStage) }));
+}
+function sizeJourney() {
+  const canvas = $('journey-canvas'), box = $('journey').getBoundingClientRect(), ratio = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(box.width * ratio)); canvas.height = Math.max(1, Math.round(box.height * ratio));
+}
+function showJourney(options) {
+  journey = { ...options, since: performance.now() };
+  $('journey').classList.remove('hidden'); $('journey').classList.toggle('intro', !!options.intro);
+  refreshJourneyText(); sizeJourney(); requestAnimationFrame(drawJourney);
+}
+function closeJourney() { journey = null; $('journey').classList.add('hidden'); }
+function drawJourney(now) {
+  if (!journey) return;
+  const canvas = $('journey-canvas'), { width, height } = canvas, age = Math.max(0, (now - journey.since) / 1000);
+  const a = areaPoint(STAGES[journey.from].id, width, height), b = areaPoint(STAGES[journey.to].id, width, height);
+  const k = journey.intro && !reducedMotion ? Math.min(1, age / JOURNEY.flight) : 1, eased = k * k * (3 - 2 * k), s = Math.min(width / 600, height / 1100);
+  const pip = { x: a.x + (b.x - a.x) * eased, y: a.y + (b.y - a.y) * eased - Math.sin(eased * Math.PI) * 60 * s };
+  const reached = journey.intro ? Math.max(0, journey.to - (k < 1 ? 1 : 0)) : Math.min(prefs.completed, STAGES.length - 1);
+  drawMap(canvas.getContext('2d'), { width, height, areas: journeyAreas(journey.to), pip, reached, t: reducedMotion ? 0 : age, look: pipLook() });
+  if (journey.intro && age > (reducedMotion ? JOURNEY.introCalm : JOURNEY.intro)) { endIntro(); return; }
+  requestAnimationFrame(drawJourney);
+}
+// Before a stage (not on a retry, not on the very first run with the coach): Pip flies there on the chart.
+function showIntro() {
+  if (mode !== 'playing' || coach) return;
+  mode = 'intro'; showJourney({ intro: true, from: Math.max(0, game.stage - 1), to: game.stage });
+}
+function endIntro() {
+  if (mode === 'intro') mode = 'playing';
+  closeJourney(); canvas.focus();
+  if (startHint) { toast(t('holdHint')); $('toast').classList.add('hint'); } // the control hint shows after the flight
+}
+$('map-open').onclick = () => showJourney({ intro: false, from: selectedStage, to: selectedStage });
+$('journey-close').onclick = () => { closeJourney(); $('map-open').focus(); };
+$('journey-go').onclick = () => { closeJourney(); start(); };
+$('journey-canvas').addEventListener('pointerdown', event => {
+  if (!journey || journey.intro) return;
+  const canvas = $('journey-canvas'), box = canvas.getBoundingClientRect();
+  const x = (event.clientX - box.left) * canvas.width / box.width, y = (event.clientY - box.top) * canvas.height / box.height;
+  const index = areaAt(STAGES.map(stage => stage.id), x, y, canvas.width, canvas.height);
+  if (index === null || index > prefs.completed) return;
+  selectedStage = index; journey.from = journey.to = index; refreshMenu(); refreshJourneyText();
+});
+window.addEventListener('resize', () => { if (journey) sizeJourney(); });
 // Pip's wardrobe: collected fish unlock looks; each one is shown as a small portrait of Pip.
 function pipLook(outfit = prefs.outfit) { return { outfit, plumage: prefs.plumage, beak: prefs.beak }; }
 function portrait(canvas, outfit) {
@@ -312,11 +373,13 @@ $('pause-dialog').addEventListener('cancel', event => { event.preventDefault(); 
 $('settings-dialog').addEventListener('cancel', event => { event.preventDefault(); afterSettings(); });
 $('result-dialog').addEventListener('cancel', event => { event.preventDefault(); home(); });
 app.addEventListener('pointerdown', event => {
+  if (mode === 'intro' && !event.target.closest('button, dialog, input')) endIntro(); // a tap skips the flight and already dives
   if (mode !== 'playing' || event.target.closest('button, dialog, input')) return;
   event.preventDefault(); if (!holding) press(game); holding = true; clearStartHint(); app.setPointerCapture(event.pointerId);
 });
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) app.addEventListener(name, () => { holding = false; });
 window.addEventListener('keydown', event => {
+  if (mode === 'intro' && (event.code === 'Space' || event.code === 'Escape' || event.code === 'Enter')) endIntro();
   const action = keyAction('keydown', event.code, mode, !!event.target.closest?.('button, input, dialog'));
   if (action === 'dive') { event.preventDefault(); if (!event.repeat && !holding) press(game); holding = true; clearStartHint(); }
   if (action === 'pause') { event.preventDefault(); pause(); }
@@ -330,7 +393,9 @@ bindLifecycle({
   foreground: resumeMenuAudio, gesture: resumeMenuAudio,
   nativeApp: Capacitor.isNativePlatform() ? App : undefined,
   back() {
-    if ($('settings-dialog').open) afterSettings();
+    if (mode === 'intro') endIntro();
+    else if (journey) closeJourney();
+    else if ($('settings-dialog').open) afterSettings();
     else if ($('wardrobe-dialog').open) $('wardrobe-dialog').close();
     else if (mode === 'playing') pause();
     else if (mode === 'paused') resume();

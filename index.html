@@ -19,7 +19,7 @@
     <div id="phaser-effects" aria-hidden="true"></div>
     <div class="grain" aria-hidden="true"></div><div id="veil" class="veil" aria-hidden="true"></div>
     <header class="topbar">
-      <div class="top-actions"><button id="pause" class="icon-button hidden" aria-label="Spiel pausieren" data-i18n-aria-label="pause">Ⅱ</button><button type="button" id="wardrobe" class="icon-button wardrobe-button" aria-label="Pips Garderobe" data-i18n-aria-label="wardrobe"><canvas width="96" height="96" aria-hidden="true"></canvas><span id="wardrobe-new" class="wardrobe-new hidden" aria-hidden="true"></span></button><button id="settings" class="icon-button" aria-label="Einstellungen öffnen" data-i18n-aria-label="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#f7faf0"/><circle cx="15" cy="17" r="3" fill="#f7faf0"/></svg></button></div>
+      <div class="top-actions"><button id="pause" class="icon-button hidden" aria-label="Spiel pausieren" data-i18n-aria-label="pause">Ⅱ</button><button type="button" id="map-open" class="icon-button" aria-label="Karte" data-i18n-aria-label="mapOpen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button><button type="button" id="wardrobe" class="icon-button wardrobe-button" aria-label="Pips Garderobe" data-i18n-aria-label="wardrobe"><canvas width="96" height="96" aria-hidden="true"></canvas><span id="wardrobe-new" class="wardrobe-new hidden" aria-hidden="true"></span></button><button id="settings" class="icon-button" aria-label="Einstellungen öffnen" data-i18n-aria-label="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="#f7faf0"/><circle cx="15" cy="17" r="3" fill="#f7faf0"/></svg></button></div>
     </header>
     <section id="start" class="screen start-screen">
       <div class="intro"><h1 id="game-title">Schnabel<em>glück</em></h1><p data-i18n="tagline">Kleiner Vogel. Großes Abenteuer.</p></div>
@@ -32,6 +32,13 @@
         <div class="vital-row energy-row"><span data-i18n="energy">ENERGIE</span><div class="energy-track" role="progressbar" aria-label="Energie" data-i18n-aria-label="energy" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div id="energy"></div></div><strong id="energy-value">100</strong></div>
         <div id="air" class="vital-row air hidden"><span id="air-label">LUFT</span><div class="air-track" role="progressbar" aria-label="Verbleibende Tauchluft in Sekunden" data-i18n-aria-label="airTrack" aria-valuemin="0" aria-valuemax="8" aria-valuenow="8"><div id="air-fill"></div></div><strong id="air-value">8.0 s</strong></div>
       </div>
+    </section>
+    <section id="journey" class="journey hidden" aria-labelledby="journey-title">
+      <canvas id="journey-canvas" aria-hidden="true"></canvas>
+      <div class="journey-head"><span id="journey-kicker" class="dialog-kicker"></span><h2 id="journey-title"></h2><p id="journey-sub"></p></div>
+      <button type="button" id="journey-close" class="close icon-button" aria-label="Schließen" data-i18n-aria-label="close">×</button>
+      <button type="button" id="journey-go" class="primary">Weiter</button>
+      <p id="journey-skip" class="journey-skip" data-i18n="journeySkip">Tippen zum Starten</p>
     </section>
     <div id="toast" class="toast hidden" role="status"></div>
     <dialog id="rotate-dialog" aria-labelledby="rotate-title"><span class="rotate-icon" aria-hidden="true">📱↻</span><h2 id="rotate-title" data-i18n="rotateTitle">Bitte Gerät drehen</h2><p data-i18n="rotateBody">Pip spielt im Hochformat. Dein Spiel ist pausiert.</p></dialog>

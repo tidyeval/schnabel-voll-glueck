@@ -88,7 +88,7 @@ const CSS_COLOUR_EXCEPTIONS = {
   '#1d3a3a33': shadow, '#21575008': shadow, '#254c4920': shadow, '#275e4b15': shadow, '#275e4b23': shadow, '#2a503326': shadow, '#347c7033': shadow, '#7ca49960': 'thin intro rule',
   '#d1f3df33': '.app-actions divider', '#ffffff2a': 'night energy track', '#28565c': 'test-edition label', '#47746a': "hero label 'Hey, I'm Pip'",
   '#5e8881': 'intro eyebrow text', '#65897b': 'desktop-only .tiny-bird', '#668b7c': 'hero label arrow', '#6e9e7c': 'wardrobe: chosen outfit border', '#82948a': 'desktop-only frame',
-  '#83968a': 'desktop-only frame', '#e5edd0': 'wardrobe: chosen outfit fill', '#eaf0dd': 'wardrobe: outfit button fill', '#e9e5c2': 'stage select border, overridden by the later borderless rule',
+  '#83968a': 'desktop-only frame', '#3a8b8f': 'journey map: sea behind the chart canvas', '#5f7a70': 'journey map: subtitle', '#fff6d8': 'journey map: tap-to-start hint', '#fffaf0ee': 'journey map: header card', '#e5edd0': 'wardrobe: chosen outfit fill', '#eaf0dd': 'wardrobe: outfit button fill', '#e9e5c2': 'stage select border, overridden by the later borderless rule',
   '#effef0': 'run record label (hidden on the start screen)', '#fff6d7': 'install/update button text (.app-actions)', '#fff6dc': 'stage picker text, overridden by color.ink.on-sea later', '#fff6df': 'stage select background, overridden by the later transparent rule', '#fff8d8': 'run record number (hidden on the start screen)',
 };
 test('colours in style.css come from design tokens or are listed exceptions', () => {
@@ -190,7 +190,7 @@ test('next nest carries the journey score and time, a menu start begins at zero'
   assert.match(main, /game\.score = game\.startScore = score;/);
   assert.match(main, /\$\('next-stage'\)\.onclick = \(\) => \{[^}]*start\(game\.elapsed \+ game\.time, game\.score\);/);
   assert.match(main, /\$\('again'\)\.onclick = \(\) => \{[^}]*start\(undefined, game\.startScore\);/);
-  assert.match(main, /\$\('play'\)\.onclick = \(\) => start\(\);/);
+  assert.match(main, /\$\('play'\)\.onclick = \(\) => \{ start\(\); showIntro\(\); \};/);
 });
 
 test('reduced motion disables flashes and shakes for every event', () => {
