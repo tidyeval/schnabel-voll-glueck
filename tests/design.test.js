@@ -3,11 +3,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkComponents, checkDesignFiles, colourEvidence, constantsMatch, cssColourInventory, entitiesOf, formatDesignErrors, localeParity, relationPairs, requireDescriptions, setEquals } from '@tidyeval/game-platform/design';
+import { checkComponents, checkDesignFiles, colourEvidence, constantsMatch, cssColourInventory, cssRules, entitiesOf, formatDesignErrors, localeParity, numbersBacked, relationPairs, requireDescriptions, setEquals, valueEvidence } from '@tidyeval/game-platform/design';
+import { ImpactStyle } from '@capacitor/haptics';
+import { HAPTICS, hapticFor } from '../src/haptics.js';
+import { keyAction } from '../src/controls.js';
 import { STAGES } from '../src/stages.js';
 import { locales, translations } from '../src/i18n.js';
 import * as GAME from '../src/game.js';
-import { CONTACT_DAMAGE, ENERGY, FLOW, WORLD, createGame, hazardShape, netShape, paceAt, rollRare, step, terrainBlocks } from '../src/game.js';
+import { CONTACT_DAMAGE, FLOW, WORLD, createGame, hazardShape, netShape, paceAt, press, rollRare, step, terrainBlocks } from '../src/game.js';
 import { createJuice } from '../src/juice.js';
 import { drawStorm } from '../src/scenery.js';
 
@@ -20,6 +23,8 @@ const ids = list => list.map(e => e.id);
 const built = list => list.filter(e => (e.status ?? 'built') === 'built');
 const sorted = values => [...new Set(values)].sort();
 const css = source('src/style.css');
+// Ontology numbers that a test below compares with the code (see numbersBacked at the end).
+const measured = new Set();
 const none = (messages, hint) => assert.deepEqual(messages, [], hint ? `${hint}\n${messages.join('\n')}` : messages.join('\n'));
 
 test('design files pass the shared validator', t => {
@@ -44,6 +49,7 @@ test('stage entities, introductions, appearances, set pieces and rare moments ma
     assert.equal(node.concept, 'Stage');
     const { startElapsed, sharkWarning, night } = stage;
     assert.deepEqual({ order: node.properties.order, startElapsed: node.properties.startElapsed, sharkWarning: node.properties.sharkWarning, night: node.properties.night }, { order, startElapsed, sharkWarning, night }, `stage.${stage.id} properties`);
+    for (const key of ['order', 'startElapsed', 'sharkWarning']) measured.add(`stage.${stage.id}.${key}`);
     const introduced = [];
     for (const kind of stage.encounters.flatMap(entry => entry.split('-'))) if (!seen.has(kind)) { seen.add(kind); introduced.push(kind); }
     assert.deepEqual(node.properties.introduces, introduced, `stage.${stage.id} introduces`);
@@ -91,6 +97,61 @@ test('colours in style.css come from design tokens or are listed exceptions', ()
 
 test('literal colour tokens match the colour in their evidence', () => {
   none(colourEvidence(tokens));
+});
+
+// Chords in audio.js are written as [hz...].forEach((f, i) => tone(..., i * step)): a note's delay is i * step.
+const delayForms = (value, { path, token }) => {
+  const match = path.match(/^notes\[(\d+)\]\.delay$/), index = match && Number(match[1]);
+  if (!index) return [];
+  const step = Math.round(value / index * 1e6) / 1e6;
+  return [`i * ${String(step).replace(/^0\./, '.')}`];
+};
+test('token numbers occur in their evidence (sounds, motion, sizes, haptics)', () => {
+  none(valueEvidence(tokens, { forms: delayForms }));
+});
+
+test('keyboard, labels and touch targets support every player', () => {
+  // Keyboard: the real key mapping used by main.js.
+  assert.equal(keyAction('keydown', 'Space', 'playing'), 'dive');
+  assert.equal(keyAction('keyup', 'Space', 'playing'), 'release');
+  assert.equal(keyAction('keydown', 'Escape', 'playing'), 'pause');
+  assert.equal(keyAction('keydown', 'Space', 'playing', true), null, 'Space in a button or dialog keeps its meaning');
+  assert.equal(keyAction('keydown', 'Space', 'menu'), null);
+  const main = source('src/main.js');
+  assert.ok(main.includes("if (action === 'dive') { event.preventDefault(); if (!event.repeat && !holding) press(game); holding = true;"), 'main.js dives on the dive action');
+  assert.ok(main.includes("if (action === 'pause') { event.preventDefault(); pause(); }") && main.includes("if (keyAction('keyup', event.code, mode) === 'release') { holding = false;"), 'main.js pauses and releases on key actions');
+  // Labels: icon-only buttons and the canvas carry localized aria-labels; HUD bars are progressbars.
+  const html = source('index.html');
+  for (const [, attrs, inner] of html.matchAll(/<button([^>]*)>([\s\S]*?)<\/button>/g)) {
+    const text = inner.replace(/<[^>]+>/g, '').replace(/[‹›×Ⅱ🇩🇪🇬🇧🇪🇸\s]/gu, '');
+    if (!text && !/data-i18n="/.test(attrs)) assert.match(attrs, /aria-label="[^"]+"/, `icon-only button without aria-label: <button${attrs}>`);
+    if (!text && /data-i18n-aria-label="/.test(attrs) === false && !/data-locale=/.test(attrs) && !/data-i18n="/.test(attrs)) assert.fail(`icon-only button label is not localized: <button${attrs}>`);
+  }
+  assert.match(html, /<canvas id="world"[^>]*data-i18n-aria-label="canvas"/);
+  for (const bar of ['energy-track', 'air-track']) assert.match(html, new RegExp(`class="${bar}" role="progressbar"[^>]*aria-valuemin="0" aria-valuemax="[^"]+" aria-valuenow`), `${bar} is a progressbar`);
+  // Touch targets: the base min-size of each control, and no control below the floor anywhere.
+  const { minSizes, floorPx } = entity('a11y.touchTargets').properties, rules = cssRules(css);
+  for (const [selector, size] of Object.entries(minSizes)) {
+    const sizes = rules.filter(r => r.selectors.includes(selector)).flatMap(r => r.declarations.filter(d => /^min-(width|height)$/.test(d.property)).map(d => ({ px: parseFloat(d.value), media: r.atRules.length > 0 })));
+    assert.ok(sizes.length, `${selector} declares no min size`);
+    assert.equal(Math.min(...sizes.filter(x => !x.media).map(x => x.px)), size, `${selector}: base min size`);
+    for (const { px } of sizes) assert.ok(px >= floorPx, `${selector}: ${px}px below the ${floorPx}px floor`);
+  }
+  measured.add('a11y.touchTargets');
+});
+
+// Animated or transitioning selectors that reduced motion leaves running, each with the reason.
+const REDUCED_MOTION_GAPS = {
+  '.viewfinder span': 'recording dot blinks during the 0.2 s shutter delay',
+  '.photo-actions': 'photo buttons fade in (opacity only, no movement)',
+};
+test('reduced-motion CSS stops every animation and transition except named gaps', () => {
+  const rules = cssRules(css), reduced = rules.filter(r => r.atRules.some(a => /prefers-reduced-motion:\s*reduce/.test(a)));
+  const moving = rules.filter(r => !r.atRules.some(a => /prefers-reduced-motion/.test(a))).flatMap(r => r.declarations.filter(d => /^(animation|transition)(-name)?$/.test(d.property) && !/^none\b/.test(d.value)).flatMap(d => r.selectors.map(selector => ({ selector, property: d.property.split('-')[0] }))));
+  assert.ok(moving.length >= 15, `found ${moving.length} animated selectors`);
+  const stopped = (selector, property) => reduced.some(r => r.selectors.includes(selector) && r.declarations.some(d => d.property.startsWith(property) && /^none\b/.test(d.value)));
+  const running = sorted(moving.filter(({ selector, property }) => !stopped(selector, property)).map(m => m.selector));
+  none(setEquals(Object.keys(REDUCED_MOTION_GAPS), running, 'selectors still moving with reduced motion (stop them or name the gap)'));
 });
 
 // Declarations of the first rule whose selector list is exactly `selector`.
@@ -215,6 +276,8 @@ function simulateTelegraph({ announce, danger, probe }) {
   return result;
 }
 test('every obstacle is telegraphed with its declared lead time', () => {
+  // The shark's lead derives from STAGES[].sharkWarning: it may not promise more than the shortest stage warning.
+  assert.ok(entity('shark').properties.telegraph.leadSeconds <= Math.min(...STAGES.map(s => s.sharkWarning)), 'shark lead exceeds the shortest sharkWarning');
   const obstacles = entitiesOf(ontology, 'Obstacle');
   assert.ok(obstacles.length >= 17, `found ${obstacles.length} obstacles`);
   for (const obstacle of obstacles) {
@@ -226,12 +289,13 @@ test('every obstacle is telegraphed with its declared lead time', () => {
     const first = Math.min(result.danger ?? Infinity, result.hurt ?? Infinity);
     assert.ok(first < Infinity, `${obstacle.id}: the probe never reached its danger (${telegraph.danger}); fix the probe`);
     assert.ok(first - result.announce >= telegraph.leadSeconds - 1e-9, `${obstacle.id}: announced only ${(first - result.announce).toFixed(2)} s before it can hurt; declared lead ${telegraph.leadSeconds} s`);
+    measured.add(`${obstacle.id}.telegraph.leadSeconds`);
   }
 });
 
 test('ontology constants equal the exported game constants', () => {
   none(constantsMatch(ontology, GAME, { min: 12 }));
-  for (const e of entities.filter(e => e.properties?.contactDamage !== undefined)) assert.equal(e.properties.contactDamage, CONTACT_DAMAGE[e.id], `${e.id}: contactDamage differs from CONTACT_DAMAGE`);
+  for (const hazard of entitiesOf(ontology, 'EnergyHazard')) assert.equal(hazard.properties.constants?.[`CONTACT_DAMAGE.${hazard.id}`], CONTACT_DAMAGE[hazard.id], `${hazard.id}: declare constants["CONTACT_DAMAGE.${hazard.id}"]`);
   const hazards = new Set(ids(entitiesOf(ontology, 'Hazard')));
   for (const kind of Object.keys(CONTACT_DAMAGE)) assert.ok(hazards.has(kind), `CONTACT_DAMAGE.${kind} has no Hazard entity`);
 });
@@ -245,7 +309,9 @@ test('contact damage stays within each hazard class band', () => {
   none(setEquals(contract.fatalKinds, ids(entitiesOf(ontology, 'FatalHazard')), 'FatalHazard entities (contract.hazard.fatalKinds)'));
   const fatalLine = source('src/game.js').match(/const fatalHit = ([^;]+);/)[1];
   for (const kind of contract.fatalKinds.filter(kind => kind !== 'fisher')) assert.ok(fatalLine.includes(`item.kind === '${kind}'`), `${kind} is not fatal in resolveHazard`);
-  assert.equal(contract.terrainBounceCost, ENERGY.bounce);
+  const damages = entitiesOf(ontology, 'EnergyHazard').map(h => CONTACT_DAMAGE[h.id]);
+  assert.deepEqual([contract.energyHazardDamage.min, contract.energyHazardDamage.max], [Math.min(...damages), Math.max(...damages)], 'the band states the current lightest and heaviest contact');
+  measured.add('contract.hazard.energyHazardDamage');
   for (const force of entitiesOf(ontology, 'Force')) assert.equal(hazardShape(force.properties.telegraph.probe.item), null, `${force.id} is a Force but has a contact shape`);
 });
 
@@ -255,6 +321,9 @@ test('stages follow the pacing contract', () => {
   assert.deepEqual(pacing.startElapsed, STAGES.map(s => s.startElapsed));
   assert.deepEqual(pacing.sharkWarning, STAGES.map(s => s.sharkWarning));
   assert.deepEqual(pacing.pairPatterns, STAGES.map(s => s.pairPatterns));
+  assert.equal(pacing.minSharkWarning, Math.min(...STAGES.map(s => s.sharkWarning)), 'minSharkWarning is the shortest stage warning');
+  assert.ok(source('src/game.js').includes(`.length > ${pacing.maxSharksOnScreen}) {`), 'maxSharksOnScreen is the encounter() shark cap');
+  for (const key of ['startElapsed', 'sharkWarning', 'minSharkWarning', 'maxSharksOnScreen']) measured.add(`contract.pacing.${key}`);
   STAGES.forEach((stage, i) => {
     if (i) assert.ok(stage.startElapsed > STAGES[i - 1].startElapsed, `${stage.id} must start later in the journey than ${STAGES[i - 1].id}`);
     assert.equal(stage.encounters.length, pacing.encountersPerStage, `${stage.id} encounters`);
@@ -303,9 +372,16 @@ test('events, end reasons and haptics match the code', () => {
   // Translated reasons no run can reach are documented as status "unused".
   none(setEquals(Object.keys(translations.de.reasons).filter(r => !reachable.includes(r) && !['final', 'fallback'].includes(r)), ids(endReasons.filter(e => e.status === 'unused')).map(id => id.slice(10)), 'unused EndReason entities'));
   for (const reason of reachable) for (const locale of locales) assert.ok(translations[locale].reasons[reason], `${locale} has no reasons.${reason}`);
-  const haptics = Object.fromEntries([...source('src/audio.js').matchAll(/^  (\w+): \{ web: (\[[^\]]*\]|\d+)(?:, native: ImpactStyle\.(\w+))?(?:, success: (true))? \},$/gm)].map(([, name, web, native, success]) => [name, { web: JSON.parse(web), ...(native ? { native } : {}), ...(success ? { nativeSuccess: true } : {}) }]));
-  assert.ok(Object.keys(haptics).length >= 10);
-  assert.deepEqual(Object.fromEntries(entitiesOf(ontology, 'Haptic').map(e => [e.id.slice(7), e.properties])), haptics, 'Haptic entities equal the HAPTICS table');
+  // Each event names the haptic token the code plays (hapticFor); the tokens equal the HAPTICS table.
+  for (const e of entitiesOf(ontology, 'GameEvent')) {
+    const kind = e.id.slice(6), cue = name => (name ? `{haptic.${name}}` : undefined);
+    const nameOf = feel => Object.keys(HAPTICS).find(name => HAPTICS[name] === feel);
+    assert.equal(e.properties?.haptic, cue(nameOf(hapticFor(kind))), `${e.id}: haptic`);
+    if (e.properties?.hapticGolden || kind === 'catch') assert.equal(e.properties.hapticGolden, cue(nameOf(hapticFor(kind, 'golden'))), `${e.id}: golden haptic`);
+  }
+  const style = h => h.success ? 'Success' : Object.keys(ImpactStyle).find(k => ImpactStyle[k] === h.native);
+  none(setEquals(Object.keys(HAPTICS).map(n => `haptic.${n}`), Object.keys(tokens.tokens).filter(id => id.startsWith('haptic.')), 'haptic tokens'));
+  for (const [name, h] of Object.entries(HAPTICS)) assert.deepEqual(tokens.tokens[`haptic.${name}`]?.value, { web: h.web, native: style(h) }, `haptic.${name} differs from HAPTICS.${name}`);
 });
 
 test('every entity and concept has a description', () => {
@@ -314,4 +390,35 @@ test('every entity and concept has a description', () => {
 
 test('component selectors exist and their colour tokens are the colours in that CSS', () => {
   none(checkComponents(tokens, css));
+});
+
+test('trick taps and the combo multiplier behave as declared', () => {
+  const trick = entity('trick').properties, window = trick.tapWindowSeconds;
+  const taps = (count, gap) => {
+    const g = createGame(() => .5); g.items = []; g.nextEncounter = Infinity;
+    Object.assign(g.player, { wet: false, trickUntil: 5, taps: 0, tapAt: -10, trickUsed: false, turns: 0 });
+    for (let i = 0; i < count; i++) { press(g); g.time += gap; }
+    return g.player.turns;
+  };
+  assert.equal(taps(trick.tapsForFlip, window * .5), 1, 'a quick triple tap starts a flip');
+  assert.equal(taps(trick.tapsForDouble, window * .5), 2, 'a fourth quick tap upgrades it to a double');
+  assert.equal(taps(trick.tapsForFlip, window * 1.1), 0, 'taps further apart than the window do not count');
+  const pointsAt = combo => {
+    const g = createGame(() => .5); g.items = []; g.nextEncounter = Infinity; g.combo = combo; g.comboTime = 8;
+    Object.assign(g.player, { y: 500, vy: 0, wet: true });
+    g.items = [{ kind: 'fish', x: 0, y: 0, golden: false }];
+    Object.assign(g.items[0], GAME.beakPosition(g.player)); g.items[0].x += 10;
+    const before = g.score; step(g, 1 / 60, false); return (g.score - before) / entity('fish').properties.points;
+  };
+  const { step: per, maxMultiplier } = entity('combo').properties;
+  assert.equal(pointsAt(per - 2), 1, 'below one step no bonus');
+  assert.equal(pointsAt(per - 1), 2, 'the fish that completes a step doubles');
+  assert.equal(pointsAt(per * 10), maxMultiplier, 'the multiplier is capped');
+  assert.equal(entity('fish').properties.maxMultiplier, maxMultiplier);
+  for (const key of ['trick.tapsForDouble', 'combo.step', 'combo.maxMultiplier', 'fish.maxMultiplier']) measured.add(key);
+});
+
+// Last: every number in the ontology is a constant, quoted in evidence, or measured above.
+test('every ontology number is backed by code', () => {
+  none(numbersBacked(ontology, { measured }));
 });

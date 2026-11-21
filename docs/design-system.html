@@ -43,6 +43,8 @@
   .crop canvas{width:100%;height:auto;border-radius:8px}
   .toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}.toc a{font-size:13px;padding:3px 10px;border-radius:999px;background:#eaf0dd;color:#214d4d;text-decoration:none}.toc a:hover{background:#ffdc86}
   .ds h2{scroll-margin-top:12px}
+  .specimen dialog .h2{font-size:8cqw;line-height:1.07;letter-spacing:-.055em;margin:4cqw 0;font-weight:700}
+  .status{font-size:11px;padding:0 6px;border-radius:999px;background:#ffe39e;color:#775532;margin-left:4px}
   .chips span{display:inline-block;margin:2px 4px 2px 0;padding:1px 8px;border-radius:999px;background:#eaf0dd;font-size:12px}
   .rule-auto{color:#3f7e6c;font-weight:700}
   .rule-manual{color:#b78250;font-weight:700}
@@ -270,6 +272,8 @@ function real(id, setup) {
   const node = document.importNode(page.getElementById(id), true);
   node.querySelectorAll('[data-i18n]').forEach(n => { n.textContent = t(n.dataset.i18n); });
   node.querySelectorAll('[data-i18n-html]').forEach(n => { n.innerHTML = t(n.dataset.i18nHtml); });
+  // Specimen headings are pictures of the game, not headings of this page.
+  node.querySelectorAll('h2').forEach(h => { const d = document.createElement('div'); d.className = 'h2'; d.innerHTML = h.innerHTML; d.id = h.id; h.replaceWith(d); });
   setup?.(node, sel => node.querySelector(`#${sel}`));
   return node;
 }
@@ -327,7 +331,9 @@ $('sounds').append(soundTable);
 // Principles with their checks.
 const ruleTable = el('table', {}, el('tr', {}, el('th', { textContent: 'Principle' }), el('th', { textContent: 'Check' })));
 for (const rule of ontology.rules) {
-  const checks = rule.check.manual ? [el('span', { className: 'rule-manual', textContent: 'manual: ' }), rule.check.manual] : [el('span', { className: 'rule-auto', textContent: 'automated: ' }), ...[rule.check].flat().map(c => el('div', { className: 'mono', textContent: `${c.test} › ${c.name}` }))];
+  const list = [rule.check].flat(), partialRule = list.some(c => c.covers === 'partial');
+  const checks = rule.check.manual ? [el('span', { className: 'rule-manual', textContent: 'manual: ' }), rule.check.manual]
+    : [el('span', { className: partialRule ? 'rule-manual' : 'rule-auto', textContent: partialRule ? 'partly automated: ' : 'automated: ' }), ...list.map(c => el('div', {}, el('div', { className: 'mono', textContent: `${c.test} › ${c.name}` }), c.gap ? el('small', { className: 'muted', textContent: `gap: ${c.gap}` }) : ''))];
   ruleTable.append(el('tr', {}, el('td', {}, el('b', { textContent: rule.id }), el('br'), rule.statement), el('td', {}, ...checks)));
 }
 $('rules').append(ruleTable);
@@ -338,7 +344,7 @@ for (const entity of ontology.entities) (byConcept[entity.concept] ??= []).push(
 const ontologyTable = el('table', {}, el('tr', {}, el('th', { textContent: 'Concept' }), el('th', { textContent: 'Entities' })));
 for (const concept of ontology.concepts) {
   ontologyTable.append(el('tr', {}, el('td', {}, el('b', { textContent: concept.id }), concept.parent ? el('small', { className: 'muted', textContent: ` ⊂ ${concept.parent}` }) : '', el('br'), el('small', { className: 'muted', textContent: concept.description })),
-    el('td', { className: 'chips' }, ...(byConcept[concept.id] || []).map(e => el('span', { title: e.description || '', textContent: e.label || e.id })))));
+    el('td', { className: 'chips' }, ...(byConcept[concept.id] || []).map(e => el('span', { title: e.description || '' }, e.label || e.id, e.status ? el('b', { className: 'status', textContent: e.status }) : '')))));
 }
 $('ontology').append(ontologyTable);
 document.documentElement.dataset.ready = 'true';
