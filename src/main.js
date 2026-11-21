@@ -14,6 +14,7 @@ import { createJuice } from './juice.js';
 import { recordAttempt, attemptFromGame } from './progress.js';
 import { restoreProgress, readStoredProgress, prepareProgress, saveSetting, saveAttempt, isProgressKey } from './storage.js';
 import { setupPwa } from './pwa.js';
+import { keyAction } from './controls.js';
 import { applyTranslations, currentLocale, formatNumber, setLocale, stageName, t } from './i18n.js';
 
 const $ = id => document.getElementById(id);
@@ -273,10 +274,11 @@ app.addEventListener('pointerdown', event => {
 });
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) app.addEventListener(name, () => { holding = false; });
 window.addEventListener('keydown', event => {
-  if (event.code === 'Space' && mode === 'playing' && !event.target.closest('button, input, dialog')) { event.preventDefault(); if (!event.repeat && !holding) press(game); holding = true; clearStartHint(); }
-  if (event.code === 'Escape' && mode === 'playing') { event.preventDefault(); pause(); }
+  const action = keyAction('keydown', event.code, mode, !!event.target.closest?.('button, input, dialog'));
+  if (action === 'dive') { event.preventDefault(); if (!event.repeat && !holding) press(game); holding = true; clearStartHint(); }
+  if (action === 'pause') { event.preventDefault(); pause(); }
 });
-window.addEventListener('keyup', event => { if (event.code === 'Space') { holding = false; if (mode === 'playing') event.preventDefault(); } });
+window.addEventListener('keyup', event => { if (keyAction('keyup', event.code, mode) === 'release') { holding = false; if (mode === 'playing') event.preventDefault(); } });
 function resumeMenuAudio() {
   if (!document.hidden && (mode === 'menu' || mode === 'ended')) audio.start('menu');
 }

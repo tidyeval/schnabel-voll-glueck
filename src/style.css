@@ -103,7 +103,7 @@ canvas{object-fit:fill}
 .desktop-footer{display:none}
 dialog{position:fixed;max-height:85svh}
 }
-@media(prefers-reduced-motion:reduce){button,input:after,#energy{transition:none}
+@media(prefers-reduced-motion:reduce){button,.setting input:after,#energy{transition:none}
 }
 [hidden]{display:none!important}
 #install-help p{line-height:1.5}
