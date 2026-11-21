@@ -21,7 +21,9 @@ export function readProgress(raw) {
   // Swapping storm and reef: whoever had reached the storm (the old fifth) keeps every stage open.
   // completed counts finished stages from the start, so it stays as it was; at worst the storm counts as done.
   const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
-    completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))) };
+    completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))),
+    // Journey points carried into each stage, so leaving for the menu or closing the app keeps them.
+    carry: saved.layout === LAYOUT ? STAGES.map((_, i) => count(saved.carry?.[i])) : STAGES.map(() => 0) };
   for (const key of ['music', 'sound', 'haptics', 'tutorial']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
   if (Object.hasOwn(PLUMAGES, saved.plumage)) prefs.plumage = saved.plumage;
   if (Object.hasOwn(BEAKS, saved.beak)) prefs.beak = saved.beak;
@@ -36,7 +38,10 @@ export function applyAttempt(prefs, attempt) {
   prefs.attemptIds.push(attempt.id);
   prefs.totalFish += count(attempt.fish);
   prefs.bests[stage] = Math.max(prefs.bests[stage], count(attempt.score));
-  if (attempt.endReason === 'complete') prefs.completed = Math.max(prefs.completed, stage + 1);
+  if (attempt.endReason === 'complete') {
+    prefs.completed = Math.max(prefs.completed, stage + 1);
+    if (stage + 1 < STAGES.length) prefs.carry[stage + 1] = count(attempt.score);
+  }
   return true;
 }
 export function attemptFromGame(game, id) {

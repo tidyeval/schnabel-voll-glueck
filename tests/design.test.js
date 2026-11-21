@@ -184,9 +184,9 @@ test('the result screen offers only next nest or this nest again as main actions
   for (const locale of locales) assert.ok(translations[locale].next && translations[locale].again && translations[locale].retryStage);
 });
 
-test('next nest carries the journey score and time, a menu start begins at zero', () => {
+test('next nest carries the journey score and time, a menu start keeps the saved journey score', () => {
   const main = source('src/main.js');
-  assert.match(main, /function start\(elapsed, score = 0\) \{/);
+  assert.match(main, /function start\(elapsed, score = prefs\.carry\[selectedStage\] \|\| 0\) \{/);
   assert.match(main, /game\.score = game\.startScore = score;/);
   assert.match(main, /\$\('next-stage'\)\.onclick = \(\) => \{[^}]*start\(game\.elapsed \+ game\.time, game\.score\);/);
   assert.match(main, /\$\('again'\)\.onclick = \(\) => \{[^}]*start\(undefined, game\.startScore\);/);

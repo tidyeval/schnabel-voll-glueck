@@ -173,8 +173,9 @@ function updateCoach() {
   }
 }
 $('coach-skip').onclick = () => endCoach(true);
-// `score` carries the journey's points into the next nest; a fresh start from the menu begins at 0.
-function start(elapsed, score = 0) {
+// `score` carries the journey's points into the next nest; from the menu or map a stage starts with
+// the points the last finished stage before it ended with.
+function start(elapsed, score = prefs.carry[selectedStage] || 0) {
   if (savePending || selectedStage > prefs.completed) return;
   phaserScene?.scene.resume();
   closeDialogs(); cameraAhead = 0; releasePhysics(game); game = createGame(Math.random, selectedStage, elapsed); game.score = game.startScore = score; attachPhysics(game, phaserScene?.matter.world.engine); document.body.classList.toggle('night', STAGES[game.stage].night); game.attemptId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`; effects = []; juice.reset(); mode = 'playing'; holding = false;

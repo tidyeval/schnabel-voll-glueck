@@ -67,3 +67,14 @@ test('Pip keeps the saved feather and beak colours; unknown colours fall back to
   const odd = readProgress(JSON.stringify({ plumage: 'teal', beak: 42 }));
   assert.equal(odd.plumage, 'white'); assert.equal(odd.beak, 'orange');
 });
+test('a finished stage hands its points to the next one, kept across saves', () => {
+  const prefs = readProgress('{}');
+  assert.deepEqual(prefs.carry, [0, 0, 0, 0, 0]);
+  applyAttempt(prefs, { id: 'a', layout: 5, stage: 1, fish: 9, score: 640, endReason: 'energy' });
+  assert.equal(prefs.carry[2], 0, 'a failed stage carries nothing on');
+  applyAttempt(prefs, { id: 'b', layout: 5, stage: 1, fish: 20, score: 1500, endReason: 'complete' });
+  assert.equal(prefs.carry[2], 1500);
+  applyAttempt(prefs, { id: 'c', layout: 5, stage: 4, fish: 20, score: 9000, endReason: 'complete' });
+  assert.equal(prefs.carry.length, 5, 'the finale hands nothing on');
+  assert.deepEqual(readProgress(JSON.stringify(prefs)).carry, [0, 0, 1500, 0, 0]);
+});
