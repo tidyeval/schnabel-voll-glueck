@@ -6,7 +6,9 @@ const labels = {
   en: ['Diagnostic report', 'Created locally. Select the text to copy it; it is not sent automatically.'],
   es: ['Informe de diagnóstico', 'Creado localmente. Selecciona el texto para copiarlo; no se envía automáticamente.']
 };
+// Only in development (vite dev server): the live game shows no diagnostic report in the settings.
 export function setupDiagnostics(game, situation) {
+  if (!import.meta.env.DEV) { document.getElementById('diagnostics')?.remove(); return; }
   const build = new URL(import.meta.url).pathname.match(/-([A-Za-z0-9_-]{8})\.js$/)?.[1] || 'development';
   setup(game, pkg.version, () => ({ build, ...situation() }), labels);
 }
