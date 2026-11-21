@@ -238,9 +238,13 @@ const SHARK_LOOK = { tail: '#557f89', edge: '#426974', fin: '#638e98', body: ['#
 // The great white: paler, bigger, with a cheeky toothy grin (still a cartoon, never gory).
 const WHITE_LOOK = { tail: '#7f8d95', edge: '#56646c', fin: '#8c9aa2', body: ['#c3ced2', '#76868f'], belly: '#f5f6ee', flipper: '#85939b', eye: '#26343a', mouth: '#4a5860', brow: '#5e6d75', gill: '#7a8991', teeth: true };
 function shark(c, item, t, look = SHARK_LOOK) {
-  const hurry = item.phase === 'dash' || item.phase === 'chase' ? 11 : item.phase === 'warn' ? 16 : 4;
-  const tail = Math.sin(t * hurry) * (item.phase === 'dash' ? .3 : .16);
-  c.save(); c.translate(item.x, item.y); c.rotate(Math.sin(t * (item.phase === 'warn' ? 16 : 1.5)) * .04);
+  // Picking up speed (the great white's sweep): hard, wide tail strokes that settle into a fast beat,
+  // the body swinging against the tail and stretching a little.
+  const sweep = item.phase === 'sweep', push = sweep ? 1 - Math.min(1, (item.timer || 0) / .6) : 0;
+  const hurry = sweep ? 15 - push * 6 : item.phase === 'dash' || item.phase === 'chase' ? 11 : item.phase === 'warn' ? 16 : 4;
+  const tail = Math.sin(t * hurry) * (sweep ? .38 + push * .2 : item.phase === 'dash' ? .3 : .16);
+  c.save(); c.translate(item.x, item.y); c.rotate(sweep ? -tail * .18 : Math.sin(t * (item.phase === 'warn' ? 16 : 1.5)) * .04);
+  if (sweep) c.scale(1.06, .97);
   if (look.teeth) c.scale(-1.45, 1.45);
   if (item.phase === 'warn') c.scale(.92, 1.15);
   if (item.reaction > 0) c.rotate(-.1 * item.reaction);
@@ -265,6 +269,11 @@ function shark(c, item, t, look = SHARK_LOOK) {
   c.restore();
 }
 function greatWhite(c, item, water, t) {
+  if (item.phase === 'sweep') {
+    // A wake of streaks and bubbles behind the rushing shark.
+    for (let i = 0; i < 4; i++) path(c, null, p => { const y = item.y - 24 + i * 16, len = 90 + i % 2 * 50; p.moveTo(item.x - 95 - i * 12, y); p.lineTo(item.x - 95 - i * 12 - len, y + Math.sin(t * 9 + i) * 3); }, '#ffffff66', 2.4 - i * .3);
+    for (let i = 0; i < 6; i++) ellipse(c, item.x - 110 - i * 26, item.y - 30 + Math.sin(i * 2.3 + t * 5) * 22, 2.2 + i % 3, 2.2 + i % 3, '#e8f8f2aa');
+  }
   if (item.phase !== 'stalk') return shark(c, item, t, WHITE_LOOK);
   // First only the tall fin cuts the surface at the left edge, with a little wake.
   const x = item.x + 110, bob = Math.sin(t * 3) * 1.5;

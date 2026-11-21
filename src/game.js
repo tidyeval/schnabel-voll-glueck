@@ -24,7 +24,7 @@ import { STAGES } from './stages.js';
  * Events are returned in simulation order; presentation consumers only read state.
  * Position/payload fields are present only when relevant to that event.
  * @typedef {object} GameEvent
- * @property {'end'|'delivery'|'bounce'|'rare'|'show'|'airWarning'|'splash'|'breach'|'islandWarning'|'reefWarning'|'sardine'|'feast'|'current'|'warning'|'chase'|'netSplash'|'outsmart'|'airBonus'|'fishLeap'|'catch'|'airCatch'|'frenzy'|'mission'|'nearMiss'|'kick'|'hurt'|'trick'|'thunder'|'roller'|'waveRide'} kind
+ * @property {'end'|'delivery'|'bounce'|'rare'|'show'|'airWarning'|'splash'|'breach'|'islandWarning'|'reefWarning'|'sardine'|'feast'|'current'|'warning'|'chase'|'netSplash'|'outsmart'|'airBonus'|'fishLeap'|'catch'|'airCatch'|'frenzy'|'mission'|'nearMiss'|'kick'|'hurt'|'trick'|'thunder'|'roller'|'waveRide'|'sharkSweep'} kind
  * @property {number} [x]
  * @property {number} [y]
  * @property {string} [name]
@@ -249,12 +249,21 @@ function nearMissZone(item, p) {
 export const LEAP = { from: WORLD.water + 40, height: 125, duration: 1.1, at: 430 };
 export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 0, 1) * Math.PI) * LEAP.height; }
 /*
- * Once per stage from the harbour on, a great white comes up from behind and follows Pip's depth.
- * It cannot follow him out of the water, and it never comes up into the shallow band just under
- * the surface (CHASE.shallow) where the fish trail is: swimming up is always the escape.
+ * Once per stage from the harbour on, a great white comes up from behind (only its fin shows first)
+ * and follows Pip's depth, but never into the shallow band just under the surface (CHASE.shallow).
+ * Two ways out:
+ *  - Into the air: after CHASE.giveUp seconds out of the water it gives up and sweeps across the
+ *    screen at CHASE.sweep px/s, scaring away every creature in the water (fish too).
+ *  - Through the water: holding a steady depth builds Pip's sprint (SPRINT), and he outswims it;
+ *    bobbing up and down loses the sprint and it catches up.
  * A bite ends the run, like any shark.
  */
-export const CHASE = { from: 1, at: .55, closing: 30, follow: .7, duration: 7, giveUp: .7, shallow: 130 };
+export const CHASE = { from: 1, at: .55, closing: 30, follow: .7, duration: 7, giveUp: .2, shallow: 130, sweep: 650, speedUp: .5, scare: 150, dart: .6 };
+// Sprint under water while the great white chases: builds while Pip's vertical speed stays below
+// `calm`, drops quickly when he bobs; at full sprint he swims `boost` faster than cruising speed.
+export const SPRINT = { calm: 70, build: 1.2, drop: .4, boost: .5 };
+// Creatures the sweeping great white scares away.
+const SCARED = ['fish', 'turtle', 'jelly', 'shark', 'puffer'];
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2, bounce: 10 };
 /*
  * Matter play: Pip has momentum and the camera follows him.
@@ -425,7 +434,7 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
   const pieces = rollSetPieces(stage, random), decor = rollDecor(stage, random), rare = rollRare(stage, random);
   return {
     pieces, decor, rare, rareShow: null,
-    elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0,
+    elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0, sprint: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vx: paceAt(elapsed).speed, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: [
@@ -457,6 +466,9 @@ export function step(game, dt, holding) {
   game.time += dt;
   const waitingNest = game.items.find(item => item.kind === 'nest' && item.final && item.x <= p.x + 55);
   game.cruise = waitingNest ? 0 : paceAt(game.elapsed + game.time).speed;
+  // Under-water sprint: only while the great white chases; a steady depth builds it, bobbing loses it.
+  const chased = p.wet && game.items.some(item => item.kind === 'whiteshark' && item.phase === 'chase');
+  game.sprint = chased && Math.abs(p.vy) < SPRINT.calm ? Math.min(1, (game.sprint || 0) + dt / SPRINT.build) : Math.max(0, (game.sprint || 0) - dt / SPRINT.drop);
   if (game.pendingRare) { events.push({ kind: 'rare', name: game.pendingRare }); game.pendingRare = null; }
   if (game.pendingShow) { events.push({ kind: 'show', name: game.pendingShow }); game.pendingShow = null; }
   game.frenzy = Math.max(0, game.frenzy - dt);
@@ -507,7 +519,8 @@ function advanceNest(game, dt) {
 function moveBody(game, dt, events) {
   const p = game.player;
   // Pip swims back up to cruising speed; arriving at the final nest stops him at once.
-  p.vx = game.cruise ? p.vx + (game.cruise - p.vx) * (1 - Math.exp(-dt * MOMENTUM.recover)) : 0;
+  const target = game.cruise * (1 + SPRINT.boost * (game.sprint || 0));
+  p.vx = game.cruise ? p.vx + (target - p.vx) * (1 - Math.exp(-dt * MOMENTUM.recover)) : 0;
   const wet = p.wet, terrain = game.items.filter(item => TERRAIN.includes(item.kind)).map(item => ({ item, blocks: terrainBlocks(item) }));
   const result = movePlayerSolid(game, dt, p.vx, p.vy, terrain, (x, y) => wet ? flowAt(game, x, y) : { x: 0, y: 0 });
   game.distance += result.moved; game.speed = dt ? result.moved / dt : 0;
@@ -739,9 +752,9 @@ function resolveHazard(game, item, events) {
   }
 }
 
-function updateWhiteShark(game, item, dt) {
+function updateWhiteShark(game, item, dt, events) {
   const p = game.player;
-  item.x += game.speed * dt; // it keeps pace with Pip instead of drifting past with the world
+  item.x += game.cruise * dt; // it keeps cruising pace: only Pip's sprint pulls away from it
   item.timer += dt;
   if (item.phase === 'stalk') {
     // Only the fin shows at the left edge first: time to react.
@@ -751,7 +764,21 @@ function updateWhiteShark(game, item, dt) {
     item.dry = p.wet ? 0 : (item.dry || 0) + dt;
     item.x += CHASE.closing * dt * (item.x < p.x - 60 ? 1 : .2);
     item.y += (clamp(p.y, WORLD.water + CHASE.shallow, 700) - item.y) * (1 - Math.exp(-dt * CHASE.follow));
-    if (item.hit || item.dry > CHASE.giveUp || item.timer > CHASE.duration) { item.phase = 'leave'; item.timer = 0; }
+    if (item.dry > CHASE.giveUp && !item.hit) { item.phase = 'sweep'; item.timer = 0; events.push({ kind: 'sharkSweep', x: item.x, y: item.y }); }
+    else if (item.hit || item.timer > CHASE.duration) { item.phase = 'leave'; item.timer = 0; }
+  } else if (item.phase === 'sweep') {
+    // Pip got away into the air: the shark rushes across and everything in the water scatters.
+    // It picks up speed with a few hard tail strokes, then shoots across.
+    item.x += CHASE.sweep * Math.min(1, .25 + item.timer / CHASE.speedUp) * dt;
+    for (const other of game.items) {
+      if (other.fled || !SCARED.includes(other.kind) || other.caught || other.y < WORLD.water) continue;
+      if (Math.abs(other.x - item.x) < CHASE.scare) {
+        const up = other.y < item.y;
+        other.fled = { vx: 140 + game.random() * 120, vy: (up ? -1 : 1) * (180 + game.random() * 140) };
+        other.heading = up ? .9 : -.9;
+      }
+    }
+    if (item.x > WORLD.width + 220) { item.caught = true; return true; }
   } else {
     item.x -= 130 * dt; item.y += 35 * dt;
     if (item.x < -170) { item.caught = true; return true; }
@@ -776,6 +803,16 @@ function advanceWorld(game, dt, events) {
   const beak = beakPosition(p);
   for (const item of game.items) {
     item.x -= game.speed * dt;
+    // Scattered by the sweeping great white. Fish dart off and settle in a new spot (still food);
+    // every other creature flees the screen for good.
+    if (item.fled) {
+      item.x += item.fled.vx * dt; item.y += item.fled.vy * dt; item.fled.time = (item.fled.time || 0) + dt;
+      if (item.kind === 'fish') {
+        item.y = clamp(item.y, WORLD.water + 35, 760);
+        if (item.fled.time > CHASE.dart) { item.fled = null; item.heading = 0; }
+      } else if (item.y < WORLD.water + 15 || item.y > 790 || item.x > WORLD.width + 80) item.caught = true;
+      continue;
+    }
     if (TERRAIN.includes(item.kind) && !item.warned && item.x < Math.max(760, p.x + 90 + game.speed * 3)) {
       item.warned = true; events.push({ kind: item.kind === 'island' ? 'islandWarning' : 'reefWarning' });
     }
@@ -837,7 +874,7 @@ function advanceWorld(game, dt, events) {
     if (item.kind === 'diver') {
       updateDiver(game, item, dt, events);
     }
-    if (item.kind === 'whiteshark' && updateWhiteShark(game, item, dt)) continue;
+    if (item.kind === 'whiteshark' && updateWhiteShark(game, item, dt, events)) continue;
     if (item.kind === 'harpoon') {
       item.x += item.vx * dt; item.y += item.vy * dt; item.life -= dt;
       if (item.life <= 0 || item.y < WORLD.water + 18 || item.y > 760) { item.caught = true; continue; }

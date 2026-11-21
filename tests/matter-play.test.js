@@ -87,14 +87,33 @@ const chase = (stage = 1) => {
 test('the great white never appears in the bay', () => {
   const g = createGame(() => .5, 0); assert.equal(g.chaseWave, Infinity);
 });
-test('a great white that catches Pip at the same depth ends the run', () => {
+test('a steady depth outswims the great white; bobbing up and down gets caught', () => {
+  // One-button play: Pip taps to hold a depth (his vertical speed stays low) and builds his sprint.
+  const steady = chase(), events = []; let sprint = 0;
+  for (let t = 0; t < 10 && !steady.ended; t += 1 / 60) { steady.player.breath = 10; steady.energy = Math.max(steady.energy, 60); events.push(...step(steady, 1 / 60, steady.player.y < 560 + (steady.player.vy > 0 ? -12 : 12))); sprint = Math.max(sprint, steady.sprint); }
+  assert.ok(events.some(e => e.kind === 'chase'), 'it comes');
+  assert.equal(events.some(e => e.kind === 'hurt'), false, 'no bite');
+  assert.ok(sprint > .9, 'the sprint is built');
+  // Diving up and down between two depths keeps the sprint low: the shark catches up and bites.
+  const bobbing = chase(); let target = 560, bitten = false;
+  for (let t = 0; t < 10 && !bobbing.ended; t += 1 / 60) {
+    bobbing.player.breath = 10; bobbing.energy = Math.max(bobbing.energy, 60);
+    if (Math.abs(bobbing.player.y - target) < 30) target = target > 500 ? 420 : 600;
+    bitten ||= step(bobbing, 1 / 60, bobbing.player.y < target).some(e => e.kind === 'hurt');
+  }
+  assert.equal(bitten, true); assert.equal(bobbing.ended, true, 'a bite ends the run'); assert.equal(bobbing.endReason, 'shark');
+});
+test('jumping out makes the great white sweep across and scatter the creatures', () => {
   const g = chase(), events = [];
-  // Pip holds his depth: the shark closes in from behind.
-  for (let t = 0; t < 8 && !g.ended; t += 1 / 60) { g.player.y = 560; g.player.vy = 0; g.player.breath = 10; g.energy = Math.max(g.energy, 60); events.push(...step(g, 1 / 60, false)); }
-  assert.ok(events.some(e => e.kind === 'chase'), 'it is announced');
-  assert.equal(events.filter(e => e.kind === 'hurt').length, 1, 'one bite');
-  assert.equal(g.ended, true, 'a bite ends the run');
-  assert.equal(g.endReason, 'shark');
+  for (let t = 0; t < 1.6; t += 1 / 60) { g.player.y = 560; g.player.vy = 0; events.push(...step(g, 1 / 60, true)); }
+  g.items.push({ kind: 'fish', x: 300, y: 520, golden: false }, { kind: 'turtle', x: 360, y: 600, baseY: 600, lane: 'lower' }, { kind: 'jelly', x: 420, y: 480, phase: 0 });
+  const [fish, turtle, jelly] = g.items.slice(-3);
+  for (let t = 0; t < 4 && !g.ended; t += 1 / 60) events.push(...step(g, 1 / 60, false));
+  assert.equal(events.filter(e => e.kind === 'sharkSweep').length, 1, 'it sweeps once');
+  assert.equal(events.some(e => e.kind === 'hurt'), false);
+  assert.equal(g.items.some(i => i.kind === 'whiteshark'), false, 'it has crossed the screen');
+  assert.ok(turtle.caught && jelly.caught, 'turtles and jellies flee the screen');
+  assert.ok(fish.y !== 520 && !fish.fled, 'the fish darted off and settled again');
 });
 test('the great white cannot reach the fish trail just under the surface', () => {
   const g = chase(), events = [];

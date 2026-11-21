@@ -7,6 +7,7 @@ export const HAPTICS = {
   golden: { web: [10, 40, 18], native: ImpactStyle.Medium },
   airCatch: { web: [10, 30, 10], native: ImpactStyle.Medium },
   waveRide: { web: [14, 30, 20], native: ImpactStyle.Medium },
+  sharkSweep: { web: [30, 20, 40], native: ImpactStyle.Heavy },
   nearMiss: { web: 6, native: ImpactStyle.Light },
   bounce: { web: 28, native: ImpactStyle.Medium },
   hurt: { web: [45, 35, 70], native: ImpactStyle.Heavy },

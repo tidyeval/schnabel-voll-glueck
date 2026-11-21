@@ -151,7 +151,7 @@ test('sharks track faster later, telegraph a fixed dash, and stop pursuing above
 test('sharks and turtles use stable upper, middle and lower underwater bands', () => {
   const seen = { shark: new Set(), turtle: new Set() };
   for (let stage = 0; stage < STAGES.length; stage++) for (let wave = 0; wave < STAGES[stage].encounters.length; wave++) {
-    const g = createGame(() => .5, stage); g.wave = wave; g.items = []; g.distance = g.nextEncounter;
+    const g = createGame(() => .5, stage); g.wave = wave; g.items = []; g.chaseWave = Infinity; g.distance = g.nextEncounter;
     step(g, .01, false);
     for (const item of g.items.filter(item => item.kind === 'shark' || item.kind === 'turtle')) {
       seen[item.kind].add(item.lane);

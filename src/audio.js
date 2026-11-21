@@ -85,7 +85,8 @@ export function createAudio(settings) {
         if (kind === 'catch') { tone(880, .12, .13); tone(1174, .18, .09, 'sine', .06); }
         if (kind === 'splash' || kind === 'netSplash') tone(190, .2, kind === 'netSplash' ? .09 : .05, 'triangle');
         if (kind === 'breach') { tone(392, .18, .06); tone(587, .25, .04, 'sine', .08); }
-        if (kind === 'warning' || kind === 'airWarning' || kind === 'chase') { tone(660, .13, .07, 'triangle'); tone(520, .18, .05, 'triangle', .15); }
+        if (kind === 'warning' || kind === 'airWarning') { tone(660, .13, .07, 'triangle'); tone(520, .18, .05, 'triangle', .15); }
+        if (kind === 'sharkSweep') { tone(140, .55, .09, 'triangle', 0, 420); tone(90, .7, .06, 'sine', .05, 60); }
         if (kind === 'thunder') { tone(64, 1.6, .1, 'triangle', .35, 34); tone(48, 2.2, .08, 'sine', .45, 28); }
         if (kind === 'waveRide') { tone(330, .5, .08, 'triangle', 0, 990); [784, 1046, 1318].forEach((f, i) => tone(f, .25, .05, 'sine', .2 + i * .07)); }
         if (kind === 'bounce') tone(300, .22, .08, 'sine', 0, 520);
