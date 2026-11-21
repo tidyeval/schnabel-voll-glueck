@@ -1,0 +1,207 @@
+<!doctype html>
+<!-- Dev-server page only (vite build has index.html as its single input): http://<dev-host>/docs/styles.html
+     Style test for the promo video: the same moment (Pip dives and snaps a fish) in several looks.
+     Own sketches after the Lemo-Opuscar style descriptions, not renders from the library. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Promo Stiltest</title>
+<style>
+  :root{color-scheme:light}
+  body{margin:0;background:#f6f3ea;color:#214d4d;font:15px/1.45 ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif}
+  main{max-width:1240px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:32px;letter-spacing:-1px;margin:0 0 4px}
+  p.lead{margin:0 0 18px;color:#62827a;max-width:800px}
+  .grid{display:grid;gap:22px 16px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .grid canvas{display:block;width:100%;max-width:280px;aspect-ratio:9/16;height:auto;border-radius:22px;border:6px solid #23403d;box-shadow:0 10px 30px #123d3b33}
+  h3{margin:10px 0 2px;font-size:16px}
+  .card p{margin:3px 0 0;font-size:13px;color:#5f7a70;max-width:280px}
+  .tag{display:inline-block;margin-top:6px;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700;background:#dff0e6;color:#2f6b55}
+  .tag.minus{background:#f8e1d8;color:#9a4a2f}
+</style>
+</head>
+<body>
+<main>
+  <h1>Stiltest: Pip im Promo-Look</h1>
+  <p class="lead">Viermal derselbe Moment: Pip taucht ab, schnappt einen Fisch und freut sich. Das sind eigene Skizzen nach den Stilbeschreibungen von Lemo-Opuscar, keine echten Renderings der Bibliothek. Sie sollen ein Gefühl für Look und Tempo geben.</p>
+  <div class="grid" id="grid"></div>
+</main>
+<script type="module">
+import { drawWorld } from '/src/art.js';
+import { createGame } from '/src/game.js';
+
+const W = 540, H = 960, LOOP = 3.2, SURF = 430, FISH_Y = 640, PIP_X = 170;
+const FONT = "ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif";
+const ease = k => k * k * (3 - 2 * k), clamp01 = k => Math.max(0, Math.min(1, k));
+
+// --- The shared moment -------------------------------------------------------
+// 0–1.0 float, 1.0–1.5 dive, 1.5 snap, 1.5–2.2 back up, 2.2–3.2 cheer.
+function moment(t) {
+  const dive = ease(clamp01((t - 1) / .5)), rise = ease(clamp01((t - 1.5) / .7));
+  const deep = FISH_Y + 20 - (SURF - 40);
+  const y = SURF - 40 + deep * dive - deep * rise + (t < 1 || t > 2.2 ? Math.sin(t * 5) * 6 : 0);
+  const tilt = t > 1 && t < 1.5 ? .55 * Math.sin(clamp01((t - 1) / .5) * Math.PI * .5) : t >= 1.5 && t < 2.2 ? -.45 * Math.sin(clamp01((t - 1.5) / .7) * Math.PI) : 0;
+  const cheer = t > 2.2 ? Math.abs(Math.sin((t - 2.2) * Math.PI * 4)) : 0;
+  return { x: PIP_X, y: y - cheer * 30, tilt, mouth: t > 1.3 && t < 1.6 ? 1 : 0, eaten: t >= 1.5, cheer, fishX: PIP_X + 150 + Math.max(0, 1.5 - t) * 170, wet: y > SURF };
+}
+
+// --- A toy Pip made of simple parts, each style paints them its own way -----
+const COL = { body: '#fffaf0', wing: '#d9e3d3', beak: '#f4b860', pouch: '#e9975a', eye: '#214d4d', fish: '#f28a6a', fin: '#e0664c', water: '#4fb3a9', deep: '#2b7d80' };
+function pipParts(m) {
+  const P = (fn, fill, plate) => ({ path: (() => { const p = new Path2D(); fn(p); return p; })(), fill, plate });
+  const jaw = m.mouth * .45;
+  return [
+    P(p => { p.moveTo(-70, 5); p.lineTo(-108, -12); p.lineTo(-92, 26); p.closePath(); }, COL.wing, [0, .5]),
+    P(p => p.ellipse(0, 18, 66, 48, 0, 0, Math.PI * 2), COL.body, [.08, .05]),
+    P(p => p.ellipse(-8, 18, 40, 24, -.2, 0, Math.PI * 2), COL.wing, [0, .55]),
+    P(p => p.ellipse(34, -22, 24, 34, .3, 0, Math.PI * 2), COL.body, [.08, .05]),
+    P(p => p.arc(44, -50, 31, 0, Math.PI * 2), COL.body, [.08, .05]),
+    P(p => { p.moveTo(64, -40); p.quadraticCurveTo(120 + jaw * 20, -10 + jaw * 70, 156, -34 + jaw * 60); p.lineTo(68, -30); p.closePath(); }, COL.pouch, [.8, .1]),
+    P(p => { p.moveTo(62, -58); p.lineTo(160, -42); p.quadraticCurveTo(110, -36, 64, -38); p.closePath(); }, COL.beak, [.65, 0]),
+    P(p => p.arc(50, -58, 7, 0, Math.PI * 2), COL.eye, [1, 1]),
+  ];
+}
+function fishParts() {
+  const P = (fn, fill, plate) => ({ path: (() => { const p = new Path2D(); fn(p); return p; })(), fill, plate });
+  return [P(p => { p.moveTo(20, 0); p.lineTo(44, -18); p.lineTo(44, 18); p.closePath(); }, COL.fin, [1, 0]), P(p => p.ellipse(0, 0, 30, 16, 0, 0, Math.PI * 2), COL.fish, [.9, 0]), P(p => p.arc(-14, -3, 3.5, 0, Math.PI * 2), COL.eye, [1, 1])];
+}
+function placed(c, x, y, s, tilt, fn) { c.save(); c.translate(x, y); c.rotate(tilt); c.scale(s, s); fn(); c.restore(); }
+function telop(c, text, x, y, size, fill = '#ffe14d', ink = '#1d1b2a', alpha = 1, rot = 0) {
+  c.save(); c.globalAlpha = alpha; c.translate(x, y); c.rotate(rot); c.font = `900 ${size}px ${FONT}`; c.textAlign = 'center'; c.lineJoin = 'round';
+  c.lineWidth = size * .28; c.strokeStyle = ink; c.strokeText(text, 0, 0); c.fillStyle = fill; c.fillText(text, 0, 0); c.restore();
+}
+let seed = 1; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+
+// --- 1. Rhythm Game Show -----------------------------------------------------
+function gameShow(c, t) {
+  const beat = (t * 2) % 1, hop = Math.pow(1 - beat, 3) * 10;
+  c.fillStyle = '#2fa8e0'; c.fillRect(0, 0, W, H);
+  c.save(); c.translate(-((t * 40) % 80), 0); c.fillStyle = '#4bbcf0';
+  for (let x = -H; x < W + 160; x += 80) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x + 40, 0); c.lineTo(x + 40 + H, H); c.lineTo(x + H, H); c.closePath(); c.fill(); }
+  c.restore();
+  // Water as a flat band with an ink line on top.
+  c.fillStyle = '#1d6fb8'; c.fillRect(0, SURF, W, H - SURF); c.lineWidth = 8; c.strokeStyle = '#1d1b2a'; c.beginPath(); c.moveTo(0, SURF); c.lineTo(W, SURF); c.stroke();
+  c.fillStyle = '#2a85cc'; for (let i = 0; i < 7; i++) { c.beginPath(); c.arc(40 + i * 80, 560 + (i % 2) * 140, 14, 0, Math.PI * 2); c.fill(); }
+  const m = moment(t), ink = (parts, sh = 12) => {
+    c.save(); c.translate(sh * .8, sh); parts.forEach(p => { c.fillStyle = '#1d1b2a'; c.fill(p.path); c.lineWidth = 16; c.strokeStyle = '#1d1b2a'; c.lineJoin = 'round'; c.stroke(p.path); }); c.restore();
+    parts.forEach(p => { c.lineWidth = 8; c.strokeStyle = '#1d1b2a'; c.lineJoin = 'round'; c.stroke(p.path); c.fillStyle = p.fill === COL.body ? '#ffffff' : p.fill === COL.wing ? '#ffd84a' : p.fill; c.fill(p.path); });
+  };
+  if (!m.eaten) placed(c, m.fishX, FISH_Y + hop * .5, 1.5, 0, () => ink(fishParts(), 8));
+  placed(c, m.x, m.y - hop, 1.15, m.tilt, () => ink(pipParts(m)));
+  // Round card at the start, then the judgement word on the snap.
+  if (t < .9) { const k = clamp01(t / .15); c.save(); c.translate(W / 2, 170); c.scale(k, k); c.fillStyle = '#1d1b2a'; c.beginPath(); c.roundRect(-200 + 12, -60 + 14, 400, 120, 30); c.fill(); c.fillStyle = '#ffb870'; c.lineWidth = 8; c.beginPath(); c.roundRect(-200, -60, 400, 120, 30); c.fill(); c.stroke(); c.restore(); telop(c, 'RUNDE 2', W / 2, 150, 30, '#fff', '#1d1b2a', k); telop(c, 'SCHNAPPEN!', W / 2, 200, 46, '#ffe14d', '#1d1b2a', k); }
+  if (m.eaten) {
+    const k = clamp01((t - 1.5) / .12), wob = Math.sin((t - 1.5) * 18) * .06 * (1 - clamp01(t - 1.5));
+    c.save(); c.translate(W / 2, 175); c.rotate((t - 1.5) * .8); c.fillStyle = '#ffe14d'; for (let i = 0; i < 12; i++) { c.rotate(Math.PI / 6); c.beginPath(); c.moveTo(0, 0); c.lineTo(-20, -200 * k); c.lineTo(20, -200 * k); c.closePath(); c.globalAlpha = .35; c.fill(); } c.restore();
+    telop(c, 'LECKER!', W / 2, 200, 92 * (.6 + .4 * k), '#ff5fa8', '#1d1b2a', 1, -.08 + wob);
+  }
+  // Score sticker in the corner, ticking on the beat.
+  c.save(); c.translate(W - 120, 60); c.rotate(.08); c.fillStyle = '#1d1b2a'; c.beginPath(); c.roundRect(-80 + 8, -34 + 10, 170, 68, 20); c.fill(); c.fillStyle = '#ffe14d'; c.lineWidth = 6; c.beginPath(); c.roundRect(-80, -34, 170, 68, 20); c.fill(); c.stroke(); c.restore();
+  telop(c, m.eaten ? '+15' : '0', W - 115, 82, 38, '#fff');
+}
+
+// --- 2. Paper Pop-up Book ----------------------------------------------------
+function paperPopup(c, t) {
+  c.fillStyle = '#9c6f4a'; c.fillRect(0, 0, W, H);
+  const page = c.createLinearGradient(0, 0, W, 0); page.addColorStop(0, '#efe4cc'); page.addColorStop(.47, '#f8f0dc'); page.addColorStop(.5, '#d9c9a6'); page.addColorStop(.53, '#f8f0dc'); page.addColorStop(1, '#efe4cc');
+  c.fillStyle = page; c.fillRect(18, 60, W - 36, H - 120);
+  const paper = (fn, fill, lift = 8, sway = 0) => {
+    c.save(); c.rotate(sway); c.shadowColor = '#3b2a1a55'; c.shadowBlur = 14; c.shadowOffsetX = lift * .6; c.shadowOffsetY = lift;
+    const p = new Path2D(); fn(p); c.lineWidth = 10; c.lineJoin = 'round'; c.strokeStyle = '#fffdf6'; c.stroke(p); c.shadowColor = 'transparent'; c.fillStyle = fill; c.fill(p); c.restore();
+  };
+  paper(p => p.arc(410, 190, 60, 0, Math.PI * 2), '#f3c25a', 6);
+  const wave = (y, amp, col, ph) => paper(p => { p.moveTo(30, H - 70); p.lineTo(30, y); for (let x = 30; x <= W - 30; x += 30) p.lineTo(x, y + Math.sin(x * .03 + ph + t * 1.6) * amp); p.lineTo(W - 30, H - 70); p.closePath(); }, col, 10);
+  wave(SURF, 10, '#6cc3b8', 0);
+  const m = moment(t);
+  const cut = (parts, s, x, y, tilt) => placed(c, x, y, s, tilt + Math.sin(t * 3) * .04, () => {
+    c.shadowColor = '#3b2a1a66'; c.shadowBlur = 12; c.shadowOffsetX = 8; c.shadowOffsetY = 10;
+    parts.forEach(p => { c.lineWidth = 14; c.lineJoin = 'round'; c.strokeStyle = '#fffdf6'; c.stroke(p.path); });
+    c.shadowColor = 'transparent'; parts.forEach(p => { c.fillStyle = p.fill; c.fill(p.path); });
+  });
+  wave(560, 14, '#3f9e9a', 1.5);
+  if (!m.eaten) cut(fishParts(), 1.4, m.fishX, FISH_Y, 0);
+  cut(pipParts(m), 1.05, m.x, m.y, m.tilt);
+  wave(760, 12, '#2b7d80', 3);
+  // A paper flag pops up from the page on the catch.
+  if (m.eaten) { const k = ease(clamp01((t - 1.5) / .3)); c.save(); c.translate(W / 2, 240); c.scale(1, k); paper(p => p.roundRect(-140, -110, 280, 90, 14), '#e8766a', 10); c.restore(); if (k > .6) { c.fillStyle = '#fffdf6'; c.font = `900 50px ${FONT}`; c.textAlign = 'center'; c.fillText('Happs!', W / 2, 182); } }
+  // Warm lamp light from the top left.
+  const lamp = c.createRadialGradient(80, 40, 50, 80, 40, 900); lamp.addColorStop(0, '#fff3d011'); lamp.addColorStop(1, '#2a1a0a55'); c.fillStyle = lamp; c.fillRect(0, 0, W, H);
+}
+
+// --- 3. Microgame Frenzy: one medium per two seconds -------------------------
+const off = document.createElement('canvas'), oc = off.getContext('2d');
+function flatScene(ctx, t, m, fills = true) {
+  ctx.fillStyle = '#bfe8f0'; ctx.fillRect(0, 0, W, SURF); ctx.fillStyle = COL.water; ctx.fillRect(0, SURF, W, H - SURF);
+  if (!m.eaten) placed(ctx, m.fishX, FISH_Y, 1.4, 0, () => fishParts().forEach(p => { ctx.fillStyle = p.fill; ctx.fill(p.path); }));
+  placed(ctx, m.x, m.y, 1.05, m.tilt, () => pipParts(m).forEach(p => { ctx.fillStyle = p.fill; ctx.fill(p.path); }));
+}
+function pixel(c, t, m) {
+  off.width = 68; off.height = 120; oc.save(); oc.scale(68 / W, 120 / H); flatScene(oc, t, m); oc.restore();
+  c.imageSmoothingEnabled = false; c.drawImage(off, 0, 0, W, H); c.imageSmoothingEnabled = true;
+}
+function crayon(c, t, m) {
+  c.fillStyle = '#fbf6ea'; c.fillRect(0, 0, W, H); seed = 7 + Math.floor(t * 12);
+  const scribble = (path, col, dense = 22) => { c.save(); c.clip(path); c.strokeStyle = col; c.lineWidth = 7; c.globalAlpha = .75; c.lineCap = 'round';
+    for (let i = 0; i < dense; i++) { const y = -260 + i * 26 + rnd() * 10; c.beginPath(); c.moveTo(-300, y); for (let x = -300; x < 300; x += 40) c.lineTo(x, y + (rnd() - .5) * 18 + x * .2); c.stroke(); } c.restore();
+    c.save(); c.strokeStyle = '#3a3a3a'; c.globalAlpha = .8; c.lineWidth = 3; c.translate((rnd() - .5) * 3, (rnd() - .5) * 3); c.stroke(path); c.restore(); };
+  c.save(); const sea = new Path2D(); sea.rect(0, SURF, W, H - SURF); c.translate(0, 0); scribble(sea, '#4fb3c9', 1); c.restore();
+  c.save(); c.globalAlpha = .55; c.fillStyle = '#7cc9d6'; for (let i = 0; i < 160; i++) c.fillRect(rnd() * W, SURF + rnd() * (H - SURF), 22, 3); c.restore();
+  if (!m.eaten) placed(c, m.fishX, FISH_Y, 1.4, 0, () => fishParts().forEach(p => scribble(p.path, p.fill)));
+  placed(c, m.x, m.y, 1.05, m.tilt, () => pipParts(m).forEach(p => scribble(p.path, p.fill === COL.body ? '#e9e4d8' : p.fill)));
+}
+function riso(c, t, m) {
+  c.fillStyle = '#f7f1e3'; c.fillRect(0, 0, W, H);
+  const plates = [['#ff48b0', 0, 0], ['#0078bf', 5, 4]];
+  plates.forEach(([ink, dx, dy], k) => {
+    c.save(); c.globalCompositeOperation = 'multiply'; c.translate(dx, dy);
+    const dots = (path, density) => { if (density <= 0) return; c.save(); c.clip(path); c.fillStyle = ink; for (let y = -300; y < 300; y += 9) for (let x = -300; x < 300; x += 9) { c.beginPath(); c.arc(x + (y / 9 % 2) * 4.5, y, 4.6 * Math.sqrt(density), 0, Math.PI * 2); c.fill(); } c.restore(); };
+    const sea = new Path2D(); sea.rect(0, SURF, W, H - SURF); c.save(); c.clip(sea); c.fillStyle = ink; c.globalAlpha = k ? .55 : .12; c.fillRect(0, SURF, W, H - SURF); c.restore();
+    if (!m.eaten) placed(c, m.fishX, FISH_Y, 1.4, 0, () => fishParts().forEach(p => dots(p.path, p.plate[k])));
+    placed(c, m.x, m.y, 1.05, m.tilt, () => pipParts(m).forEach(p => dots(p.path, p.plate[k])));
+    c.restore();
+  });
+}
+function microgame(c, t) {
+  const n = query.has('m') ? Number(query.get('m')) : Math.floor((performance.now() / 1000) / LOOP) % 3, m = moment(t);
+  [pixel, crayon, riso][n](c, t, m);
+  telop(c, 'SCHNAPP!', W / 2, 150, 84 * (t < .25 ? 1.3 - t * 1.2 : 1), '#fff', '#1d1b2a', 1, -.05);
+  c.fillStyle = '#1d1b2a'; c.fillRect(40, H - 70, W - 80, 26); c.fillStyle = t < 1.5 ? '#ffe14d' : '#62d26f'; c.fillRect(44, H - 66, (W - 88) * (t < 1.5 ? 1 - t / 1.5 : 1), 18);
+  if (m.eaten) telop(c, 'GESCHAFFT!', W / 2, 300, 54, '#62d26f', '#1d1b2a', clamp01((t - 1.5) * 6), .06);
+  telop(c, ['Pixel', 'Wachsmalkreide', 'Risodruck'][n], W / 2, H - 100, 24, '#fff', '#1d1b2a');
+}
+
+// --- 4. The real game art ----------------------------------------------------
+const g = createGame(() => .5, 1); g.nextEncounter = Infinity;
+function realGame(c, t) {
+  const m = moment(t), K = W / 480, toWorld = y => y / K;
+  g.items = m.eaten ? [] : [{ kind: 'fish', x: (PIP_X + 75 + Math.max(0, 1.5 - t) * 170) / K, y: toWorld(FISH_Y), golden: false, species: 'mackerel', lane: 'main' }];
+  const p = g.player; const prevY = p.y; p.x = m.x / K; p.y = toWorld(m.y); p.vy = (p.y - prevY) * 60; p.wet = p.y > 360; p.gulp = m.mouth ? .42 : Math.max(0, (p.gulp || 0) - .02);
+  g.score = m.eaten ? 15 : 0; g.fish = m.eaten ? 1 : 0; g.distance = t * 150;
+  c.save(); c.scale(K, K); drawWorld(c, g, 'play', t, { outfit: 'classic', plumage: 'white', beak: 'orange' }, [], false); c.restore();
+}
+
+const STYLES = [
+  { name: 'Rhythm Game Show', draw: gameShow, text: 'Bonbonfarben, dicke Umrisse, harte Schatten. Pip hüpft im Takt, jede Runde hat eine Karte und endet mit einem großen Lobwort.', plus: 'Viel Spaß und Energie, zeigt jede Tätigkeit als eigene Runde', minus: 'Pip sieht nicht aus wie im Spiel' },
+  { name: 'Paper Pop-up Book', draw: paperPopup, text: 'Pip als Papierfigur mit weißem Schnittrand vor aufgeklappten Papierwellen, im Licht einer Schreibtischlampe. So war das letzte Promo gemacht.', plus: 'Warm, liebevoll, passt zum letzten Promo', minus: 'Ruhiger, eher Geschichte als Party' },
+  { name: 'Microgame Frenzy', draw: microgame, text: 'Ein Befehl, ein paar Sekunden, eine Aktion, und jede Runde in einem anderen Medium. Hier wechselt es alle 3 Sekunden zwischen Pixel, Wachsmalkreide und Risodruck.', plus: 'Sehr witzig und schnell', minus: 'Vom Spiel-Look bleibt fast nichts' },
+  { name: 'Echte Spielgrafik', draw: realGame, text: 'Zum Vergleich: derselbe Moment mit der Grafik aus dem Spiel.', plus: 'Man sieht genau, was man bekommt', minus: 'Weniger Show-Effekt' },
+];
+const grid = document.getElementById('grid');
+const cards = STYLES.map(s => {
+  const el = document.createElement('div'); el.className = 'card';
+  const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  el.append(canvas); el.insertAdjacentHTML('beforeend', `<h3>${s.name}</h3><p>${s.text}</p><span class="tag">+ ${s.plus}</span> <span class="tag minus">− ${s.minus}</span>`);
+  grid.append(el); return { s, c: canvas.getContext('2d') };
+});
+// ?t=1.4 freezes the moment, ?m=0..2 picks the microgame medium (for checking stills).
+const query = new URLSearchParams(location.search), FREEZE = query.has('t') ? Number(query.get('t')) : null;
+function frame(now) {
+  const t = FREEZE ?? (now / 1000) % LOOP;
+  for (const { s, c } of cards) { c.save(); try { s.draw(c, t); } catch (e) { console.error(e); } c.restore(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
