@@ -324,11 +324,12 @@ function portrait(canvas, outfit) {
   c.clearRect(0, 0, size, size);
   pelican(c, { x: size * .4, y: size * .84, scale: size / 150, time: 0, ...pipLook(outfit), happy: true, reducedMotion: true });
 }
-// Colour swatches for Pip's feathers, beak and Hawaiian shirt: choosing one recolours Pip at once and keeps the wardrobe open.
-const SWATCHES = { plumage: PLUMAGES, beak: BEAKS, shirt: SHIRTS };
+// Colour swatches for Pip's feathers, beak and Hawaiian shirt (the first shirt swatch takes it off): choosing one recolours
+// Pip at once and keeps the wardrobe open.
+const SWATCHES = { plumage: PLUMAGES, beak: BEAKS, shirt: { none: { swatch: '' }, ...SHIRTS } };
 for (const [key, table] of Object.entries(SWATCHES)) $(`${key}-swatches`).replaceChildren(...Object.entries(table).map(([id, colours]) => {
   const button = document.createElement('button'); button.type = 'button'; button.className = 'swatch'; button.dataset[key] = id;
-  button.style.background = colours.swatch;
+  if (colours.swatch) button.style.background = colours.swatch; else button.classList.add('none');
   button.onclick = () => { prefs[key] = id; persistSettings(key); needsDraw = true; refreshWardrobe(); };
   return button;
 }));
@@ -339,8 +340,6 @@ function refreshWardrobe() {
     button.setAttribute('aria-pressed', String(prefs.outfit === outfit));
     portrait(button.querySelector('canvas'), outfit);
   });
-  // The shirt colours only matter while Pip wears the shirt.
-  $('shirt-row').hidden = prefs.outfit !== 'hawaii';
   for (const key of Object.keys(SWATCHES)) document.querySelectorAll(`[data-${key}]`).forEach(button => {
     button.setAttribute('aria-pressed', String(prefs[key] === button.dataset[key]));
     button.setAttribute('aria-label', t(`${key}_${button.dataset[key]}`));
@@ -349,8 +348,9 @@ function refreshWardrobe() {
 $('wardrobe').onclick = () => { refreshWardrobe(); $('wardrobe-dialog').showModal(); };
 $('wardrobe-dialog').querySelector('.close').onclick = () => $('wardrobe-dialog').close();
 document.querySelectorAll('[data-outfit]').forEach(button => button.onclick = () => {
+  // An accessory combines with the shirt, so the wardrobe stays open like for the colours.
   prefs.outfit = button.dataset.outfit; persistSettings('outfit'); needsDraw = true;
-  refreshWardrobe(); $('wardrobe-dialog').close();
+  refreshWardrobe();
 });
 $('retry-save').onclick = async () => {
   if (savePending) return;

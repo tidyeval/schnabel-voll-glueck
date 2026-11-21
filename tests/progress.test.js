@@ -54,8 +54,8 @@ test('saves from before the storm moved ahead of the reef keep each record on it
   assert.deepEqual(prefs.bests, [1, 2, 3, 77, 40], 'an unsaved storm run from the old layout lands on the storm');
 });
 
-test('every outfit is available from the start, whatever the fish count; unknown outfits fall back to classic', () => {
-  for (const outfit of ['flower', 'sailor', 'hawaii', 'snorkel']) assert.equal(readProgress(JSON.stringify({ totalFish: 0, outfit })).outfit, outfit);
+test('every head accessory is available from the start, whatever the fish count; unknown ones fall back to classic', () => {
+  for (const outfit of ['flower', 'sailor', 'snorkel']) assert.equal(readProgress(JSON.stringify({ totalFish: 0, outfit })).outfit, outfit);
   assert.equal(readProgress(JSON.stringify({ outfit: 'tuxedo' })).outfit, 'classic');
 });
 
@@ -76,7 +76,16 @@ test('a finished stage hands its points to the next one, kept across saves', () 
   assert.equal(prefs.carry.length, 5, 'the finale hands nothing on');
   assert.deepEqual(readProgress(JSON.stringify(prefs)).carry, [0, 0, 1500, 0, 0]);
 });
-test('the Hawaiian shirt keeps its saved colour; unknown colours fall back to coral', () => {
-  assert.equal(readProgress(JSON.stringify({ outfit: 'hawaii', shirt: 'mint' })).shirt, 'mint');
-  assert.equal(readProgress(JSON.stringify({ shirt: 'plaid' })).shirt, 'coral');
+test('the Hawaiian shirt combines with any accessory and keeps its colour; old saves keep what Pip wore', () => {
+  assert.equal(readProgress('{}').shirt, 'none', 'no shirt by default');
+  const both = readProgress(JSON.stringify({ wardrobe: 2, outfit: 'snorkel', shirt: 'mint' }));
+  assert.equal(both.outfit, 'snorkel'); assert.equal(both.shirt, 'mint');
+  assert.equal(readProgress(JSON.stringify({ wardrobe: 2, shirt: 'none' })).shirt, 'none');
+  assert.equal(readProgress(JSON.stringify({ wardrobe: 2, shirt: 'plaid' })).shirt, 'none');
+  // Wardrobe 1: the shirt was the outfit 'hawaii', and an unworn shirt colour was saved anyway.
+  const old = readProgress(JSON.stringify({ outfit: 'hawaii', shirt: 'mint' }));
+  assert.equal(old.outfit, 'classic'); assert.equal(old.shirt, 'mint');
+  assert.equal(readProgress(JSON.stringify({ outfit: 'hawaii' })).shirt, 'coral');
+  assert.equal(readProgress(JSON.stringify({ outfit: 'sailor', shirt: 'sky' })).shirt, 'none');
+  assert.equal(readProgress(JSON.stringify(old)).shirt, 'mint', 'kept after the next save');
 });

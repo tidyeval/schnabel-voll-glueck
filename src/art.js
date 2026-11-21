@@ -87,7 +87,7 @@ function pelicanWing(c, lift, fold, back, fe = plumageOf()) {
   c.restore();
 }
 export function pelican(c, {
-  x, y, scale, time: t, tilt = 0, outfit = 'classic', plumage = 'white', beak = 'orange', shirt = 'coral', wet = false, happy = false,
+  x, y, scale, time: t, tilt = 0, outfit = 'classic', plumage = 'white', beak = 'orange', shirt = 'none', wet = false, happy = false,
   gulp = 0, breach = 0, cargo = 0, breath = WORLD.breath, reducedMotion = false, expression = {},
 }) {
   const confused = expression.confused || 0;
@@ -150,7 +150,7 @@ export function pelican(c, {
   }
   c.restore();
   ellipse(c, -17, 7, 38, 30 + bite * 2, gradient(c, -20, 38, ...fe.body), -.16);
-  if (outfit === 'hawaii') hawaiiShirt(c, shirtOf(shirt), bite, outline);
+  if (shirt && shirt !== 'none') hawaiiShirt(c, shirtOf(shirt), bite, outline);
   c.save(); headPose();
   path(c, gradient(c, -57, 21, ...fe.head), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
   // Pip's tousled crown is his main character mark at every rendered scale.
@@ -647,7 +647,7 @@ function rock(c, b, item, index, water, t, night, pink = false) {
 }
 
 export function drawWorld(c, game, mode, t, look, effects, reducedMotion = false, fx = null) {
-  // `look` is Pip's wardrobe: { outfit, plumage, beak }, or just an outfit name.
+  // `look` is Pip's wardrobe: { outfit (head accessory), plumage, beak, shirt }, or just an outfit name.
   const { outfit = 'classic', plumage, beak, shirt } = typeof look === 'string' ? { outfit: look } : look || {};
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;

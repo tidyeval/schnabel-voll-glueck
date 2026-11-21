@@ -16,15 +16,18 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.reload(); await page.locator('#play').waitFor();
     assert.equal(await page.locator('[name=difficulty]').count(), 0);
     assert.equal(await page.locator('#result-difficulty').count(), 0);
-    // Wardrobe: every look is open from the start; the chosen one is saved and marked.
+    // Wardrobe: every accessory is open from the start; the chosen one is saved and marked; the shirt combines with it.
     await page.locator('#wardrobe').click();
     assert.equal(await page.locator('[data-outfit=sailor]').getAttribute('aria-pressed'), 'true');
     assert.equal(await page.locator('[data-outfit]:disabled').count(), 0);
-    assert.equal(await page.locator('#shirt-row').isHidden(), true, 'shirt colours only while the shirt is worn');
+    assert.equal(await page.locator('[data-shirt=none]').getAttribute('aria-pressed'), 'true', 'no shirt by default');
     await page.locator('[data-outfit=flower]').click();
-    assert.equal(await page.locator('#wardrobe-dialog').evaluate(d => d.open), false, 'choosing a look closes the wardrobe');
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-phaser-matter-v1')).outfit), 'flower');
-    await page.locator('#wardrobe').click(); await page.locator('[data-outfit=sailor]').click(); await page.clock.runFor(20);
+    assert.equal(await page.locator('#wardrobe-dialog').evaluate(d => d.open), true, 'an accessory keeps the wardrobe open to combine');
+    await page.locator('[data-shirt=sky]').click();
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-phaser-matter-v1')));
+    assert.equal(saved.outfit, 'flower'); assert.equal(saved.shirt, 'sky', 'flower and shirt together');
+    await page.locator('[data-shirt=none]').click();
+    await page.locator('[data-outfit=sailor]').click(); await page.locator('#wardrobe-dialog .close').click(); await page.clock.runFor(20);
     assert.equal(await page.locator('#stage-best').textContent(), 'Rekord: 789 Punkte');
     await page.locator('#stages').selectOption('0');
     assert.equal(await page.locator('#stage-best').textContent(), 'Rekord: 123 Punkte');

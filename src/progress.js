@@ -2,7 +2,8 @@ import { STAGES } from './stages.js';
 import { localeFrom } from './i18n.js';
 import { PLUMAGES, BEAKS, SHIRTS } from './looks.js';
 /** Pip's looks in the wardrobe, all available from the start. */
-export const OUTFITS = ['classic', 'flower', 'sailor', 'hawaii', 'snorkel'];
+// Head accessories (saved as `outfit`); the Hawaiian shirt is separate (`shirt`: a colour or 'none') and combines with any of them.
+export const OUTFITS = ['classic', 'flower', 'sailor', 'snorkel'];
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const attemptIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
 // Saved stage numbers by save layout: where each old stage index sits today.
@@ -19,14 +20,17 @@ export function readProgress(raw) {
   if (saved.layout !== LAYOUT) saved = { ...saved, bests: remapBests(saved.layout, saved.bests), difficultyBests: Object.fromEntries(Object.entries(saved.difficultyBests || {}).map(([id, list]) => [id, remapBests(saved.layout, list)])) };
   // Swapping storm and reef: whoever had reached the storm (the old fifth) keeps every stage open.
   // completed counts finished stages from the start, so it stays as it was; at worst the storm counts as done.
-  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', shirt: 'coral', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
+  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', shirt: 'none', wardrobe: 2, music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))),
     // Journey points carried into each stage, so leaving for the menu or closing the app keeps them.
     carry: saved.layout === LAYOUT ? STAGES.map((_, i) => count(saved.carry?.[i])) : STAGES.map(() => 0) };
   for (const key of ['music', 'sound', 'haptics', 'tutorial']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
   if (Object.hasOwn(PLUMAGES, saved.plumage)) prefs.plumage = saved.plumage;
   if (Object.hasOwn(BEAKS, saved.beak)) prefs.beak = saved.beak;
-  if (Object.hasOwn(SHIRTS, saved.shirt)) prefs.shirt = saved.shirt;
+  // Wardrobe 1 kept a shirt colour even when the shirt was not worn; the shirt was the outfit 'hawaii'.
+  const colour = Object.hasOwn(SHIRTS, saved.shirt) ? saved.shirt : null;
+  if (saved.wardrobe === 2) prefs.shirt = colour || 'none';
+  else if (saved.outfit === 'hawaii') prefs.shirt = colour || 'coral';
   if (OUTFITS.includes(saved.outfit)) prefs.outfit = saved.outfit;
   return prefs;
 }

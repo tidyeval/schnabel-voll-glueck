@@ -25,7 +25,7 @@ export const plumageOf = id => {
 };
 export const beakOf = id => BEAKS[id] || BEAKS.orange;
 
-// The Hawaiian shirt (outfit 'hawaii'): its colour is chosen like feathers and beak.
+// The Hawaiian shirt: worn with any head accessory; its colour (or 'none') is chosen like feathers and beak.
 // `print` is the hibiscus flower, `leaf` the leaves between them.
 export const SHIRTS = {
   coral: { swatch: '#ef8a6f', cloth: ['#f49a7f', '#dc7458'], print: '#fff1c9', leaf: '#5f9e6e', edge: '#b85d47' },
