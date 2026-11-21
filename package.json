@@ -21,7 +21,7 @@
     "@capacitor/core": "^8.5.1",
     "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.1",
-    "@tidyeval/game-platform": "file:vendor/tidyeval-game-platform-0.3.5.tgz",
+    "@tidyeval/game-platform": "file:vendor/tidyeval-game-platform-0.3.6.tgz",
     "phaser": "4.2.1"
   },
   "devDependencies": {
