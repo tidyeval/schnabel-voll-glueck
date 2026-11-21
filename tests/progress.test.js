@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readProgress, recordAttempt, applyAttempt, newOutfits } from '../src/progress.js';
+import { readProgress, recordAttempt, applyAttempt } from '../src/progress.js';
 import { createGame } from '../src/game.js';
 test('old/invalid saves retain valid possessions and never unlock invalid stages', () => {
   for (const raw of [undefined, 'bad', 'null', '7', '[]', '{"completed":-1,"bests":[null,-4,"7"]}']) {
@@ -54,11 +54,9 @@ test('saves from before the storm moved ahead of the reef keep each record on it
   assert.deepEqual(prefs.bests, [1, 2, 3, 77, 40], 'an unsaved storm run from the old layout lands on the storm');
 });
 
-test('collecting fish announces each outfit once, at the round that crosses its threshold', () => {
-  assert.deepEqual(newOutfits(20, 30), ['flower']);
-  assert.deepEqual(newOutfits(30, 40), []);
-  assert.deepEqual(newOutfits(10, 90), ['flower', 'sailor']);
-  assert.deepEqual(newOutfits(80, 85), []);
+test('every outfit is available from the start, whatever the fish count; unknown outfits fall back to classic', () => {
+  for (const outfit of ['flower', 'sailor', 'hawaii']) assert.equal(readProgress(JSON.stringify({ totalFish: 0, outfit })).outfit, outfit);
+  assert.equal(readProgress(JSON.stringify({ outfit: 'tuxedo' })).outfit, 'classic');
 });
 
 test('Pip keeps the saved feather and beak colours; unknown colours fall back to white and orange', () => {
@@ -78,10 +76,7 @@ test('a finished stage hands its points to the next one, kept across saves', () 
   assert.equal(prefs.carry.length, 5, 'the finale hands nothing on');
   assert.deepEqual(readProgress(JSON.stringify(prefs)).carry, [0, 0, 1500, 0, 0]);
 });
-test('the Hawaiian shirt unlocks at 150 fish and keeps its saved colour; unknown colours fall back to coral', () => {
-  assert.deepEqual(newOutfits(100, 160), ['hawaii']);
-  assert.equal(readProgress(JSON.stringify({ totalFish: 200, outfit: 'hawaii', shirt: 'mint' })).shirt, 'mint');
-  assert.equal(readProgress(JSON.stringify({ totalFish: 200, outfit: 'hawaii' })).outfit, 'hawaii');
-  assert.equal(readProgress(JSON.stringify({ totalFish: 100, outfit: 'hawaii' })).outfit, 'classic', 'not yet unlocked');
+test('the Hawaiian shirt keeps its saved colour; unknown colours fall back to coral', () => {
+  assert.equal(readProgress(JSON.stringify({ outfit: 'hawaii', shirt: 'mint' })).shirt, 'mint');
   assert.equal(readProgress(JSON.stringify({ shirt: 'plaid' })).shirt, 'coral');
 });

@@ -1,9 +1,8 @@
 import { STAGES } from './stages.js';
 import { localeFrom } from './i18n.js';
 import { PLUMAGES, BEAKS, SHIRTS } from './looks.js';
-export const unlocks = { classic: 0, flower: 25, sailor: 80, hawaii: 150 };
-/** Outfits a player unlocked by going from `before` to `after` collected fish. */
-export const newOutfits = (before, after) => Object.keys(unlocks).filter(outfit => before < unlocks[outfit] && after >= unlocks[outfit]);
+/** Pip's looks in the wardrobe, all available from the start. */
+export const OUTFITS = ['classic', 'flower', 'sailor', 'hawaii'];
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const attemptIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
 // Saved stage numbers by save layout: where each old stage index sits today.
@@ -28,7 +27,7 @@ export function readProgress(raw) {
   if (Object.hasOwn(PLUMAGES, saved.plumage)) prefs.plumage = saved.plumage;
   if (Object.hasOwn(BEAKS, saved.beak)) prefs.beak = saved.beak;
   if (Object.hasOwn(SHIRTS, saved.shirt)) prefs.shirt = saved.shirt;
-  if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;
+  if (OUTFITS.includes(saved.outfit)) prefs.outfit = saved.outfit;
   return prefs;
 }
 export function applyAttempt(prefs, attempt) {
