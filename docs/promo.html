@@ -1,0 +1,219 @@
+<!doctype html>
+<!-- Dev-server page only (vite build has index.html as its single input): http://<dev-host>/docs/promo.html
+     Storyboard for the promo video of the new version: not the video itself, not game code. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Promo Storyboard</title>
+<style>
+  :root{color-scheme:light}
+  body{margin:0;background:#f6f3ea;color:#214d4d;font:15px/1.45 ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif}
+  main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:32px;letter-spacing:-1px;margin:0 0 4px}
+  .badge{display:inline-block;background:#e78c57;color:#fffaf0;font-weight:800;font-size:12px;letter-spacing:.08em;border-radius:99px;padding:3px 10px;vertical-align:middle;margin-left:8px}
+  p.lead{margin:0 0 18px;color:#62827a;max-width:780px}
+  .shots{display:grid;gap:26px 18px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+  .shot canvas{display:block;width:100%;max-width:270px;aspect-ratio:9/16;height:auto;border-radius:24px;border:6px solid #23403d;box-shadow:0 10px 30px #123d3b33;background:#2f7176}
+  .shot h3{margin:10px 0 2px;font-size:15px}
+  .shot .time{color:#b78250;font-weight:800;font-size:12px}
+  .shot .say{font-weight:800;margin:4px 0}
+  .shot p{margin:3px 0 0;font-size:13px;color:#5f7a70}
+  .tag{display:inline-block;margin-top:6px;background:#dff0e6;color:#2f6b55;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700}
+  .rec{background:#fff4d8;border:1px solid #efd9a0;border-radius:12px;padding:10px 14px;margin:26px 0 0;max-width:780px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Promo „Neue Version“<span class="badge">STORYBOARD</span></h1>
+  <p class="lead">Entwurf für ein ca. 30 Sekunden langes Hochkant-Video (9:16) für Reels, Shorts und den Status. Die Bilder sind mit der echten Spielgrafik gezeichnet. Jede Szene läuft hier in Schleife. Ton: die Menümusik, kurze Texte im Bild, keine Sprecherstimme nötig.</p>
+  <div class="shots" id="shots"></div>
+  <div class="rec"><b>Dramaturgie:</b> Einstieg mit dem Sturm, der die meiste Action bietet. Danach in schneller Folge, was neu ist: Karte, Fischarten, Formationen, Weißer Hai, Garderobe, Punkte und Fischzähler. Am Ende 3 Sekunden Titel mit Link. Ein Schnitt passt auf einen Takt der Musik (120 bpm, also 2 Sekunden pro Takt).</div>
+</main>
+<script type="module">
+import { pelican, fish, drawWorld } from '/src/art.js';
+import { drawMap, areaPoint } from '/src/map.js';
+import { drawSpecies } from '/src/fishes.js';
+import { FISH_SPECIES } from '/src/species.js';
+import { PLUMAGES, BEAKS } from '/src/looks.js';
+import { createGame, step, press } from '/src/game.js';
+import { STAGES } from '/src/stages.js';
+
+const W = 540, H = 960, K = W / 480, FONT = "ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif";
+const look = { outfit: 'classic', plumage: 'white', beak: 'orange' };
+const ease = k => k * k * (3 - 2 * k), clamp01 = k => Math.max(0, Math.min(1, k));
+
+function pill(c, text, y, { size = 38, bg = '#fffaf0ee', fg = '#214d4d', alpha = 1 } = {}) {
+  c.save(); c.globalAlpha = alpha; c.font = `900 ${size}px ${FONT}`; c.textAlign = 'center';
+  const w = c.measureText(text).width + size * 1.2;
+  c.beginPath(); c.roundRect(W / 2 - w / 2, y - size * .95, w, size * 1.5, size * .75); c.fillStyle = bg; c.fill();
+  c.fillStyle = fg; c.fillText(text, W / 2, y + size * .2); c.restore();
+}
+const pop = t => clamp01(t / .35); // captions slide in during the first third of a second
+
+// A world from the real game, drawn at 9:16. `setup` fills it; no encounters spawn on their own.
+function world(stage, setup) { const g = createGame(() => .5, stage); g.nextEncounter = Infinity; g.items = []; setup?.(g); return g; }
+function drawGame(c, g, t, lookNow = look) { c.save(); c.scale(K, K); drawWorld(c, g, 'play', t, lookNow, [], false); c.restore(); }
+
+// A short live run: the real game steps on, a simple autopilot dives for fish and comes up for air.
+function liveRun(stage, extra) {
+  let g = null, last = false;
+  const reset = () => { g = createGame(Math.random, stage); extra?.(g); last = false; };
+  reset();
+  return (c, t, dt) => {
+    if (g.ended || g.time > 40) reset();
+    const p = g.player, next = g.items.filter(i => i.kind === 'fish' && i.x > p.x).sort((a, b) => a.x - b.x)[0];
+    const sharkNear = g.items.some(i => (i.kind === 'shark' || i.kind === 'whiteshark') && Math.abs(i.x - p.x) < 220);
+    const hold = !sharkNear && p.breath > 3 && next && next.x < p.x + 170 && next.y > p.y + p.vy * .1;
+    if (hold && !last) press(g); last = hold;
+    step(g, Math.min(dt, 1 / 30), hold);
+    drawGame(c, g, t);
+    return g;
+  };
+}
+
+const storm = liveRun(3);
+const reef = liveRun(4, g => { g.score = 4820; });
+let reefScoreStart = 4820;
+
+const SHOTS = [
+  { d: 3.5, title: 'Hook: Sturmkap', say: '„Neu: das Sturmkap“',
+    what: 'Gewitter, Brecher, Blitze: Pip taucht durch die Wellen und reitet einen Brecher hoch in die Luft. Das Spiel läuft hier live.',
+    tag: 'Neue Etappe 4: Sturmkap',
+    draw(c, t, dt) { storm(c, t, dt); pill(c, 'NEU: Das Sturmkap ⚡', 130, { alpha: pop(t) }); } },
+  { d: 4, title: 'Die Reise', say: '„5 Bereiche. Eine Reise.“',
+    what: 'Die neue Seekarte: Pip fliegt von der Lagune zum Sturmkap. Geschaffte Bereiche tragen Häkchen und Rekord, das Riff liegt noch im Nebel.',
+    tag: 'Reisekarte + Flug vor jeder Etappe',
+    draw(c, t) {
+      const from = areaPoint('lagoon', W, H), to = areaPoint('storm', W, H), k = ease(clamp01((t - .6) / 2.2));
+      const areas = STAGES.map((s, i) => ({ id: s.id, name: s.names.de, done: i < 3, current: i === 3, locked: i > 3, best: ['1.240', '1.870', '2.310', '', ''][i] }));
+      drawMap(c, { width: W, height: H, areas, pip: { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k - Math.sin(k * Math.PI) * 60 }, reached: k < 1 ? 2 : 3, t, look });
+      pill(c, '5 Bereiche. Eine Reise.', 90, { alpha: pop(t) });
+    } },
+  { d: 4, title: 'Fischarten', say: '„Jeder Bereich hat seine Fische“',
+    what: 'Sardine, Makrele, Kaiserfisch, Fliegender Fisch, Clownfisch, Laternenfisch, Doktorfisch erscheinen nacheinander mit ihren Punkten. Der seltene Doktorfisch glänzt.',
+    tag: '7 Fischarten mit eigenen Punkten und eigenem Ausweichen',
+    draw(c, t) {
+      const g = this.g ||= world(2);
+      drawGame(c, g, t);
+      const list = ['sardine', 'mackerel', 'angelfish', 'flyingfish', 'clownfish', 'lanternfish', 'tang'];
+      list.forEach((id, i) => {
+        const k = clamp01((t - .3 - i * .38) / .3); if (!k) return;
+        const x = i % 2 ? 360 : 180, y = 300 + i * 84;
+        c.save(); c.globalAlpha = k; drawSpecies(c, id, x, y, 2.1 * (.6 + .4 * k), t + i);
+        const rare = id === 'tang';
+        c.font = `900 ${rare ? 30 : 26}px ${FONT}`; c.textAlign = 'center'; c.fillStyle = rare ? '#ffe27a' : '#fffaf0';
+        c.fillText(`+${FISH_SPECIES[id].points}${rare ? ' · selten!' : ''}`, x + (i % 2 ? -150 : 150), y + 10); c.restore();
+      });
+      pill(c, 'Jeder Bereich, eigene Fische', 130, { alpha: pop(t), size: 34 });
+    } },
+  { d: 4, title: 'Formationen', say: '„Nie zweimal gleich“',
+    what: 'Pip taucht hintereinander durch eine Welle, eine Treppe und einen wogenden Schwarm. Die Formation wird jede Runde neu gewürfelt.',
+    tag: 'Fischformationen (gerade im Bau)',
+    draw(c, t) {
+      const g = this.g ||= world(1), part = Math.min(2, Math.floor(t / (this.d / 3))), local = t - part * this.d / 3;
+      const shapes = [k => 450 + Math.abs(Math.sin(k * Math.PI * 2)) * 90, k => 425 + (k < .3 ? 0 : k < .65 ? 1 : 2) * 65, null];
+      const scroll = local * 300;
+      g.items = part < 2 ? Array.from({ length: 11 }, (_, i) => ({ kind: 'fish', x: 300 + i * 64 - scroll, y: shapes[part](i / 10), golden: false }))
+        : Array.from({ length: 9 }, (_, i) => { const a = i * 2.4, r = Math.sqrt((i + .5) / 9); return { kind: 'fish', x: 420 + Math.cos(a) * r * 120 - scroll, y: 490 + Math.sin(a) * r * 48 + Math.sin(t * 2.6) * 38, golden: false }; });
+      g.items = g.items.filter(f => f.x > 150);
+      const p = g.player, ahead = g.items.filter(f => f.x > p.x).sort((a, b) => a.x - b.x)[0];
+      p.y += ((ahead ? ahead.y : 300) - p.y) * .12; p.wet = p.y > 360; g.distance = t * 300;
+      drawGame(c, g, t);
+      pill(c, ['Welle', 'Treppe', 'Schwarm'][part], 230, { size: 30, bg: '#214d4dcc', fg: '#fff6d8' });
+      pill(c, 'Nie zweimal gleich', 130, { alpha: pop(t) });
+    } },
+  { d: 4.5, title: 'Der Weiße Hai', say: '„Spring raus – der Hai fegt vorbei!“',
+    what: 'Ein großer Weißer folgt Pip. Pip springt aus dem Wasser, der Hai nimmt Fahrt auf, fegt quer durchs Bild und verscheucht alle Tiere.',
+    tag: 'Neuer Weißer Hai: springen oder im Wasser davonsprinten',
+    draw(c, t) {
+      const g = this.g ||= world(1, g => {
+        g.items = [...Array.from({ length: 6 }, (_, i) => ({ kind: 'fish', x: 220 + i * 45, y: 470 + (i % 3) * 40, golden: false, home: 470 + (i % 3) * 40 })),
+          { kind: 'turtle', x: 330, y: 600, baseY: 600, lane: 'lower', home: 600 }, { kind: 'whiteshark', x: -150, y: 520, phase: 'stalk', timer: 0 }];
+      });
+      const shark = g.items.find(i => i.kind === 'whiteshark'), p = g.player;
+      // Pip: swims, jumps out at 1.2 s, glides back in at 3.6 s.
+      const air = clamp01((t - 1.2) / 2.4);
+      p.y = t < 1.2 ? 470 : 470 - Math.sin(air * Math.PI) * 300; p.wet = p.y > 360; p.vy = Math.cos(air * Math.PI) * -400;
+      shark.phase = t < 1.5 ? 'stalk' : 'sweep'; shark.timer = Math.max(0, t - 1.5);
+      shark.x = t < 1.5 ? -150 + t * 60 : -60 + Math.pow(t - 1.5, 1.6) * 330;
+      for (const it of g.items) if (it !== shark && it.home !== undefined) {
+        const gap = it.x - shark.x; it.x = it.x0 ??= it.x;
+        if (t > 1.5 && gap < 150 && gap > -400) { it.fleeAt ??= t; } else if (t < 1.5) it.fleeAt = undefined;
+        if (it.fleeAt) { const k = t - it.fleeAt; it.x = it.x0 + k * 160; it.y = it.home + (it.home < 520 ? -1 : 1) * Math.min(120, k * 200); }
+        else it.y = it.home;
+      }
+      g.distance = t * 200;
+      drawGame(c, g, t);
+      pill(c, t < 1.3 ? 'Ein Weißer Hai!' : 'Raus springen!', 130, { alpha: pop(t) });
+      if (t > 2) pill(c, 'Alle weg! 💨', 820, { size: 30, alpha: clamp01((t - 2) * 3) });
+    } },
+  { d: 4, title: 'Garderobe', say: '„Dein Pip, deine Farben“',
+    what: 'Pip probiert Outfits (klassisch, Blume, Matrosenmütze) und wechselt Federkleid und Schnabelfarbe. Darunter die Farbfelder aus der Garderobe.',
+    tag: 'Garderobe: Outfits + Federkleid- und Schnabelfarben',
+    draw(c, t) {
+      const bg = c.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#fbf3df'); bg.addColorStop(1, '#f1d9b8'); c.fillStyle = bg; c.fillRect(0, 0, W, H);
+      const combos = [['classic', 'white', 'orange'], ['flower', 'rose', 'pink'], ['sailor', 'sun', 'coral'], ['sailor', 'lilac', 'lilac']];
+      const i = Math.min(combos.length - 1, Math.floor(t / (this.d / combos.length))), [outfit, plumage, beak] = combos[i];
+      const hop = Math.max(0, Math.sin((t % 1) * Math.PI * 2)) * 14;
+      pelican(c, { x: W / 2 - 10, y: 520 - hop, scale: 2.2, time: t, happy: true, outfit, plumage, beak });
+      const row = (table, active, y) => Object.keys(table).forEach((id, k, list) => {
+        const x = W / 2 + (k - (list.length - 1) / 2) * 74; c.beginPath(); c.arc(x, y, 26, 0, Math.PI * 2);
+        c.fillStyle = table[id].swatch; c.fill();
+        c.lineWidth = id === active ? 6 : 2; c.strokeStyle = id === active ? '#e78c57' : '#21404033'; c.stroke();
+      });
+      row(PLUMAGES, plumage, 790); row(BEAKS, beak, 870);
+      pill(c, 'Dein Pip, deine Farben', 130, { alpha: pop(t) });
+    } },
+  { d: 3.5, title: 'Punkte reisen mit', say: '„Jeder Fisch zählt“',
+    what: 'Nachts am Riff: Die Punkte aus den vorigen Etappen sind schon da (4.820), daneben zählt der neue Fischzähler mit.',
+    tag: 'Fischzähler im HUD + Punkte über die ganze Reise',
+    draw(c, t, dt) {
+      if (t < dt * 1.5) reefScoreStart = 4820;
+      const g = reef(c, t, dt);
+      c.save(); c.beginPath(); c.roundRect(24, 24, 300, 92, 24); c.fillStyle = '#fffaf0e6'; c.fill();
+      c.fillStyle = '#214d4d'; c.font = `900 50px ${FONT}`; c.textAlign = 'left'; c.fillText((g.score || reefScoreStart).toLocaleString('de-DE'), 46, 86);
+      c.font = `800 26px ${FONT}`; c.fillStyle = '#5f7a70'; c.fillText(`🐟 ${g.fish}`, 220, 84); c.restore();
+      pill(c, 'Punkte reisen mit', 210, { alpha: pop(t) });
+    } },
+  { d: 3, title: 'Abspann', say: '„Schnabelglück – jetzt kostenlos spielen“',
+    what: 'Pip mit Matrosenmütze vor der Seekarte, Titel und Link. Mindestens 3 Sekunden stehen lassen.',
+    tag: 'Aufruf + Link',
+    draw(c, t) {
+      const areas = STAGES.map((s, i) => ({ id: s.id, name: s.names.de, done: true, current: false, locked: false, best: '' }));
+      drawMap(c, { width: W, height: H, areas, pip: { x: -999, y: -999 }, reached: 4, t, look });
+      c.fillStyle = '#123d3be0'; c.fillRect(0, 0, W, H);
+      pelican(c, { x: W / 2 - 10, y: 470 + Math.sin(t * 3) * 8, scale: 1.9, time: t, happy: true, outfit: 'sailor', plumage: 'white', beak: 'orange' });
+      c.textAlign = 'center'; c.fillStyle = '#fff6d8'; c.font = `900 56px ${FONT}`; c.fillText('Schnabelglück', W / 2, 220);
+      c.font = `800 28px ${FONT}`; c.fillText('Jetzt kostenlos im Browser', W / 2, 700);
+      c.font = `700 20px ${FONT}`; c.fillStyle = '#bfe3da'; c.fillText('tidyeval.github.io/schnabel-voll-glueck', W / 2, 745);
+    } },
+];
+
+const host = document.getElementById('shots');
+let start = 0;
+const fmt = s => `0:${s.toFixed(1).padStart(4, '0')}`.replace('.0', '');
+const cards = SHOTS.map((shot, i) => {
+  const el = document.createElement('div'); el.className = 'shot';
+  const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
+  el.append(canvas);
+  el.insertAdjacentHTML('beforeend', `<h3>${i + 1} · ${shot.title}</h3><div class="time">${fmt(start)}–${fmt(start + shot.d)} · ${shot.d} s</div><div class="say">${shot.say}</div><p>${shot.what}</p><span class="tag">${shot.tag}</span>`);
+  host.append(el); start += shot.d;
+  return { shot, c: canvas.getContext('2d') };
+});
+
+let before = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - before) / 1000); before = now;
+  for (const { shot, c } of cards) {
+    const t = (now / 1000) % shot.d;
+    c.save();
+    try { shot.draw(c, t, dt); } catch (error) { c.restore(); c.save(); c.fillStyle = '#7a2f2f'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = `24px ${FONT}`; c.fillText(String(error.message).slice(0, 40), 20, 60); console.error(error); }
+    c.restore();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
