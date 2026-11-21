@@ -6,14 +6,20 @@ export const unlocks = { classic: 0, flower: 25, sailor: 80 };
 export const newOutfits = (before, after) => Object.keys(unlocks).filter(outfit => before < unlocks[outfit] && after >= unlocks[outfit]);
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const attemptIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
-// Saves from before the lagoon have three stages: bay, harbor, reef. The reef is now the fourth.
-const LAYOUT = 4, LEGACY_STAGES = [0, 1, 3];
-const legacyBests = list => Array.isArray(list) ? STAGES.map((_, i) => list[LEGACY_STAGES.indexOf(i)]) : list;
+// Saved stage numbers by save layout: where each old stage index sits today.
+// No layout: bay, harbor, reef (before the lagoon). Layout 4: bay, harbor, lagoon, reef, storm.
+// Layout 5 (now): bay, harbor, lagoon, storm, reef: the storm comes before the reef finale.
+const LAYOUT = 5, OLD_STAGES = { 4: [0, 1, 2, 4, 3], legacy: [0, 1, 4] };
+const stageMap = layout => layout === LAYOUT ? null : OLD_STAGES[layout] || OLD_STAGES.legacy;
+const remapStage = (layout, stage) => { const map = stageMap(layout); return map ? map[stage] : stage; };
+const remapBests = (layout, list) => { const map = stageMap(layout); return map && Array.isArray(list) ? STAGES.map((_, i) => list[map.indexOf(i)]) : list; };
 export function readProgress(raw) {
   let saved;
   try { saved = JSON.parse(raw); } catch { /* Old or unavailable storage starts fresh. */ }
   saved = saved && typeof saved === 'object' ? saved : {};
-  if (saved.layout !== LAYOUT) saved = { ...saved, bests: legacyBests(saved.bests), difficultyBests: Object.fromEntries(Object.entries(saved.difficultyBests || {}).map(([id, list]) => [id, legacyBests(list)])) };
+  if (saved.layout !== LAYOUT) saved = { ...saved, bests: remapBests(saved.layout, saved.bests), difficultyBests: Object.fromEntries(Object.entries(saved.difficultyBests || {}).map(([id, list]) => [id, remapBests(saved.layout, list)])) };
+  // Swapping storm and reef: whoever had reached the storm (the old fifth) keeps every stage open.
+  // completed counts finished stages from the start, so it stays as it was; at worst the storm counts as done.
   const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))) };
   for (const key of ['music', 'sound', 'haptics', 'tutorial']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
@@ -24,7 +30,7 @@ export function readProgress(raw) {
 }
 export function applyAttempt(prefs, attempt) {
   if (!attempt || typeof attempt.id !== 'string' || !attempt.id || prefs.attemptIds.includes(attempt.id)) return false;
-  const raw = attempt.layout === LAYOUT ? attempt.stage : LEGACY_STAGES[attempt.stage];
+  const raw = remapStage(attempt.layout, attempt.stage);
   const stage = Number.isInteger(raw) && raw >= 0 && raw < STAGES.length ? raw : null;
   if (stage === null) return false;
   prefs.attemptIds.push(attempt.id);

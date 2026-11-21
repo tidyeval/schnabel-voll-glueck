@@ -1,5 +1,5 @@
 // The end-of-round press photo: a proud Pip, drawn as in the game, cheers next to a certificate
-// with the score and gives a wing's thumbs up. Drawn into a 4:5 Polaroid that can be shared as an image.
+// with the score. Drawn into a 4:5 Polaroid that can be shared as an image.
 import { createGame } from './game.js';
 import { drawWorld, pelican } from './art.js';
 import { star } from './cute.js';
@@ -54,25 +54,12 @@ function certificate(c, card) {
   c.restore();
 }
 
-// A wing tip curled into a fist with the thumb feather pointing up.
-function thumbsUp(c) {
-  c.fillStyle = '#fffbed'; c.strokeStyle = '#87957b'; c.lineWidth = 2.2;
-  c.beginPath(); c.ellipse(0, 0, 24, 20, -.2, 0, TAU); c.fill(); c.stroke();
-  c.beginPath(); c.moveTo(-6, -14); c.quadraticCurveTo(-12, -46, 2, -50); c.quadraticCurveTo(14, -50, 10, -14); c.closePath(); c.fill(); c.stroke();
-  c.strokeStyle = '#b7cbb2'; c.lineWidth = 1.6;
-  for (const y of [-2, 7]) { c.beginPath(); c.moveTo(-18, y); c.quadraticCurveTo(0, y + 4, 18, y - 2); c.stroke(); }
-}
-
-// Pip as he looks in the game, in profile with his chest out and a cheeky wink toward us,
-// both wings raised in a cheer and one wing tip giving a thumbs up.
+// Pip as he looks in the game (in the player's look), in profile with his chest out, a cheeky wink
+// toward us and one wing raised in a cheer.
 const PIP = { x: 470, y: 700, scale: 3.9 };
 function proudPip(c, t, look = {}) {
   pelican(c, { x: PIP.x, y: PIP.y, scale: PIP.scale, time: t, tilt: -.12, happy: true, cargo: 6, ...look,
     expression: { cheer: true, wink: 1, look: -.08 } });
-  // Thumbs up at the tip of the near wing (wing tip in Pip's frame, rotated by his tilt).
-  const tip = { x: -64, y: -70 }, a = -.12;
-  const x = PIP.x + (tip.x * Math.cos(a) - tip.y * Math.sin(a)) * PIP.scale, y = PIP.y + (tip.x * Math.sin(a) + tip.y * Math.cos(a)) * PIP.scale;
-  c.save(); c.translate(x, y); c.rotate(-.25); c.scale(2.1, 2.1); thumbsUp(c); c.restore();
 }
 
 /** Draws the photo; `t` twinkles the stars around Pip. */

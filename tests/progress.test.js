@@ -37,12 +37,21 @@ test('attempt ledgers merge distinct attempts and ignore repeated identifiers', 
 
 test('saves from before the lagoon keep their reef record on the reef', () => {
   const prefs = readProgress(JSON.stringify({ completed: 3, bests: [10, 20, 30], totalFish: 5 }));
-  assert.deepEqual(prefs.bests, [10, 20, 0, 30, 0]); assert.equal(prefs.completed, 3);
+  assert.deepEqual(prefs.bests, [10, 20, 0, 0, 30]); assert.equal(prefs.completed, 3);
   assert.deepEqual(readProgress(JSON.stringify(prefs)), prefs);
   assert.equal(applyAttempt(prefs, { id: 'old-reef', stage: 2, fish: 1, score: 99, endReason: 'energy' }), true);
-  assert.deepEqual(prefs.bests, [10, 20, 0, 99, 0]);
+  assert.deepEqual(prefs.bests, [10, 20, 0, 0, 99]);
   assert.equal(applyAttempt(prefs, { id: 'new-lagoon', layout: 4, stage: 2, fish: 1, score: 77, endReason: 'complete' }), true);
-  assert.deepEqual(prefs.bests, [10, 20, 77, 99, 0]); assert.equal(prefs.completed, 3);
+  assert.deepEqual(prefs.bests, [10, 20, 77, 0, 99]); assert.equal(prefs.completed, 3);
+});
+
+test('saves from before the storm moved ahead of the reef keep each record on its own stage', () => {
+  // Layout 4 order: bay, harbor, lagoon, reef, storm. Now: bay, harbor, lagoon, storm, reef.
+  const prefs = readProgress(JSON.stringify({ layout: 4, completed: 4, bests: [1, 2, 3, 40, 50], totalFish: 9 }));
+  assert.deepEqual(prefs.bests, [1, 2, 3, 50, 40]); assert.equal(prefs.completed, 4, 'everything that was open stays open');
+  assert.deepEqual(readProgress(JSON.stringify(prefs)), prefs);
+  assert.equal(applyAttempt(prefs, { id: 'storm-run', layout: 4, stage: 4, fish: 1, score: 77, endReason: 'energy' }), true);
+  assert.deepEqual(prefs.bests, [1, 2, 3, 77, 40], 'an unsaved storm run from the old layout lands on the storm');
 });
 
 test('collecting fish announces each outfit once, at the round that crosses its threshold', () => {

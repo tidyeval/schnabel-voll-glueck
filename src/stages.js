@@ -48,6 +48,21 @@ export const STAGES = [
     },
   },
   {
+    id: 'storm',
+    names: { de: 'Sturm', en: 'Storm', es: 'Tormenta' },
+    // Rain, lightning and big breakers; surfacing on a crest throws Pip high (see STORM in game.js).
+    startElapsed: 120, sharkWarning: .95, night: false, storm: true,
+    encounters: ['driftwood', 'shark', 'turtle-turtle-gull', 'jelly-shark', 'shark-shark', 'whirlpool', 'turtle-turtle-gull', 'driftwood-jelly-shark', 'shark-shark', 'jelly-shark', 'driftwood-shark', 'shark-shark'],
+    pairPatterns: { 4: 'staggered', 8: 'parallel', 11: 'staggered' },
+    residents: ['starfish', 'bottle', 'octopus'],
+    setPieces: { calm: ['baitball', 'current'], shows: ['whale'], count: 1 },
+    theme: {
+      sky: [[0, '#5d6878'], [.55, '#8590a0'], [1, '#aab3bc']], glow: '#d8e2ea44', far: '#5f6f74', tint: 'rgba(60,72,92,.38)',
+      water: ['#4f8a8e', '#173843'], surface: '#dfe8ee33', rays: '#dce8f0', rayAlpha: .05, mote: '#dfeef535',
+      seabed: '#3f6a6c', grass: ['#4f857a', '#2f6060'], rocks: '#2b4c58', swell: 3,
+    },
+  },
+  {
     id: 'reef',
     names: { de: 'Korallenriff', en: 'Coral Reef', es: 'Arrecife de coral' },
     startElapsed: 140, sharkWarning: .68, night: true,
@@ -60,21 +75,6 @@ export const STAGES = [
       sky: [[0, '#151b47'], [.5, '#3a3672'], [.85, '#8b5f8c'], [1, '#e09a86']], glow: '#ff9f8a44', far: '#2b2d5e', tint: 'rgba(24,30,78,.62)',
       water: ['#3b8fa6', '#10294a'], surface: '#cfe0ff3a', rays: '#bcd8ff', rayAlpha: .07, mote: '#bfe9ff30',
       seabed: '#2f5f73', grass: ['#3f8a86', '#235a66'], rocks: '#173a56', swell: 1.1,
-    },
-  },
-  {
-    id: 'storm',
-    names: { de: 'Sturm', en: 'Storm', es: 'Tormenta' },
-    // Rain, lightning and big breakers; surfacing on a crest throws Pip high (see STORM in game.js).
-    startElapsed: 185, sharkWarning: .95, night: false, storm: true,
-    encounters: ['driftwood', 'shark', 'turtle-turtle-gull', 'jelly-shark', 'shark-shark', 'whirlpool', 'turtle-turtle-gull', 'driftwood-jelly-shark', 'shark-shark', 'puffer-shark', 'driftwood-shark', 'shark-shark'],
-    pairPatterns: { 4: 'staggered', 8: 'parallel', 11: 'staggered' },
-    residents: ['starfish', 'bottle', 'octopus'],
-    setPieces: { calm: ['baitball', 'current'], shows: ['whale'], count: 1 },
-    theme: {
-      sky: [[0, '#5d6878'], [.55, '#8590a0'], [1, '#aab3bc']], glow: '#d8e2ea44', far: '#5f6f74', tint: 'rgba(60,72,92,.38)',
-      water: ['#4f8a8e', '#173843'], surface: '#dfe8ee33', rays: '#dce8f0', rayAlpha: .05, mote: '#dfeef535',
-      seabed: '#3f6a6c', grass: ['#4f857a', '#2f6060'], rocks: '#2b4c58', swell: 3,
     },
   },
 ];
