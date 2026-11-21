@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createGame, step, paceAt, ENERGY } from '../src/game.js';
+import { createGame, step, paceAt, ENERGY, WORLD } from '../src/game.js';
 import { physicsSnapshot, releasePhysics } from '../src/physics.js';
 import { STAGES } from '../src/stages.js';
 
@@ -95,6 +95,13 @@ test('a great white that catches Pip at the same depth ends the run', () => {
   assert.equal(events.filter(e => e.kind === 'hurt').length, 1, 'one bite');
   assert.equal(g.ended, true, 'a bite ends the run');
   assert.equal(g.endReason, 'shark');
+});
+test('the great white cannot reach the fish trail just under the surface', () => {
+  const g = chase(), events = [];
+  // Pip swims along the fish trail for the whole chase.
+  for (let t = 0; t < 10 && !g.ended; t += 1 / 60) { g.player.y = WORLD.water + 45; g.player.vy = 0; g.player.wet = true; g.player.breath = 10; g.energy = Math.max(g.energy, 60); events.push(...step(g, 1 / 60, false)); }
+  assert.ok(events.some(e => e.kind === 'chase'));
+  assert.equal(events.some(e => e.kind === 'hurt'), false, 'no bite on the trail');
 });
 test('surfacing shakes off the great white without a bite', () => {
   const g = chase(), events = [];

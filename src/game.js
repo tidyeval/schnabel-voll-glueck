@@ -250,10 +250,11 @@ export const LEAP = { from: WORLD.water + 40, height: 125, duration: 1.1, at: 43
 export function leapY(t) { return LEAP.from - Math.sin(clamp(t / LEAP.duration, 0, 1) * Math.PI) * LEAP.height; }
 /*
  * Once per stage from the harbour on, a great white comes up from behind and follows Pip's depth.
- * It is slower than Pip: changing depth shakes it off, and it cannot follow him out of the water.
+ * It cannot follow him out of the water, and it never comes up into the shallow band just under
+ * the surface (CHASE.shallow) where the fish trail is: swimming up is always the escape.
  * A bite ends the run, like any shark.
  */
-export const CHASE = { from: 1, at: .55, closing: 42, follow: 1.3, duration: 7, giveUp: .7 };
+export const CHASE = { from: 1, at: .55, closing: 42, follow: 1.3, duration: 7, giveUp: .7, shallow: 90 };
 export const ENERGY = { fish: 4, golden: 12, grace: 2, drain: 3, flightDrain: 8, protection: 1.2, bounce: 10 };
 /*
  * Matter play: Pip has momentum and the camera follows him.
@@ -748,7 +749,7 @@ function updateWhiteShark(game, item, dt) {
   } else if (item.phase === 'chase') {
     item.dry = p.wet ? 0 : (item.dry || 0) + dt;
     item.x += CHASE.closing * dt * (item.x < p.x - 60 ? 1 : .2);
-    item.y += (clamp(p.y, WORLD.water + 60, 700) - item.y) * (1 - Math.exp(-dt * CHASE.follow));
+    item.y += (clamp(p.y, WORLD.water + CHASE.shallow, 700) - item.y) * (1 - Math.exp(-dt * CHASE.follow));
     if (item.hit || item.dry > CHASE.giveUp || item.timer > CHASE.duration) { item.phase = 'leave'; item.timer = 0; }
   } else {
     item.x -= 130 * dt; item.y += 35 * dt;
