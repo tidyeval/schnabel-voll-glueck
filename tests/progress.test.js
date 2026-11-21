@@ -78,3 +78,10 @@ test('a finished stage hands its points to the next one, kept across saves', () 
   assert.equal(prefs.carry.length, 5, 'the finale hands nothing on');
   assert.deepEqual(readProgress(JSON.stringify(prefs)).carry, [0, 0, 1500, 0, 0]);
 });
+test('the Hawaiian shirt unlocks at 150 fish and keeps its saved colour; unknown colours fall back to coral', () => {
+  assert.deepEqual(newOutfits(100, 160), ['hawaii']);
+  assert.equal(readProgress(JSON.stringify({ totalFish: 200, outfit: 'hawaii', shirt: 'mint' })).shirt, 'mint');
+  assert.equal(readProgress(JSON.stringify({ totalFish: 200, outfit: 'hawaii' })).outfit, 'hawaii');
+  assert.equal(readProgress(JSON.stringify({ totalFish: 100, outfit: 'hawaii' })).outfit, 'classic', 'not yet unlocked');
+  assert.equal(readProgress(JSON.stringify({ shirt: 'plaid' })).shirt, 'coral');
+});

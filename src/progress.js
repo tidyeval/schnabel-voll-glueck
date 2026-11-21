@@ -1,7 +1,7 @@
 import { STAGES } from './stages.js';
 import { localeFrom } from './i18n.js';
-import { PLUMAGES, BEAKS } from './looks.js';
-export const unlocks = { classic: 0, flower: 25, sailor: 80 };
+import { PLUMAGES, BEAKS, SHIRTS } from './looks.js';
+export const unlocks = { classic: 0, flower: 25, sailor: 80, hawaii: 150 };
 /** Outfits a player unlocked by going from `before` to `after` collected fish. */
 export const newOutfits = (before, after) => Object.keys(unlocks).filter(outfit => before < unlocks[outfit] && after >= unlocks[outfit]);
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
@@ -20,13 +20,14 @@ export function readProgress(raw) {
   if (saved.layout !== LAYOUT) saved = { ...saved, bests: remapBests(saved.layout, saved.bests), difficultyBests: Object.fromEntries(Object.entries(saved.difficultyBests || {}).map(([id, list]) => [id, remapBests(saved.layout, list)])) };
   // Swapping storm and reef: whoever had reached the storm (the old fifth) keeps every stage open.
   // completed counts finished stages from the start, so it stays as it was; at worst the storm counts as done.
-  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
+  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', shirt: 'coral', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))),
     // Journey points carried into each stage, so leaving for the menu or closing the app keeps them.
     carry: saved.layout === LAYOUT ? STAGES.map((_, i) => count(saved.carry?.[i])) : STAGES.map(() => 0) };
   for (const key of ['music', 'sound', 'haptics', 'tutorial']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
   if (Object.hasOwn(PLUMAGES, saved.plumage)) prefs.plumage = saved.plumage;
   if (Object.hasOwn(BEAKS, saved.beak)) prefs.beak = saved.beak;
+  if (Object.hasOwn(SHIRTS, saved.shirt)) prefs.shirt = saved.shirt;
   if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;
   return prefs;
 }

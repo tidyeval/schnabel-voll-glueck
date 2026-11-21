@@ -1,4 +1,4 @@
-import { plumageOf, beakOf } from './looks.js';
+import { plumageOf, beakOf, shirtOf } from './looks.js';
 import { drawSpecies } from './fishes.js';
 import { STAGES } from './stages.js';
 import { t as translate } from './i18n.js';
@@ -87,7 +87,7 @@ function pelicanWing(c, lift, fold, back, fe = plumageOf()) {
   c.restore();
 }
 export function pelican(c, {
-  x, y, scale, time: t, tilt = 0, outfit = 'classic', plumage = 'white', beak = 'orange', wet = false, happy = false,
+  x, y, scale, time: t, tilt = 0, outfit = 'classic', plumage = 'white', beak = 'orange', shirt = 'coral', wet = false, happy = false,
   gulp = 0, breach = 0, cargo = 0, breath = WORLD.breath, reducedMotion = false, expression = {},
 }) {
   const confused = expression.confused || 0;
@@ -150,6 +150,7 @@ export function pelican(c, {
   }
   c.restore();
   ellipse(c, -17, 7, 38, 30 + bite * 2, gradient(c, -20, 38, ...fe.body), -.16);
+  if (outfit === 'hawaii') hawaiiShirt(c, shirtOf(shirt), bite, outline);
   c.save(); headPose();
   path(c, gradient(c, -57, 21, ...fe.head), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
   // Pip's tousled crown is his main character mark at every rendered scale.
@@ -234,6 +235,23 @@ export function pelican(c, {
     c.restore();
   }
   c.restore(); c.restore();
+}
+// A loose Hawaiian shirt over Pip's body: hibiscus print, an open collar at the neck and a button line.
+function hawaiiShirt(c, s, bite, outline) {
+  c.save(); c.beginPath(); c.ellipse(-17, 7, 39, 31 + bite * 2, -.16, 0, TAU); c.clip();
+  // The shirt covers the body down to a hem that dips at the back.
+  path(c, gradient(c, -22, 36, ...s.cloth), p => { p.moveTo(-60, -30); p.lineTo(25, -30); p.lineTo(25, 25); p.quadraticCurveTo(-10, 33, -60, 28); p.closePath(); });
+  for (const [fx, fy, r] of [[-38, -6, 6], [-14, 14, 5.5], [-30, 22, 4.5], [6, 2, 5], [-6, -14, 4.5], [-48, 12, 4]]) {
+    for (const a of [.6, 2.4]) ellipse(c, fx + Math.cos(a) * r * 1.5, fy + Math.sin(a) * r * 1.5, r * .9, r * .4, s.leaf, a);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU; ellipse(c, fx + Math.cos(a) * r * .7, fy + Math.sin(a) * r * .7, r * .62, r * .42, s.print, a); }
+    ellipse(c, fx, fy, r * .28, r * .28, s.edge);
+  }
+  path(c, null, p => { p.moveTo(-60, 28); p.quadraticCurveTo(-10, 33, 25, 25); }, s.edge, 1.4);
+  c.restore();
+  // Open collar where the neck meets the body, and two buttons below it.
+  path(c, s.cloth[0], p => { p.moveTo(-6, -6); p.lineTo(6, -16); p.lineTo(10, -2); p.closePath(); }, s.edge, 1);
+  path(c, s.cloth[0], p => { p.moveTo(10, -2); p.lineTo(20, -14); p.lineTo(18, 4); p.closePath(); }, s.edge, 1);
+  ellipse(c, 11, 8, 1.6, 1.6, s.print); ellipse(c, 9, 17, 1.6, 1.6, s.print);
 }
 const SHARK_LOOK = { tail: '#557f89', edge: '#426974', fin: '#638e98', body: ['#83abb0', '#527d89'], belly: '#bad0c8', flipper: '#648d96', eye: '#294e55', mouth: '#3d6670', brow: '#527783', gill: '#597e88', teeth: false };
 // The great white: paler, bigger, with a cheeky toothy grin (still a cartoon, never gory).
@@ -620,7 +638,7 @@ function rock(c, b, item, index, water, t, night, pink = false) {
 
 export function drawWorld(c, game, mode, t, look, effects, reducedMotion = false, fx = null) {
   // `look` is Pip's wardrobe: { outfit, plumage, beak }, or just an outfit name.
-  const { outfit = 'classic', plumage, beak } = typeof look === 'string' ? { outfit: look } : look || {};
+  const { outfit = 'classic', plumage, beak, shirt } = typeof look === 'string' ? { outfit: look } : look || {};
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;
   const d = menu ? (reducedMotion ? 0 : t * 12) : game.distance;
@@ -727,7 +745,7 @@ export function drawWorld(c, game, mode, t, look, effects, reducedMotion = false
     }
     if (yawn > .5) { c.globalAlpha = (yawn - .5) * 2; c.fillStyle = '#7a8a9a'; c.font = "bold 14px 'Trebuchet MS'"; c.fillText('z', 300 + yawn * 6, y - 96 - yawn * 10); c.globalAlpha = 1; }
     pelican(c, {
-      x: 217, y, scale: 1.55, time: motion, tilt: -.06, outfit, plumage, beak,
+      x: 217, y, scale: 1.55, time: motion, tilt: -.06, outfit, plumage, beak, shirt,
       happy: hop < 0 || (hearts > 0 && hearts < .7), gulp, reducedMotion,
       expression: { look, wink, yawn, shiver },
     });
@@ -925,7 +943,7 @@ export function drawWorld(c, game, mode, t, look, effects, reducedMotion = false
     pelican(c, {
       x: p.feedX ?? p.x, y: p.y, scale: .76, time: motion,
       tilt: game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p),
-      outfit, plumage, beak, wet: p.wet, happy: game.feeding > 0 || p.gulp > .1 || fx?.joy > 0,
+      outfit, plumage, beak, shirt, wet: p.wet, happy: game.feeding > 0 || p.gulp > .1 || fx?.joy > 0,
       gulp: game.feeding ? .2 : p.gulp, breach: p.breach, cargo: game.cargo, breath: p.breath, reducedMotion,
       expression: {
         energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick,

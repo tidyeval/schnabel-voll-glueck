@@ -16,10 +16,11 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.reload(); await page.locator('#play').waitFor();
     assert.equal(await page.locator('[name=difficulty]').count(), 0);
     assert.equal(await page.locator('#result-difficulty').count(), 0);
-    // Wardrobe: 90 fish unlock every look; the chosen one is saved and marked.
+    // Wardrobe: 90 fish unlock every look but the Hawaiian shirt (150); the chosen one is saved and marked.
     await page.locator('#wardrobe').click();
     assert.equal(await page.locator('[data-outfit=sailor]').getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.locator('[data-outfit]:disabled').count(), 0);
+    assert.deepEqual(await page.locator('[data-outfit]:disabled').evaluateAll(list => list.map(b => b.dataset.outfit)), ['hawaii']);
+    assert.equal(await page.locator('#shirt-row').isHidden(), true, 'shirt colours only while the shirt is worn');
     await page.locator('[data-outfit=flower]').click();
     assert.equal(await page.locator('#wardrobe-dialog').evaluate(d => d.open), false, 'choosing a look closes the wardrobe');
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-phaser-matter-v1')).outfit), 'flower');

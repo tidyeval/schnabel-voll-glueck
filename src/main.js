@@ -12,7 +12,7 @@ import { createAudio } from './audio.js';
 import { drawPhoto, photoFile, photoScene } from './photo.js';
 import { createJuice } from './juice.js';
 import { recordAttempt, attemptFromGame, unlocks, newOutfits } from './progress.js';
-import { PLUMAGES, BEAKS } from './looks.js';
+import { PLUMAGES, BEAKS, SHIRTS } from './looks.js';
 import { drawMap, areaAt, areaPoint } from './map.js';
 import { restoreProgress, readStoredProgress, prepareProgress, saveSetting, saveAttempt, isProgressKey } from './storage.js';
 import { setupPwa } from './pwa.js';
@@ -319,14 +319,14 @@ $('journey-canvas').addEventListener('pointerdown', event => {
 });
 window.addEventListener('resize', () => { if (journey) sizeJourney(); });
 // Pip's wardrobe: collected fish unlock looks; each one is shown as a small portrait of Pip.
-function pipLook(outfit = prefs.outfit) { return { outfit, plumage: prefs.plumage, beak: prefs.beak }; }
+function pipLook(outfit = prefs.outfit) { return { outfit, plumage: prefs.plumage, beak: prefs.beak, shirt: prefs.shirt }; }
 function portrait(canvas, outfit) {
   const c = canvas.getContext('2d'), size = canvas.width;
   c.clearRect(0, 0, size, size);
   pelican(c, { x: size * .4, y: size * .84, scale: size / 150, time: 0, ...pipLook(outfit), happy: true, reducedMotion: true });
 }
-// Colour swatches for Pip's feathers and beak: choosing one recolours Pip at once and keeps the wardrobe open.
-const SWATCHES = { plumage: PLUMAGES, beak: BEAKS };
+// Colour swatches for Pip's feathers, beak and Hawaiian shirt: choosing one recolours Pip at once and keeps the wardrobe open.
+const SWATCHES = { plumage: PLUMAGES, beak: BEAKS, shirt: SHIRTS };
 for (const [key, table] of Object.entries(SWATCHES)) $(`${key}-swatches`).replaceChildren(...Object.entries(table).map(([id, colours]) => {
   const button = document.createElement('button'); button.type = 'button'; button.className = 'swatch'; button.dataset[key] = id;
   button.style.background = colours.swatch;
@@ -344,6 +344,8 @@ function refreshWardrobe() {
     button.querySelector('small').textContent = locked ? `🔒 ${t('outfitFrom', { fish: formatNumber(unlocks[outfit]) })}` : unlocks[outfit] ? '' : t('outfitAlways');
     portrait(button.querySelector('canvas'), outfit);
   });
+  // The shirt colours only matter while Pip wears the shirt.
+  $('shirt-row').hidden = prefs.outfit !== 'hawaii';
   for (const key of Object.keys(SWATCHES)) document.querySelectorAll(`[data-${key}]`).forEach(button => {
     button.setAttribute('aria-pressed', String(prefs[key] === button.dataset[key]));
     button.setAttribute('aria-label', t(`${key}_${button.dataset[key]}`));

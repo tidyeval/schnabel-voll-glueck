@@ -24,3 +24,14 @@ export const plumageOf = id => {
   return { flight: p.wing, back: p.tail, quill: p.lines[1], ...p };
 };
 export const beakOf = id => BEAKS[id] || BEAKS.orange;
+
+// The Hawaiian shirt (outfit 'hawaii'): its colour is chosen like feathers and beak.
+// `print` is the hibiscus flower, `leaf` the leaves between them.
+export const SHIRTS = {
+  coral: { swatch: '#ef8a6f', cloth: ['#f49a7f', '#dc7458'], print: '#fff1c9', leaf: '#5f9e6e', edge: '#b85d47' },
+  sky: { swatch: '#6fb4dd', cloth: ['#82c2e6', '#5299c6'], print: '#fff6dc', leaf: '#f2c45e', edge: '#3f7aa0' },
+  sun: { swatch: '#f3c955', cloth: ['#f7d773', '#e5b53e'], print: '#e9765f', leaf: '#5f9e6e', edge: '#b88a2e' },
+  mint: { swatch: '#7fc9a6', cloth: ['#93d6b6', '#62b18c'], print: '#f9b0c3', leaf: '#3f7f61', edge: '#4a8f6f' },
+  lilac: { swatch: '#b7a1e2', cloth: ['#c7b5ec', '#9f87d2'], print: '#fff1c9', leaf: '#6f9e70', edge: '#7a64ab' },
+};
+export const shirtOf = id => SHIRTS[id] || SHIRTS.coral;
