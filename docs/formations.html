@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Dev-server page only (vite build has index.html as its single input): http://<dev-host>/docs/formations.html
+     Mockup for discussion, not game code: fish formations so runs feel less static. -->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fischformationen</title>
+<style>
+  :root{color-scheme:light}
+  body{margin:0;background:#f6f3ea;color:#214d4d;font:15px/1.45 ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif}
+  main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:32px;letter-spacing:-1px;margin:0 0 4px}
+  p.lead{margin:0 0 18px;color:#62827a;max-width:760px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+  .card{background:#fffdf6;border:1px solid #e3e3d3;border-radius:14px;overflow:hidden}
+  .card canvas{display:block;width:100%;height:auto}
+  .card .txt{padding:10px 12px 12px}
+  .card b{font-size:15px}
+  .card .tag{float:right;font-size:12px;color:#b78250;font-weight:700}
+  .card p{margin:4px 0 0;font-size:13px;color:#5f7a70}
+  .rec{background:#fff4d8;border:1px solid #efd9a0;border-radius:12px;padding:10px 14px;margin:18px 0;max-width:760px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Fischformationen</h1>
+  <p class="lead">Heute kommt jede Fischreihe als derselbe Bogen. Vorschlag: Bei jeder Begegnung wird eine passende Formation gewürfelt. Die gestrichelte Linie zeigt, welchen Weg Pip dabei taucht.</p>
+  <div class="grid" id="host"></div>
+  <div class="rec"><b>Empfehlung:</b> Bogen, Welle, Treppe und Schwarm überall. Sprungschanze und Ring als seltene Highlights. Die Nachzügler nur dort, wo kein Hai in der Nähe ist, damit es fair bleibt.</div>
+</main>
+<script type="module">
+import { fish } from '/src/art.js';
+
+// World coordinates like the game: surface at y 360, fish lanes about 405–650, spacing 64 px.
+const SURFACE = 360, K = 300 / 380, TOP = 330, SPEED = 130, SPAN = 1100;
+const arc = (base, h, n = 11) => Array.from({ length: n }, (_, i) => [i * 64, base + Math.sin(i / (n - 1) * Math.PI) * h]);
+const FORMATIONS = [
+  { name: 'Bogen', tag: 'heute', note: 'Der bekannte Bogen: abtauchen und wieder hoch.', fish: arc(440, 65), path: true },
+  { name: 'Welle', tag: 'überall', note: 'Zwei Täler hintereinander: zweimal tauchen, ohne dazwischen auszutauchen.', fish: Array.from({ length: 13 }, (_, i) => [i * 56, 470 + Math.sin(i / 12 * Math.PI * 2 - Math.PI / 2) * -55]), path: true },
+  { name: 'Treppe', tag: 'überall', note: 'Drei Stufen nach unten: Pip muss die Tiefe bewusst halten, dann eine Stufe tiefer.', fish: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => [i * 60, 425 + Math.floor(i / 3.4) * 70]), path: true },
+  { name: 'Schwarm', tag: 'überall', note: 'Ein enger Schwarm, der sich gemeinsam bewegt: wer mittendurch taucht, bekommt eine schnelle Serie.', swarm: true },
+  { name: 'Sprungschanze', tag: 'selten', note: 'Tief runter, steil hoch, und die letzten Fische hängen über dem Wasser: perfekt für einen Sprung.', fish: [[0, 430], [60, 500], [120, 570], [180, 610], [240, 600], [300, 545], [350, 470], [395, 395], [440, 320], [490, 270], [545, 255]], path: true },
+  { name: 'Ring', tag: 'selten', note: 'Ein Kreis aus Fischen mit dem goldenen in der Mitte. Wer ihn holen will, muss durch den Ring tauchen.', ring: true },
+  { name: 'Nachzügler', tag: 'ohne Hai', note: 'Ein paar einzelne Fische in verschiedenen Tiefen: Pip sucht sich selbst den Weg.', fish: [[0, 430], [110, 590], [190, 470], [300, 630], [380, 420], [470, 540], [580, 450]] },
+];
+
+const host = document.getElementById('host');
+const cards = FORMATIONS.map(f => {
+  const card = document.createElement('div'); card.className = 'card';
+  const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 300;
+  card.append(canvas);
+  const txt = document.createElement('div'); txt.className = 'txt';
+  txt.innerHTML = `<span class="tag">${f.tag}</span><b>${f.name}</b><p>${f.note}</p>`;
+  card.append(txt); host.append(card);
+  return { f, c: canvas.getContext('2d') };
+});
+
+function scene(c, t) {
+  const g = c.createLinearGradient(0, 0, 0, 300);
+  const sy = (SURFACE - TOP) * K;
+  g.addColorStop(0, '#cfeae2'); g.addColorStop(sy / 300, '#e8f3e4'); g.addColorStop(sy / 300 + .001, '#6fc4b6'); g.addColorStop(1, '#256068');
+  c.fillStyle = g; c.fillRect(0, 0, 640, 300);
+  c.strokeStyle = '#ffffff88'; c.lineWidth = 2; c.beginPath();
+  for (let x = 0; x <= 640; x += 8) c.lineTo(x, sy + Math.sin(x * .03 + t * 2) * 2);
+  c.stroke();
+}
+
+// Positions of a formation (world x relative to its start, world y) at time t.
+function positions(f, t) {
+  if (f.swarm) return Array.from({ length: 12 }, (_, i) => {
+    const a = i * 2.4, r = 14 + (i % 4) * 11;
+    return [140 + Math.cos(a + t * .8) * r * 1.6 + Math.sin(t * 1.3) * 10, 500 + Math.sin(a + t * .8) * r + Math.sin(t * .9) * 40];
+  });
+  if (f.ring) return [...Array.from({ length: 10 }, (_, i) => { const a = i / 10 * Math.PI * 2 + t * .5; return [220 + Math.cos(a) * 95, 510 + Math.sin(a) * 75]; }), [220, 510, true]];
+  return f.fish;
+}
+
+function draw({ f, c }, t) {
+  scene(c, t);
+  const width = f.swarm || f.ring ? 320 : Math.max(...f.fish.map(p => p[0]));
+  const offset = 680 / K - ((t * SPEED) % SPAN) - width / 2 + 100; // scroll right to left, loop
+  const sx = x => (x + offset) * K, sy = y => (y - TOP) * K;
+  const list = positions(f, t);
+  if (f.path) {
+    c.save(); c.setLineDash([3, 9]); c.lineWidth = 3; c.strokeStyle = '#fff6d8cc'; c.lineCap = 'round'; c.beginPath();
+    c.moveTo(sx(list[0][0] - 120), sy(400));
+    list.forEach(([x, y]) => c.lineTo(sx(x), sy(y)));
+    const [lx, ly] = list[list.length - 1]; c.lineTo(sx(lx + 120), sy(Math.min(ly, 400))); c.stroke(); c.restore();
+  }
+  list.forEach(([x, y, golden], i) => fish(c, sx(x), sy(y), K * 1.05, !!golden, t + i * .7));
+}
+
+function frame(ms) { const t = ms / 1000; cards.forEach(card => draw(card, t)); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
