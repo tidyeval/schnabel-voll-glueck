@@ -7,11 +7,11 @@ import './style.css';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { createGame, step, press, WORLD, airState } from './game.js';
-import { drawWorld } from './art.js';
+import { drawWorld, pelican } from './art.js';
 import { createAudio } from './audio.js';
 import { drawPhoto, photoFile, photoScene } from './photo.js';
 import { createJuice } from './juice.js';
-import { recordAttempt, attemptFromGame } from './progress.js';
+import { recordAttempt, attemptFromGame, unlocks, newOutfits } from './progress.js';
 import { restoreProgress, readStoredProgress, prepareProgress, saveSetting, saveAttempt, isProgressKey } from './storage.js';
 import { setupPwa } from './pwa.js';
 import { keyAction } from './controls.js';
@@ -39,7 +39,7 @@ const audio = createAudio(prefs);
 const juice = createJuice(reducedMotion);
 const showLabels = { dolphins: 'showDolphins', goldenHour: 'showGoldenHour', shootingStars: 'showShootingStars' };
 const labels = { airCatch: ['fxAirCatch', '#fff2b6', true], nearMiss: ['fxNearMiss', '#ffffff'], frenzy: ['fxFrenzy', '#ffd66e', true], feast: ['fxFeast', '#e3f6ff', true], current: ['fxCurrent', '#dffff6'], waveRide: ['fxWaveRide', '#e3f6ff', true] };
-let phaserScene, cameraAhead = 0, savePending = false;
+let phaserScene, cameraAhead = 0, savePending = false, unseenOutfit = false;
 let game = createGame(), mode = 'menu', holding = false, effects = [], animation = 0, toastUntil = 0, needsDraw = true, startHint = false;
 // Round-start control hint: shown until the first hold, so a new player sees how to dive before the first obstacle.
 function clearStartHint() { if (startHint) { startHint = false; toastUntil = 0; $('toast').classList.add('hidden'); } }
@@ -83,6 +83,7 @@ function refreshMenu() {
   $('play').disabled = locked;
   $('stage-prev').disabled = selectedStage === 0; $('stage-next').disabled = selectedStage >= STAGES.length - 1;
   text('play-label', prefs.completed ? t('continue') : t('play'));
+  refreshWardrobe();
 }
 $('stages').onchange = () => { selectedStage = Number($('stages').value); refreshMenu(); };
 // Arrows step through all stages (locked ones show a lock); the select still opens the full list.
@@ -97,7 +98,7 @@ let lastResult = null, photoRun = 0, photoReady = null;
 function photoCard() {
   const r = lastResult;
   return {
-    stage: r.stage, score: formatNumber(r.score), fish: formatNumber(r.fish), stageName: stageName(r.stage),
+    stage: r.stage, outfit: prefs.outfit, score: formatNumber(r.score), fish: formatNumber(r.fish), stageName: stageName(r.stage),
     title: r.final ? t('photoAllNests') : r.complete ? t('photoNest') : t('photoRound'), points: t('points'), fishLabel: t('fish'),
     record: r.record ? t('photoRecord') : null, date: new Intl.DateTimeFormat(currentLocale()).format(new Date()),
     game: { de: 'Schnabelglück', en: 'Happy Beak', es: 'Pico Feliz' }[currentLocale()],
@@ -197,7 +198,8 @@ async function finish() {
   if (mode === 'ended') return;
   if (coach) endCoach(false);
   const record = game.score > prefs.bests[game.stage];
-  game.ended = true; const attempt = attemptFromGame(game, game.attemptId); recordAttempt(prefs, game, game.attemptId);
+  game.ended = true; const attempt = attemptFromGame(game, game.attemptId); const fishBefore = prefs.totalFish; recordAttempt(prefs, game, game.attemptId);
+  const unlocked = newOutfits(fishBefore, prefs.totalFish); if (unlocked.length) unseenOutfit = true;
   const complete = game.endReason === 'complete';
   const final = complete && game.stage === STAGES.length - 1;
   $('next-stage').classList.toggle('hidden', !complete || final);
@@ -212,7 +214,7 @@ async function finish() {
   text('result-title', game.endReason === 'complete' && final ? t('reasons.final') : t(`reasons.${game.endReason || 'fallback'}`));
   lastResult = { stage: game.stage, score: game.score, fish: game.fish, record, complete, final };
   text('result-score', formatNumber(game.score)); text('result-fish', formatNumber(game.fish)); text('result-combo', formatNumber(game.bestCombo)); text('result-time', clock(game.time));
-  const resultMessage = final ? t('finalMission') : '';
+  const resultMessage = [final ? t('finalMission') : '', ...unlocked.map(outfit => t('outfitUnlocked', { outfit: t(`outfit_${outfit}`) }))].filter(Boolean).join(' ');
   text('result-mission', resultMessage);
   closeDialogs(); $('result-dialog').showModal(); $('pause').classList.add('hidden'); audio.start('menu'); audio.effect('end'); if (record) audio.effect('record');
   const saved = await pendingSave;
@@ -251,6 +253,31 @@ function afterSettings() { $('settings-dialog').close(); if (mode === 'paused') 
 $('settings-dialog').querySelector('.close').onclick = afterSettings;
 $('settings-dialog').querySelector('.close-settings').onclick = afterSettings;
 for (const key of ['music', 'sound', 'haptics']) { $(key).checked = prefs[key]; $(key).onchange = () => { prefs[key] = $(key).checked; persistSettings(key); }; }
+// Pip's wardrobe: collected fish unlock looks; each one is shown as a small portrait of Pip.
+function portrait(canvas, outfit) {
+  const c = canvas.getContext('2d'), size = canvas.width;
+  c.clearRect(0, 0, size, size);
+  pelican(c, { x: size * .4, y: size * .84, scale: size / 150, time: 0, outfit, happy: true, reducedMotion: true });
+}
+function refreshWardrobe() {
+  portrait($('wardrobe').querySelector('canvas'), prefs.outfit);
+  $('wardrobe-new').classList.toggle('hidden', !unseenOutfit);
+  text('wardrobe-wallet', t('wardrobeWallet', { fish: formatNumber(prefs.totalFish) }));
+  document.querySelectorAll('[data-outfit]').forEach(button => {
+    const outfit = button.dataset.outfit, locked = prefs.totalFish < unlocks[outfit];
+    button.disabled = locked;
+    button.setAttribute('aria-pressed', String(prefs.outfit === outfit));
+    button.querySelector('small').textContent = locked ? `🔒 ${t('outfitFrom', { fish: formatNumber(unlocks[outfit]) })}` : unlocks[outfit] ? '' : t('outfitAlways');
+    portrait(button.querySelector('canvas'), outfit);
+  });
+}
+$('wardrobe').onclick = () => { unseenOutfit = false; refreshWardrobe(); $('wardrobe-dialog').showModal(); };
+$('wardrobe-dialog').querySelector('.close').onclick = () => $('wardrobe-dialog').close();
+document.querySelectorAll('[data-outfit]').forEach(button => button.onclick = () => {
+  if (prefs.totalFish < unlocks[button.dataset.outfit]) return;
+  prefs.outfit = button.dataset.outfit; persistSettings('outfit'); needsDraw = true;
+  refreshWardrobe(); $('wardrobe-dialog').close();
+});
 $('retry-save').onclick = async () => {
   if (savePending) return;
   savePending = true; $('retry-save').disabled = true;
@@ -288,6 +315,7 @@ bindLifecycle({
   nativeApp: Capacitor.isNativePlatform() ? App : undefined,
   back() {
     if ($('settings-dialog').open) afterSettings();
+    else if ($('wardrobe-dialog').open) $('wardrobe-dialog').close();
     else if (mode === 'playing') pause();
     else if (mode === 'paused') resume();
     else if (mode === 'ended') home();

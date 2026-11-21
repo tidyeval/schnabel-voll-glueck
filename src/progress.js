@@ -1,6 +1,8 @@
 import { STAGES } from './stages.js';
 import { localeFrom } from './i18n.js';
 export const unlocks = { classic: 0, flower: 25, sailor: 80 };
+/** Outfits a player unlocked by going from `before` to `after` collected fish. */
+export const newOutfits = (before, after) => Object.keys(unlocks).filter(outfit => before < unlocks[outfit] && after >= unlocks[outfit]);
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const attemptIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
 // Saves from before the lagoon have three stages: bay, harbor, reef. The reef is now the fourth.

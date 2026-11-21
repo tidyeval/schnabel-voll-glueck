@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readProgress, recordAttempt, applyAttempt } from '../src/progress.js';
+import { readProgress, recordAttempt, applyAttempt, newOutfits } from '../src/progress.js';
 import { createGame } from '../src/game.js';
 test('old/invalid saves retain valid possessions and never unlock invalid stages', () => {
   for (const raw of [undefined, 'bad', 'null', '7', '[]', '{"completed":-1,"bests":[null,-4,"7"]}']) {
@@ -43,4 +43,11 @@ test('saves from before the lagoon keep their reef record on the reef', () => {
   assert.deepEqual(prefs.bests, [10, 20, 0, 99, 0]);
   assert.equal(applyAttempt(prefs, { id: 'new-lagoon', layout: 4, stage: 2, fish: 1, score: 77, endReason: 'complete' }), true);
   assert.deepEqual(prefs.bests, [10, 20, 77, 99, 0]); assert.equal(prefs.completed, 3);
+});
+
+test('collecting fish announces each outfit once, at the round that crosses its threshold', () => {
+  assert.deepEqual(newOutfits(20, 30), ['flower']);
+  assert.deepEqual(newOutfits(30, 40), []);
+  assert.deepEqual(newOutfits(10, 90), ['flower', 'sailor']);
+  assert.deepEqual(newOutfits(80, 85), []);
 });

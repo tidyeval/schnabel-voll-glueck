@@ -10,7 +10,7 @@ const FONT = "ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif";
 const FRAME = { x: 60, y: 60, width: 960, height: 1050 };
 
 /**
- * @typedef {{ stage: number, score: string, fish: string, stageName: string, title: string,
+ * @typedef {{ stage: number, outfit?: string, score: string, fish: string, stageName: string, title: string,
  *   points: string, fishLabel: string, record: string | null, date: string, game: string }} PhotoCard
  */
 
@@ -66,8 +66,8 @@ function thumbsUp(c) {
 // Pip as he looks in the game, in profile with his chest out and a cheeky wink toward us,
 // both wings raised in a cheer and one wing tip giving a thumbs up.
 const PIP = { x: 470, y: 700, scale: 3.9 };
-function proudPip(c, t) {
-  pelican(c, { x: PIP.x, y: PIP.y, scale: PIP.scale, time: t, tilt: -.12, happy: true, cargo: 6,
+function proudPip(c, t, outfit = 'classic') {
+  pelican(c, { x: PIP.x, y: PIP.y, scale: PIP.scale, time: t, tilt: -.12, happy: true, cargo: 6, outfit,
     expression: { cheer: true, wink: 1, look: -.08 } });
   // Thumbs up at the tip of the near wing (wing tip in Pip's frame, rotated by his tilt).
   const tip = { x: -64, y: -70 }, a = -.12;
@@ -89,7 +89,7 @@ export function drawPhoto(c, card, t = 0, scene = backdrop(card.stage)) {
   glow.addColorStop(0, '#fff6d855'); glow.addColorStop(1, '#fff6d800');
   c.fillStyle = glow; c.fillRect(FRAME.x, FRAME.y, FRAME.width, FRAME.height);
   // Pip in profile, cheering, with the certificate held up in front of him.
-  proudPip(c, t);
+  proudPip(c, t, card.outfit);
   // He floats: the water closes over his lower body.
   c.fillStyle = '#5fb3a855'; c.fillRect(FRAME.x, 790, FRAME.width, FRAME.y + FRAME.height - 790);
   c.beginPath(); c.ellipse(540, 792, 250, 22, 0, 0, TAU); c.strokeStyle = '#ffffffaa'; c.lineWidth = 4; c.stroke();

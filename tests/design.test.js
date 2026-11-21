@@ -87,8 +87,8 @@ const CSS_COLOUR_EXCEPTIONS = {
   '#00000055': shadow, '#10294a88': shadow, '#123d3b33': shadow, '#123d3b40': shadow, '#164a4938': 'install/update button fill (.app-actions)', '#164f4920': shadow, '#164f4930': shadow,
   '#1d3a3a33': shadow, '#21575008': shadow, '#254c4920': shadow, '#275e4b15': shadow, '#275e4b23': shadow, '#2a503326': shadow, '#347c7033': shadow, '#7ca49960': 'thin intro rule',
   '#d1f3df33': '.app-actions divider', '#ffffff2a': 'night energy track', '#28565c': 'test-edition label', '#47746a': "hero label 'Hey, I'm Pip'",
-  '#5e8881': 'intro eyebrow text', '#65897b': 'desktop-only .tiny-bird', '#668b7c': 'hero label arrow', '#6e9e7c': 'outfit picker (dormant)', '#82948a': 'desktop-only frame',
-  '#83968a': 'desktop-only frame', '#d6975c': 'outfit picker (dormant)', '#e5edd0': 'outfit picker (dormant)', '#eaf0dd': 'outfit picker (dormant)', '#e9e5c2': 'stage select border, overridden by the later borderless rule',
+  '#5e8881': 'intro eyebrow text', '#65897b': 'desktop-only .tiny-bird', '#668b7c': 'hero label arrow', '#6e9e7c': 'wardrobe: chosen outfit border', '#82948a': 'desktop-only frame',
+  '#83968a': 'desktop-only frame', '#e5edd0': 'wardrobe: chosen outfit fill', '#eaf0dd': 'wardrobe: outfit button fill', '#e9e5c2': 'stage select border, overridden by the later borderless rule',
   '#effef0': 'run record label (hidden on the start screen)', '#fff6d7': 'install/update button text (.app-actions)', '#fff6dc': 'stage picker text, overridden by color.ink.on-sea later', '#fff6df': 'stage select background, overridden by the later transparent rule', '#fff8d8': 'run record number (hidden on the start screen)',
 };
 test('colours in style.css come from design tokens or are listed exceptions', () => {

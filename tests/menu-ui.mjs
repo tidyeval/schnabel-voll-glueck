@@ -16,8 +16,14 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     await page.reload(); await page.locator('#play').waitFor();
     assert.equal(await page.locator('[name=difficulty]').count(), 0);
     assert.equal(await page.locator('#result-difficulty').count(), 0);
-    assert.equal(await page.locator('#wardrobe').count(), 0);
-    assert.equal(await page.locator('#wardrobe-dialog').count(), 0);
+    // Wardrobe: 90 fish unlock every look; the chosen one is saved and marked.
+    await page.locator('#wardrobe').click();
+    assert.equal(await page.locator('[data-outfit=sailor]').getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('[data-outfit]:disabled').count(), 0);
+    await page.locator('[data-outfit=flower]').click();
+    assert.equal(await page.locator('#wardrobe-dialog').evaluate(d => d.open), false, 'choosing a look closes the wardrobe');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('pelican-phaser-matter-v1')).outfit), 'flower');
+    await page.locator('#wardrobe').click(); await page.locator('[data-outfit=sailor]').click(); await page.clock.runFor(20);
     assert.equal(await page.locator('#stage-best').textContent(), 'Rekord: 789 Punkte');
     await page.locator('#stages').selectOption('0');
     assert.equal(await page.locator('#stage-best').textContent(), 'Rekord: 123 Punkte');

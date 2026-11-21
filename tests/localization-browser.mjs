@@ -16,7 +16,7 @@ for (const [name, engine] of [['chromium', chromium], ['webkit', webkit]]) {
     const page = await browser.newPage({ viewport: { width: 320, height: 568 }, reducedMotion: 'reduce' });
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.goto(url); await page.locator('#play').waitFor();
-    assert.equal(await page.locator('#wardrobe').count(), 0, 'wardrobe is removed from the menu');
+    assert.equal(await page.locator('#wardrobe').count(), 1, 'the wardrobe is on the start screen');
     assert.equal(await page.locator('[data-locale]').count(), 3);
     for (const locale of ['de', 'en', 'es']) {
       const copy = expected[locale];
