@@ -135,7 +135,7 @@ test('every shark pair leaves a reachable band after a visible reaction delay', 
 
 test('encounter traces do not repeat and never overlap more than two sharks', () => {
   for (let stage = 0; stage < STAGES.length; stage++) {
-    const g = createGame(() => .99, stage), control = routeController(); let maxSharks = 0;
+    const g = createGame(() => .99, stage), control = routeController(); g.formations = false; let maxSharks = 0;
     for (let i = 0; i < 90 * 60 && !g.ended; i++) {
       step(g, 1 / 60, control(g));
       maxSharks = Math.max(maxSharks, g.items.filter(item => item.kind === 'shark').length);
@@ -149,7 +149,7 @@ test('encounter traces do not repeat and never overlap more than two sharks', ()
 
 test('the first shark interrupts the fish route before thirty seconds but leaves an escape', () => {
   const run = avoid => {
-    const g = createGame(() => .5), control = routeController(); let hit = false, warned = false;
+    const g = createGame(() => .5), control = routeController(); g.formations = false; let hit = false, warned = false;
     for (let i = 0; i < 15 * 60 && !g.ended && g.wave < 3; i++) {
       let holding = control(g);
       const shark = g.items.find(item => item.kind === 'shark' && !item.hit && item.x > g.player.x - 90 && item.x < g.player.x + 300);

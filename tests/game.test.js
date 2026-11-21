@@ -119,7 +119,8 @@ test('authored stages introduce individual dangers before combinations and finis
 
 test('representative safe routes remain playable in every stage with empty and full cargo', () => {
   for (const dt of [1 / 30, 1 / 60, .016]) for (let stage = 0; stage < STAGES.length; stage++) for (const cargo of [0, 20]) {
-    const g = createGame(() => .99, stage); g.cargo = cargo;
+    // The scripted route follows the authored arcs; rolled formations are checked in tests/formations.test.js.
+    const g = createGame(() => .99, stage); g.cargo = cargo; g.formations = false;
     const control = routeController(); let last = false;
     while (g.time < 110 && !g.ended) {
       const holding = control(g); if (holding && !last) press(g); last = holding;

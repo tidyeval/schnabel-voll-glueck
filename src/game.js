@@ -1,4 +1,5 @@
 import { FISH_SPECIES, pickSpecies } from './species.js';
+import { pickFormation, formationFish, SCHOOL } from './formations.js';
 export { FISH_SPECIES };
 import { grow, movePlayerSolid, shape, syncPlayerBody, touches } from './physics.js';
 import { STAGES } from './stages.js';
@@ -344,7 +345,14 @@ function encounter(game) {
     : kind === 'coral' ? arc(410, 35)
     : arc(440, 65);
   const addFish = (x, y, lane = 'main') => game.items.push({ kind: 'fish', x, y, golden: false, lane, route: game.wave });
-  depths.forEach((y, i) => addFish(540 + i * 64, y));
+  // Schools that would follow a plain arc take a rolled formation instead (src/formations.js).
+  // Split schools (turtle, coral, gull) keep their arc so the lower lane stays under the upper one;
+  // so does a whirlpool's, whose pull would drag any deeper shape into it.
+  const envelope = kind === 'shark' ? [[410, 475, 540][variant], 30]
+    : ['boat', 'reef', 'buoy', 'island', 'mangrove', 'coral', 'turtle', 'gull', 'whirlpool'].includes(kind) ? null : [440, 65];
+  const formation = !envelope ? 'fixed' : game.formations ? pickFormation(kind, companions, !game.pieces.get(wave) && game.rare?.wave !== wave, game.random()) : 'arc';
+  if (envelope) formationFish(formation, ...envelope).forEach(([x, y, extra]) => { addFish(x, y); if (extra) Object.assign(game.items[game.items.length - 1], extra); });
+  else depths.forEach((y, i) => addFish(540 + i * 64, y));
   // Parallel schools share a curved shape, but occupy separate water depths.
   if (['turtle', 'coral'].includes(kind) || kind === 'gull') {
     const base = kind === 'turtle' && variant === 2 ? 435 : kind === 'coral' ? 515 : 580;
@@ -381,7 +389,7 @@ function encounter(game) {
       fish.y = UNDERWATER_BANDS[1].y + Math.sin(index / 10 * Math.PI) * 20;
     });
   }
-  game.encounterTrace.push({ stage: game.stage, wave, entry, form: pairPattern, bands });
+  game.encounterTrace.push({ stage: game.stage, wave, entry, form: pairPattern, bands, formation });
   if (game.rare?.wave === wave) { game.rareShow = { name: game.rare.name, start: game.time }; game.pendingRare = game.rare.name; }
   const piece = game.pieces.get(wave);
   if (piece === 'baitball') {
@@ -414,8 +422,10 @@ function encounter(game) {
   game.items.push({ kind: 'bubble', x: 1120, y: 540 });
   // End the school below the surface, then leave room to breathe and do a trick.
   [440, 415, 400].forEach((y, i) => addFish(1220 + i * 60, y, 'exit'));
+  // After a ramp two fish leap out of the water, for the jump it builds up to.
+  if (formation === 'ramp') [1420, 1500].forEach(x => game.items.push({ kind: 'fish', x, y: LEAP.from, golden: false, lane: 'alternate', route: wave, bonus: true, leap: 0 }));
   // Now and then a fish leaps out of the breathing gap: a bonus for a well-timed breach.
-  if ((variant + wave) % 2 === 0 && kind !== 'island') game.items.push({ kind: 'fish', x: 1460, y: LEAP.from, golden: false, lane: 'alternate', route: wave, bonus: true, leap: 0 });
+  if ((variant + wave) % 2 === 0 && kind !== 'island' && formation !== 'ramp') game.items.push({ kind: 'fish', x: 1460, y: LEAP.from, golden: false, lane: 'alternate', route: wave, bonus: true, leap: 0 });
   const terrain = game.items.filter(item => TERRAIN.includes(item.kind));
   game.items = game.items.filter(item => item.kind !== 'fish' || !terrain.some(block => hitsTerrain(item, block)));
   game.wave++;
@@ -436,7 +446,8 @@ export function createGame(random = Math.random, stage = 0, elapsed) {
   const pieces = rollSetPieces(stage, random), decor = rollDecor(stage, random), rare = rollRare(stage, random);
   return {
     pieces, decor, rare, rareShow: null,
-    elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0, sprint: 0,
+    // formations: false keeps every school on its authored arc (the scripted route tests use that).
+    formations: true, elapsed, stage, random, time: 0, distance: 0, speed: paceAt(elapsed).speed, energy: 100, score: 0, fish: 0, sprint: 0,
     cargo: 0, delivered: 0, feeding: 0, feedingTotal: 0, combo: 0, comboTime: 0, bestCombo: 0, diveFish: 0, mission: false,
     player: { x: 118, y: 265, vx: paceAt(elapsed).speed, vy: 0, wet: false, gulp: 0, breach: 0, breath: WORLD.breath, spin: 0, turns: 0, trickUntil: -1, taps: 0, tapAt: -10, trickUsed: false },
     items: [
@@ -668,8 +679,10 @@ function updateFish(game, item, dt, beak, events) {
     if (item.homeY !== undefined) item.homeY += item.drift.y * dt;
   }
   // Fish swim out of Pip's way by species (Pip's favourite only in the bay, as a gentle start).
+  // A loose school rises and sinks together instead of each fish dodging on its own.
+  if (item.bob) item.y += Math.cos(game.time * SCHOOL.speed) * SCHOOL.speed * SCHOOL.bob * dt;
   const evade = item.species === 'classic' ? (game.stage === 0 ? 75 : 0) : species.evade;
-  if (evade && !item.golden && !item.calm && item.leap === undefined) {
+  if (evade && !item.golden && !item.calm && !item.bob && item.leap === undefined) {
     item.homeY ??= item.y;
     const gap = Math.hypot(item.x - p.x, item.y - p.y);
     if (p.wet && gap < species.wary) item.escapeSide ??= Math.sign(item.y - p.y || 1);
