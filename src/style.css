@@ -52,6 +52,10 @@ h1 em{color:#e78c57;font-style:normal}
 /* Minimal HUD: one quiet line (score, time), a thin energy line; air is drawn as an arc at Pip. */
 .score-row{position:absolute;top:4.2%;left:7%;right:calc(6% + 12cqw);height:9cqw;display:flex;justify-content:space-between;align-items:center}
 .score-row .eyebrow{display:none}
+.score-row>div:first-child{display:flex;align-items:center;gap:2.6cqw}
+.fish-count{display:flex;align-items:center;gap:1cqw;font-size:4cqw;font-weight:800;font-variant-numeric:tabular-nums;opacity:.85}
+.fish-count svg{width:4.8cqw;height:2.8cqw}
+.night .fish-count{color:#fff4dc}
 .score-row strong{display:block;font-size:7cqw;line-height:1;letter-spacing:-.05em;transform-origin:left 70%}
 .score-row strong.pop{animation:score-pop .32s cubic-bezier(.3,1.8,.5,1)}
 @keyframes score-pop{0%{transform:scale(1)}35%{transform:scale(1.28) rotate(-3deg)}100%{transform:scale(1)}}

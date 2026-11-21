@@ -36,7 +36,7 @@ test('a close shave with a shark pays once; distance or a hit pays nothing', () 
 
 test('fifteen fish in a row start one frenzy with double points and reachable bonus fish', () => {
   const g = quiet(1); g.nextEncounter = 1e9; run(g, 1, true);
-  const feed = () => { const beak = beakPosition(g.player); g.items.push({ kind: 'fish', x: beak.x, y: beak.y, golden: false }); return step(g, .001, true); };
+  const feed = () => { const beak = beakPosition(g.player); g.items.push({ kind: 'fish', x: beak.x, y: beak.y, golden: false, species: 'classic' }); return step(g, .001, true); };
   let events = []; for (let i = 0; i < FRENZY.combo; i++) events.push(...feed());
   assert.equal(events.filter(e => e.kind === 'frenzy').length, 1); assert.ok(g.frenzy > 0);
   const before = g.score; feed(); assert.equal(g.score - before, 10 * 4 * 2);

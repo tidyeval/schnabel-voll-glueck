@@ -407,9 +407,9 @@ test('trick taps and the combo multiplier behave as declared', () => {
   const pointsAt = combo => {
     const g = createGame(() => .5); g.items = []; g.nextEncounter = Infinity; g.combo = combo; g.comboTime = 8;
     Object.assign(g.player, { y: 500, vy: 0, wet: true });
-    g.items = [{ kind: 'fish', x: 0, y: 0, golden: false }];
+    g.items = [{ kind: 'fish', x: 0, y: 0, golden: false, species: 'classic' }];
     Object.assign(g.items[0], GAME.beakPosition(g.player)); g.items[0].x += 10;
-    const before = g.score; step(g, 1 / 60, false); return (g.score - before) / entity('fish').properties.points;
+    const before = g.score; step(g, 1 / 60, false); return (g.score - before) / GAME.FISH_SPECIES.classic.points;
   };
   const { step: per, maxMultiplier } = entity('combo').properties;
   assert.equal(pointsAt(per - 2), 1, 'below one step no bonus');

@@ -2,7 +2,7 @@ import { STAGES } from '../src/stages.js';
 import test from 'node:test';
 import { routeController } from './route-controller.js';
 import assert from 'node:assert/strict';
-import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS, LEAP, RARE, rollRare } from '../src/game.js';
+import { createGame, step, WORLD, netShape, hitsNet, beakPosition, press, hitsBoat, hitsFisher, hitsTerrain, terrainBlocks, ENERGY, airState, hitsPuffer, pufferRadius, paceAt, UNDERWATER_BANDS, LEAP, RARE, rollRare, FISH_SPECIES } from '../src/game.js';
 
 test('Pip dives, catches a school, earns the mission once, and a shark ends the stage', () => {
   const g = createGame(() => .5);
@@ -12,7 +12,7 @@ test('Pip dives, catches a school, earns the mission once, and a shark ends the 
   for (let i = 0; i < 120; i++) step(g, 1 / 60, false);
   assert.ok(g.player.y < WORLD.water, 'releasing returns to the sky');
   g.player.y = 470; g.player.vy = 0; g.player.wet = true; g.energy = 50;
-  g.items = Array.from({ length: 5 }, () => ({ kind: 'fish', ...beakPosition(g.player) }));
+  g.items = Array.from({ length: 5 }, () => ({ kind: 'fish', ...beakPosition(g.player), species: 'classic' }));
   let events = step(g, 1 / 60, true);
   assert.equal(g.fish, 5); assert.equal(g.score, 160); assert.equal(g.mission, true);
   assert.equal(events.filter(e => e.kind === 'mission').length, 1);
@@ -299,7 +299,7 @@ test('full cargo slows ascent, caps at capacity and feeding unloads once before 
   loaded.cargo = WORLD.capacity;
   for (let i = 0; i < 30; i++) { step(empty, 1 / 60, false); step(loaded, 1 / 60, false); }
   assert.ok(loaded.player.y > empty.player.y + 10);
-  loaded.items = [{ kind: 'fish', ...beakPosition(loaded.player) }]; step(loaded, .001, false);
+  loaded.items = [{ kind: 'fish', ...beakPosition(loaded.player), species: 'classic' }]; step(loaded, .001, false);
   assert.equal(loaded.cargo, WORLD.capacity);
   loaded.player.wet = false; loaded.player.y = 280;
   const nest = { kind: 'nest', x: 180, y: WORLD.water, served: false, celebration: 0 }; loaded.items = [nest];
@@ -436,11 +436,11 @@ test('coasting cannot finish any stage; no-food endurance is bounded even withou
 test('a full pouch keeps earning points and replenishing energy, including golden fish', () => {
   for (const golden of [false, true]) {
     const g = createGame(); g.cargo = WORLD.capacity; g.energy = 50;
-    g.items = [{kind: 'fish', ...beakPosition(g.player), golden}];
+    g.items = [{kind: 'fish', ...beakPosition(g.player), golden, species: 'classic'}];
     step(g, .001, false);
     assert.equal(g.cargo, WORLD.capacity); assert.equal(g.fish, 1);
     assert.equal(g.score, golden ? 50 : 10); assert.equal(g.energy, golden ? 62 : 54);
-    g.energy = 99; g.items = [{kind: 'fish', ...beakPosition(g.player), golden}]; step(g, .001, false);
+    g.energy = 99; g.items = [{kind: 'fish', ...beakPosition(g.player), golden, species: 'classic'}]; step(g, .001, false);
     assert.equal(g.energy, 100);
   }
 });
@@ -581,11 +581,11 @@ test('a fish snapped out of the air scores double', () => {
   const g = createGame(() => .5); g.nextEncounter = Infinity;
   Object.assign(g.player, { y: 300, vy: 0, wet: false });
   const beak = beakPosition(g.player);
-  g.items = [{ kind: 'fish', x: beak.x, y: beak.y, golden: false, leap: .5 }];
+  g.items = [{ kind: 'fish', x: beak.x, y: beak.y, golden: false, leap: .5, species: 'classic' }];
   const events = step(g, 1 / 60, false);
   assert.equal(g.score, 20);
   assert.equal(events.filter(e => e.kind === 'airCatch').length, 1);
-  g.items = [{ kind: 'fish', ...beakPosition(g.player), golden: false }];
+  g.items = [{ kind: 'fish', ...beakPosition(g.player), golden: false, species: 'classic' }];
   step(g, 1 / 60, false);
   assert.equal(g.score, 30, 'a plain catch in the air is not doubled');
 });
@@ -619,4 +619,24 @@ test('storm: surfacing on a breaker crest rides it high once, flat water does no
     assert.ok(crest ? top < 120 : top >= 150, `${crest ? 'crest' : 'flat'} top ${top}`);
   }
   assert.equal(createGame(() => .5, 0).rollers, null, 'calm stages have no breakers');
+});
+
+test('fish species differ: rare quick ones dodge further and pay more, the mix follows the stage weights', () => {
+  const dodge = species => {
+    const g = createGame(() => .5, STAGES.findIndex(s => s.id === 'reef')); g.nextEncounter = Infinity;
+    const fish = { kind: 'fish', x: 260, y: 535, golden: false, species };
+    g.items = [fish]; Object.assign(g.player, { y: 535, wet: true });
+    for (let i = 0; i < 30; i++) { g.player.y = 535; g.player.vy = 0; step(g, 1 / 60, false); }
+    return Math.abs(fish.y - 535);
+  };
+  assert.ok(dodge('tang') > dodge('lanternfish') && dodge('lanternfish') > dodge('clownfish'), 'tang dodges most, clownfish stays put');
+  assert.equal(dodge('clownfish'), 0);
+  assert.ok(FISH_SPECIES.tang.points > FISH_SPECIES.clownfish.points && FISH_SPECIES.sardine.points < FISH_SPECIES.classic.points);
+  // A caught species pays its own base points.
+  const g = createGame(() => .5, 0); g.items = [{ kind: 'fish', ...beakPosition(g.player), species: 'sardine' }];
+  const before = g.score; step(g, .001, false); assert.equal(g.score - before, FISH_SPECIES.sardine.points);
+  // Over many fish the mix matches the weights (reef: clownfish 6, lanternfish 3, tang 1).
+  const reef = createGame(() => .3, STAGES.findIndex(s => s.id === 'reef')); reef.nextEncounter = Infinity; const count = {};
+  for (let i = 0; i < 200; i++) { reef.items = [{ kind: 'fish', x: 900, y: 500 }]; step(reef, .001, false); count[reef.items[0].species] = (count[reef.items[0].species] || 0) + 1; }
+  assert.ok(Math.abs(count.clownfish - 120) <= 6 && Math.abs(count.lanternfish - 60) <= 6 && Math.abs(count.tang - 20) <= 6, JSON.stringify(count));
 });

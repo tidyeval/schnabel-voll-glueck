@@ -231,6 +231,8 @@ function updateHud() {
   if (game.score > shownScore) { const score = $('score'); score.classList.remove('pop'); void score.offsetWidth; score.classList.add('pop'); }
   shownScore = game.score;
   text('score', formatNumber(game.score)); text('time', clock(Math.floor(game.time)));
+  // Fish caught this stage, next to the points.
+  if ($('fish-value').textContent !== String(formatNumber(game.fish))) { text('fish-value', formatNumber(game.fish)); $('fish-count').setAttribute('aria-label', `${formatNumber(game.fish)} ${t('fish')}`); }
   const energy = Math.ceil(game.energy); $('energy').style.width = energy + '%'; $('energy').style.background = energy < 25 ? '#d78560' : '#5c9e79'; $('status-panel').classList.toggle('low-energy', energy < 25);
   text('energy-value', energy); document.querySelector('.energy-track').setAttribute('aria-valuenow', energy);
   const p = game.player;

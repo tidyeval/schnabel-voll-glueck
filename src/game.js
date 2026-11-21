@@ -1,3 +1,5 @@
+import { FISH_SPECIES, pickSpecies } from './species.js';
+export { FISH_SPECIES };
 import { grow, movePlayerSolid, shape, syncPlayerBody, touches } from './physics.js';
 import { STAGES } from './stages.js';
 
@@ -652,7 +654,12 @@ function updateBoat(game, item, dt, events) {
 }
 
 function updateFish(game, item, dt, beak, events) {
-  const p = game.player;
+  const p = game.player, stageId = STAGES[game.stage].id;
+  // Each fish gets its species once: golden fish stay golden, leaping fish at Sturmkap are flying fish.
+  // The rolls follow a golden-ratio sequence from one random start: an even mix that matches the weights.
+  if (!item.species) game.speciesRoll = ((game.speciesRoll ?? game.random()) + .6180339887) % 1;
+  item.species ??= item.golden ? 'classic' : item.leap !== undefined && stageId === 'storm' ? 'flyingfish' : pickSpecies(stageId, game.speciesRoll);
+  const species = FISH_SPECIES[item.species];
   if (item.leap === undefined) {
     // Fish drift with the water; the drag lets them settle back once the flow lets go.
     const flow = flowAt(game, item.x, item.y), drag = FLOW.fishDrag;
@@ -660,15 +667,17 @@ function updateFish(game, item, dt, beak, events) {
     item.x += item.drift.x * dt; item.y += item.drift.y * dt;
     if (item.homeY !== undefined) item.homeY += item.drift.y * dt;
   }
-  if (game.stage === 0 && !item.golden && !item.calm && item.leap === undefined) {
+  // Fish swim out of Pip's way by species (Pip's favourite only in the bay, as a gentle start).
+  const evade = item.species === 'classic' ? (game.stage === 0 ? 75 : 0) : species.evade;
+  if (evade && !item.golden && !item.calm && item.leap === undefined) {
     item.homeY ??= item.y;
     const gap = Math.hypot(item.x - p.x, item.y - p.y);
-    if (p.wet && gap < 220) item.escapeSide ??= Math.sign(item.y - p.y || 1);
+    if (p.wet && gap < species.wary) item.escapeSide ??= Math.sign(item.y - p.y || 1);
     else item.escapeSide = undefined;
-    const away = item.escapeSide ? item.escapeSide * (1 - gap / 220) * 75 : 0;
+    const away = item.escapeSide ? item.escapeSide * (1 - gap / species.wary) * evade : 0;
     const target = terrainSafeY(game.items, item.x, item.homeY + away, 12, 0);
     const before = item.y;
-    item.y += (target - item.y) * (1 - Math.exp(-dt * 5));
+    item.y += (target - item.y) * (1 - Math.exp(-dt * species.quick));
     item.heading = clamp((item.y - before) / Math.max(dt, .001) / 220, -.2, .2);
   }
   if (item.leap !== undefined && (item.leap > 0 || item.x < LEAP.at) && item.leap < LEAP.duration) {
@@ -685,10 +694,10 @@ function updateFish(game, item, dt, beak, events) {
     game.fish++; game.cargo = Math.min(WORLD.capacity, game.cargo + 1); game.combo++; if (p.wet) game.diveFish++;
     game.comboTime = 8.5; p.gulp = .42;
     game.bestCombo = Math.max(game.bestCombo, game.combo);
-    const points = (item.golden ? 50 : 10) * Math.min(4, 1 + Math.floor(game.combo / 5)) * (game.frenzy > 0 ? 2 : 1);
+    const points = (item.golden ? 50 : species.points) * Math.min(4, 1 + Math.floor(game.combo / 5)) * (game.frenzy > 0 ? 2 : 1);
     game.score += points;
     game.energy = Math.min(100, game.energy + (item.golden ? ENERGY.golden : ENERGY.fish));
-    events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden, combo: game.combo });
+    events.push({ kind: 'catch', x: item.x, y: item.y, points, golden: item.golden, species: item.species, combo: game.combo });
     // Snapping a leaping fish out of the air doubles its points.
     if (!p.wet && item.leap > 0) { game.score += points; events.push({ kind: 'airCatch', x: item.x, y: item.y, points: points * 2 }); }
     if (game.combo >= FRENZY.combo && game.frenzyArmed && !game.frenzy) {
