@@ -21,13 +21,24 @@
   .shot .say{font-weight:800;margin:4px 0}
   .shot .vo{font-style:italic;color:#2f6f6b;margin:2px 0;font-size:13px}
   .shot p{margin:3px 0 0;font-size:13px;color:#5f7a70;max-width:260px}
+  .goal{margin:0 0 22px}.goal ul{margin:6px 0 0;padding-left:20px}.goal li{margin:4px 0}
+  .tag{display:inline-block;background:#2f6f6b;color:#fffaf0;font-size:11px;font-weight:800;border-radius:99px;padding:1px 8px;margin-left:6px;vertical-align:middle}
   .rec{background:#fff4d8;border:1px solid #efd9a0;border-radius:12px;padding:10px 14px;margin:26px 0 0;max-width:800px}
 </style>
 </head>
 <body>
 <main>
   <h1>Promo „Schnabelglück“<span class="badge">STORYBOARD</span></h1>
-  <p class="lead">Ein etwa 46 Sekunden langes Hochkant-Video (9:16) im Stil „Paper Pop-up Book“, alle Texte im Bild auf Englisch. Es erzählt die Geschichte des Spiels: Pips Küken haben Hunger, Pip fliegt hinaus aufs Meer, erlebt Abenteuer und kommt mit vollem Schnabel heim. Die Spielfunktionen sind Momente dieser Geschichte, keine Liste. Ein Bilderbuch klappt auf, Kulissen und Figuren stehen als Papier auf. Umgeblättert wird im 120er-Takt (ein Takt = 2 Sekunden). Die Bilder sind eigene Skizzen, das fertige Video entsteht mit Lemo-Opuscar.</p>
+  <p class="lead">Ein etwa 52 Sekunden langes Hochkant-Video (9:16) im Stil „Paper Pop-up Book“, alle Texte im Bild auf Englisch. Es erzählt die Geschichte des Spiels: Pips Küken haben Hunger, Pip zieht sich für die Arbeit an, fliegt hinaus aufs Meer, erlebt Abenteuer, kommt mit vollem Schnabel heim und teilt am Ende ein Erinnerungsfoto mit Freunden. Die Spielfunktionen sind Momente dieser Geschichte, keine Liste. Ein Bilderbuch klappt auf, Kulissen und Figuren stehen als Papier auf. Umgeblättert wird im 120er-Takt (ein Takt = 2 Sekunden). Die Bilder sind eigene Skizzen, das fertige Video entsteht mit Lemo-Opuscar.</p>
+  <div class="rec goal"><b>Was wir mit dieser Fassung erreichen wollen</b>
+    <ul>
+      <li><b>Pip macht sich für die Arbeit fertig (neu, Szene 2).</b> Gleich nach dem Hunger der Küken wählt Pip sein Arbeits-Outfit: erst Blume, Seemannsmütze, dann die Taucherbrille, und dazu ein Hawaiihemd in Koralle, Himmelblau und am Ende Minze. So sieht man in den ersten Sekunden, dass man Pip selbst einkleidet und Accessoire und Hemd kombinieren kann, wie jetzt im Spiel.</li>
+      <li><b>Der Look bleibt den ganzen Film über.</b> Pip taucht, reitet den Sturm und kommt mit Taucherbrille und Minzhemd heim. Das Styling wirkt damit wie ein Teil der Geschichte und nicht wie ein Menüpunkt. Und die Taucherbrille passt zum Tauchen.</li>
+      <li><b>Erinnerungsfoto und Teilen (neu, Szene 10).</b> Nach dem fünften Nest blitzt die Kamera. Das Polaroid aus dem Spiel mit „All nests!“ springt heraus, Pip tippt auf „Share“, und das Foto fliegt zu drei Freunden, die mit Herzen antworten. Das zeigt: Erfolge kann man teilen. Und es lädt die Zuschauer ein, das Spiel weiterzuempfehlen. Erst danach springt Pip ins Handy.</li>
+      <li><b>Mehr Leben im Meer.</b> Bisher gab es außer Fischen, Hai und Schildkröte kaum Tiere. Jetzt sind die Bewohner aus dem Spiel dabei: Am Strand schauen Krabbe und Seestern zu, und die Krabbe winkt Pip hinterher. Am Hafen lauert die Hafenkatze auf die Fische, und ein Seepferdchen fiebert mit. In der Lagune springen Delfine mit, und ein Flamingo staunt. Im Riff flieht alles vor dem Hai, und der Krake versteckt sich in seiner Tinte. Daheim tanzen Krabbe und Seestern mit, und am Ende bekommen genau diese Freunde das Erinnerungsfoto.</li>
+      <li><b>Die Garderobe nach der Heimkehr fällt weg.</b> Die Heimkehr bleibt der ruhige Höhepunkt, und von dort geht es direkt zur Seekarte.</li>
+      <li><b>Länge:</b> etwa 52 statt 48,5 Sekunden, weiterhin unter einer Minute.</li>
+    </ul></div>
   <div class="shots" id="shots"></div>
   <div class="rec"><b>Ton:</b> warme Musik im 120er-Takt, dazu Papiergeräusche (Aufklappen, Umblättern, Rascheln) und Effekte wie Platschen, Schnappen und Jubel auf den Schlägen. Eine warme Erzählstimme (Englisch, wie im ersten Promo) führt durch die Geschichte, kurze Sätze, die Musik wird darunter leiser. Die Texte im Bild tragen die Geschichte auch ohne Ton, falls jemand stumm durchscrollt. <b>Gefühl:</b> Wer zuschaut, soll Pip mögen, kurz um ihn bangen, sich mit den Küken freuen und dann denken: „Das will ich selbst spielen.“</div>
 </main>
@@ -38,6 +49,7 @@ import { PLUMAGES, BEAKS, SHIRTS } from '/src/looks.js';
 
 const W = 540, H = 960, SURF = 560, INK = '#5a3a22', BEAT = .5, PAPER = '#fffdf6';
 const FONT = "ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif";
+const lerp = (a, b, k) => a + (b - a) * k;
 const ease = k => k * k * (3 - 2 * k), clamp01 = k => Math.max(0, Math.min(1, k)), TAU = Math.PI * 2;
 const back = k => { const s = 1.70158; k = clamp01(k) - 1; return k * k * ((s + 1) * k + s) + 1; }; // pop-up overshoot
 const hopOn = t => Math.pow(1 - (t / BEAT) % 1, 3); // 1 on every beat, falling off
@@ -109,7 +121,8 @@ function splash(c, x, y, k) { if (k <= 0 || k >= 1) return;
 let now = 0;
 
 // --- The cast -------------------------------------------------------------------
-// Pip: a toy pelican. look = { plumage, beak, outfit } from the game's wardrobe; mouth 0..1.
+// Pip: a toy pelican. look = { plumage, beak, outfit, shirt } from the game's wardrobe; mouth 0..1.
+// outfit is the head accessory; shirt is a Hawaiian-shirt colour or 'none', worn with any accessory.
 function pip(c, x, y, { s = 1.1, tilt = 0, mouth = 0, look = {} } = {}) {
   const body = PLUMAGES[look.plumage || 'white'].swatch === '#fffaf0' ? '#ffffff' : PLUMAGES[look.plumage].swatch;
   const wing = look.plumage && look.plumage !== 'white' ? PLUMAGES[look.plumage].tail : '#dfe7d6';
@@ -126,12 +139,18 @@ function pip(c, x, y, { s = 1.1, tilt = 0, mouth = 0, look = {} } = {}) {
   ];
   if (look.outfit === 'sailor') parts.push([P(p => { p.moveTo(14, -74); p.lineTo(74, -74); p.lineTo(68, -98); p.lineTo(20, -98); p.closePath(); }), '#ffffff'], [P(p => p.rect(14, -82, 60, 9)), '#3b5ba5']);
   if (look.outfit === 'flower') for (let i = 0; i < 5; i++) { const a = i * TAU / 5; parts.push([P(p => p.arc(30 + Math.cos(a) * 13, -80 + Math.sin(a) * 13, 10, 0, TAU)), '#ff8fb8']); }
-  if (look.outfit === 'hawaii') parts.splice(2, 0, [P(p => p.ellipse(0, 26, 64, 38, 0, 0, TAU)), SHIRTS[look.shirt || 'coral'].cloth[0]]);
+  const shirt = look.shirt && look.shirt !== 'none' ? SHIRTS[look.shirt] : null;
+  if (shirt) parts.splice(2, 0, [P(p => p.ellipse(0, 26, 64, 38, 0, 0, TAU)), shirt.cloth[0]]);
+  if (look.outfit === 'snorkel') parts.splice(3, 0, [P(p => { p.roundRect(18, -118, 12, 74, 6); }), '#ff9a3d'], [P(p => p.roundRect(14, -126, 20, 14, 6)), '#ffd34a']);
   toy(c, parts, 10);
-  if (look.outfit === 'hawaii') { const sh = SHIRTS[look.shirt || 'coral'];
+  if (shirt) { const sh = shirt;
     [[-48, 36], [18, 50], [44, 26], [-24, 52]].forEach(([fx, fy]) => { for (let i = 0; i < 5; i++) { const a = i * TAU / 5; c.fillStyle = sh.print; c.beginPath(); c.arc(fx + Math.cos(a) * 6, fy + Math.sin(a) * 6, 5, 0, TAU); c.fill(); } c.fillStyle = sh.leaf; c.beginPath(); c.arc(fx, fy, 3, 0, TAU); c.fill(); }); }
   if (look.outfit === 'flower') toy(c, [[P(p => p.arc(30, -80, 8, 0, TAU)), '#f6c447']], 0);
   c.fillStyle = INK; c.beginPath(); c.arc(50, -58, 7, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(52, -60, 2.5, 0, TAU); c.fill();
+  if (look.outfit === 'snorkel') { // diving mask: strap round the head, see-through glass over the eye
+    c.strokeStyle = '#2f6f6b'; c.lineWidth = 7; c.beginPath(); c.arc(44, -52, 31, Math.PI * .95, Math.PI * 1.75); c.stroke();
+    toy(c, [[P(p => p.roundRect(30, -76, 40, 34, 12)), '#ff9a3d']], 0);
+    c.fillStyle = '#cdeff4aa'; c.beginPath(); c.roundRect(36, -70, 28, 22, 8); c.fill(); c.fillStyle = '#ffffffcc'; c.fillRect(40, -67, 5, 9); }
   c.restore();
 }
 function fish(c, x, y, s = 1.3, col = '#f28a6a', wiggle = 0) {
@@ -167,13 +186,66 @@ function nest(c, x, y, t, open) {
 function heart(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s, s); toy(c, [[P(p => { p.moveTo(0, 12); p.bezierCurveTo(-26, -6, -14, -26, 0, -12); p.bezierCurveTo(14, -26, 26, -6, 0, 12); }), '#ef7a9a']], 4); c.restore(); }
 function bolt(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s, s); toy(c, [[P(p => { p.moveTo(0, -60); p.lineTo(-24, 6); p.lineTo(-2, 6); p.lineTo(-14, 64); p.lineTo(26, -10); p.lineTo(4, -10); p.lineTo(16, -60); p.closePath(); }), '#f6c447']], 8); c.restore(); }
 
+// --- Sea folk: paper versions of the residents the game already has (src/cute.js).
+const eye = (c, x, y, r = 5) => { c.fillStyle = INK; c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(x + r * .35, y - r * .35, r * .35, 0, TAU); c.fill(); };
+// Crab: wave 0..1 lifts the right claw (a wave or a clap).
+function crab(c, x, y, t, { s = 1, wave = 0, col = '#ef7a5a' } = {}) {
+  c.save(); c.translate(x, y); c.scale(s, s); const lift = wave * Math.sin(t * 10) * .5;
+  const claw = (side, a) => P(p => { p.ellipse(side * 40 + Math.sin(a) * 10 * side, -22 - Math.cos(a) * 14, 14, 11, side * .4, 0, TAU); });
+  toy(c, [[P(p => { for (const side of [-1, 1]) for (let i = 0; i < 3; i++) { p.moveTo(side * 16, 6 + i * 5); p.lineTo(side * (40 + i * 4), 18 + i * 6); p.lineTo(side * (36 + i * 4), 22 + i * 6); p.lineTo(side * 14, 12 + i * 5); } }), col],
+    [claw(-1, 0), col], [claw(1, wave ? lift - .6 : 0), col], [P(p => p.ellipse(0, 0, 32, 20, 0, 0, TAU)), col]], 6);
+  eye(c, -9, -22, 5); eye(c, 9, -22, 5); c.strokeStyle = INK; c.lineWidth = 3; c.beginPath(); c.arc(0, 2, 7, .2, Math.PI - .2); c.stroke(); c.restore();
+}
+function starfish(c, x, y, t, s = 1, col = '#f6a04d') {
+  c.save(); c.translate(x, y); c.rotate(Math.sin(t * 3) * .12); c.scale(s, s);
+  toy(c, [[P(p => { for (let k = 0; k < 10; k++) { const r = k % 2 ? 11 : 26, a = k * Math.PI / 5 - Math.PI / 2; p.lineTo(Math.cos(a) * r, Math.sin(a) * r); } p.closePath(); }), col]], 4);
+  eye(c, -5, -3, 3); eye(c, 5, -3, 3); c.restore();
+}
+// Octopus: ink 0..1 puffs a dark cloud behind it.
+function octopus(c, x, y, t, { s = 1, col = '#c58cff', ink = 0 } = {}) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  if (ink > 0) { c.globalAlpha = 1 - ink * .6; [[-40, 30, 34], [-10, 50, 40], [-60, 0, 26]].forEach(([ix, iy, r]) => { c.fillStyle = '#1d2244'; c.beginPath(); c.arc(ix - ink * 30, iy + ink * 20, r * (.4 + ink), 0, TAU); c.fill(); }); c.globalAlpha = 1; }
+  const arms = P(p => { for (let i = 0; i < 5; i++) { const ax = -28 + i * 14, sw = Math.sin(t * 5 + i) * 8; p.moveTo(ax - 6, 10); p.quadraticCurveTo(ax + sw, 40, ax + sw * 1.6, 58); p.lineTo(ax + 6 + sw * 1.6, 56); p.quadraticCurveTo(ax + 8 + sw, 36, ax + 6, 10); p.closePath(); } });
+  toy(c, [[arms, col], [P(p => p.ellipse(0, -6, 36, 32, 0, 0, TAU)), col]], 6);
+  eye(c, -12, -8, 6); eye(c, 12, -8, 6); c.restore();
+}
+function seahorse(c, x, y, t, s = 1, col = '#ffd84a') {
+  c.save(); c.translate(x, y + Math.sin(t * 3) * 6); c.scale(s, s);
+  toy(c, [[P(p => { p.moveTo(-6, -40); p.quadraticCurveTo(24, -44, 18, -20); p.quadraticCurveTo(10, 0, 16, 22); p.quadraticCurveTo(20, 46, 0, 44); p.quadraticCurveTo(-10, 40, 2, 32); p.quadraticCurveTo(-6, 10, -6, -10); p.lineTo(-30, -24); p.lineTo(-26, -34); p.closePath(); }), col]], 5);
+  eye(c, 4, -30, 4); c.restore();
+}
+// Flamingo on one leg, head turning to follow the action.
+function flamingo(c, x, y, t, s = 1, look = 0) {
+  c.save(); c.translate(x, y); c.scale(s, s); c.strokeStyle = INK; c.lineWidth = 4; c.beginPath(); c.moveTo(0, 0); c.lineTo(0, 70); c.moveTo(0, 30); c.lineTo(14, 22); c.stroke();
+  const hx = 18 + look * 10, hy = -86;
+  toy(c, [[P(p => { p.moveTo(6, -10); p.bezierCurveTo(30, -30, -10, -60, hx, hy); p.lineTo(hx + 6, hy + 8); p.bezierCurveTo(-2, -60, 40, -30, 14, -4); p.closePath(); }), '#ff9ab8'],
+    [P(p => p.ellipse(0, -4, 34, 20, -.2, 0, TAU)), '#ff9ab8'], [P(p => p.arc(hx, hy, 12, 0, TAU)), '#ff9ab8'], [P(p => { p.moveTo(hx + 8, hy - 2); p.lineTo(hx + 28, hy + 10); p.lineTo(hx + 8, hy + 8); p.closePath(); }), '#3d2d2a']], 6);
+  eye(c, hx + 2, hy - 3, 3); c.restore();
+}
+// A dolphin leaping in an arc; k 0..1 along the jump.
+function dolphin(c, x, y, k, s = 1) {
+  if (k <= 0 || k >= 1) return; const jx = x + (k - .5) * 220 * s, jy = y - Math.sin(k * Math.PI) * 200 * s;
+  c.save(); c.translate(jx, jy); c.rotate(-Math.cos(k * Math.PI) * .9); c.scale(s, s);
+  toy(c, [[P(p => { p.moveTo(-52, 0); p.lineTo(-74, -16); p.lineTo(-70, 0); p.lineTo(-74, 16); p.closePath(); }), '#7fa6c9'], [P(p => { p.moveTo(-4, -18); p.lineTo(8, -40); p.lineTo(18, -16); p.closePath(); }), '#7fa6c9'],
+    [P(p => { p.ellipse(0, 0, 56, 20, 0, 0, TAU); p.moveTo(50, -4); p.lineTo(74, 2); p.lineTo(50, 8); }), '#9cc2e2']], 8);
+  eye(c, 34, -6, 4); c.restore();
+}
+// The harbor cat on a crate, licking its lips at the fish.
+function cat(c, x, y, t) {
+  toy(c, [[P(p => p.rect(x - 46, y, 92, 56)), '#c99b62']], 6);
+  toy(c, [[P(p => { p.moveTo(x - 24, y - 50); p.lineTo(x - 30, y - 78); p.lineTo(x - 8, y - 60); p.lineTo(x + 8, y - 60); p.lineTo(x + 30, y - 78); p.lineTo(x + 24, y - 50); p.closePath(); }), '#9aa3ad'],
+    [P(p => p.ellipse(x, y - 8, 30, 26, 0, 0, TAU)), '#9aa3ad'], [P(p => p.arc(x, y - 46, 26, 0, TAU)), '#9aa3ad']], 6);
+  eye(c, x - 10, y - 50, 4); eye(c, x + 10, y - 50, 4);
+  if (Math.sin(t * 4) > 0) { c.fillStyle = '#ef7a9a'; c.beginPath(); c.ellipse(x + 6, y - 32, 5, 4, 0, 0, TAU); c.fill(); }
+}
+
 // --- The real game, for the end card ---------------------------------------------
 const real = createGame(() => .5, 0); real.nextEncounter = Infinity;
 function realGame(c, t) {
   const K = W / 480, p = real.player, dive = Math.sin(clamp01(t / 2.4) * Math.PI);
   const prev = p.y; p.y = 330 + dive * 220; p.vy = (p.y - prev) * 60; p.wet = p.y > 360; p.x = 150;
   real.items = Array.from({ length: 6 }, (_, i) => ({ kind: 'fish', x: 260 + i * 60 - t * 60, y: 440 + Math.sin(i / 5 * Math.PI) * 110, golden: false, species: 'classic', lane: 'main' })).filter(f => f.x > p.x + 20);
-  real.distance = t * 150; c.save(); c.scale(K, K); drawWorld(c, real, 'play', t, { outfit: 'sailor', plumage: 'white', beak: 'orange' }, [], false); c.restore();
+  real.distance = t * 150; c.save(); c.scale(K, K); drawWorld(c, real, 'play', t, { ...GEAR, plumage: 'white', beak: 'orange' }, [], false); c.restore();
 }
 
 // --- Pip's family ------------------------------------------------------------------
@@ -192,12 +264,12 @@ function chick(c, cx, cy, { dir = 1, open = 0, cover = 0, happy = false, s = 1 }
     toy(c, [[P(p => p.ellipse(wx, wy, 14, 10, side * (.6 - k * .6), 0, TAU)), '#ffd34a']], 3); });
   c.restore();
 }
-// The nest with three chicks. mode: 'hungry' (beaks open, bobbing), 'scared' (wings over the eyes),
+// The nest with two chicks. mode: 'hungry' (beaks open, bobbing), 'scared' (wings over the eyes),
 // 'fed' = how many have been fed (number), 'still'.
 function family(c, x, y, t, mode = 'still', s = 1) {
   c.save(); c.translate(x, y); c.scale(s, s);
   toy(c, [[P(p => p.ellipse(0, 20, 120, 34, 0, 0, TAU)), '#a0703f']], 10);
-  [[-62, -1], [0, 1], [62, 1]].forEach(([dx, dir], i) => {
+  [[-40, -1], [40, 1]].forEach(([dx, dir], i) => {
     const fed = typeof mode === 'number' && i < mode, hungry = mode === 'hungry' || (typeof mode === 'number' && !fed);
     const bob = hungry ? Math.abs(Math.sin(t * 9 + i * 1.7)) * 12 : fed ? Math.abs(Math.sin(t * 4 + i)) * 4 : 0;
     chick(c, dx, -14 - bob, { dir, open: hungry ? .6 + .4 * Math.abs(Math.sin(t * 9 + i * 1.7)) : 0, cover: mode === 'scared' ? clamp01(t * 3 - i * .3) : 0, happy: fed });
@@ -235,15 +307,18 @@ function porthole(c, x, y, r, k, draw) {
 const beakFish = (c, x, y, s = 1.1) => fish(c, x + 120 * s, y - 34 * s, .8 * s, '#f28a6a', 0);
 
 // --- The shots -----------------------------------------------------------------------
-const LOOKS = [
-  { outfit: 'classic' }, { outfit: 'flower' }, { outfit: 'flower', plumage: 'rose', beak: 'pink' }, { outfit: 'sailor' },
-  { outfit: 'hawaii', shirt: 'coral' }, { outfit: 'hawaii', shirt: 'sky' }, { outfit: 'hawaii', shirt: 'mint', plumage: 'sun', beak: 'coral' }, { outfit: 'hawaii', shirt: 'lilac', plumage: 'lilac', beak: 'lilac' }];
+// Getting dressed for work: accessories first, then the shirt; the last look is Pip's work gear for the whole film.
+const DRESS = [
+  { outfit: 'classic', shirt: 'none' }, { outfit: 'flower', shirt: 'none' }, { outfit: 'sailor', shirt: 'none' }, { outfit: 'snorkel', shirt: 'none' },
+  { outfit: 'snorkel', shirt: 'coral' }, { outfit: 'snorkel', shirt: 'sky' }, { outfit: 'snorkel', shirt: 'mint' }];
+const GEAR = DRESS[DRESS.length - 1];
+const ACCESSORIES = [['classic', '–'], ['flower', '✿'], ['sailor', '⚓'], ['snorkel', '🤿']];
 
 const SHOTS = [
-  { d: 4, title: '1 · Hunger!', vo: 'Three little beaks. One empty nest.', say: '„PEEP! PEEP!“ → HAPPY BEAK', what: 'Das Buch klappt auf, die Insel stellt sich auf. Im Nest drei Küken mit weit offenen Schnäbeln, davor nur eine leere Gräte. Pip schaut die Küken an, dann uns, und plustert sich auf. Das Titelschild fällt an Fäden herab.',
+  { d: 4, title: '1 · Hunger!', vo: 'Two little beaks. One empty nest.', say: '„PEEP! PEEP!“ → HAPPY BEAK', what: 'Das Buch klappt auf, die Insel stellt sich auf. Im Nest zwei Küken mit weit offenen Schnäbeln, davor nur eine leere Gräte. Pip schaut die Küken an, dann uns, und plustert sich auf: Zeit für die Arbeit! Am Strand sitzen eine Krabbe und ein Seestern und schauen zu. Das Titelschild fällt an Fäden herab.',
     draw(c, t) {
       spread(c, '#f2b880', '#fbe3c4', t - .5, 'sun'); sea(c, '#4aa3c8', '#3b8fb5', SURF, t - .6); island(c, t - .7);
-      if (t > .9) { family(c, 390, 450, t, 'hungry'); bone(c, 380, 512); }
+      if (t > .9) { family(c, 390, 450, t, 'hungry'); bone(c, 380, 512); crab(c, 205, 525, t, { s: .95 }); starfish(c, 470, 545, t, .7); }
       const puff = t > 2.3 ? 1 + Math.sin(clamp01((t - 2.3) / .5) * Math.PI) * .12 : 1;
       if (t > 1) pip(c, 210, 400, { s: 1.05 * puff, tilt: t > 2.3 ? -.12 : 0 });
       bubble(c, 400, 330, 'PEEP! PEEP!', (t - 1.4) / .3);
@@ -252,79 +327,87 @@ const SHOTS = [
         c.fillStyle = '#2f6f6b'; c.fillRect(0, 30, W - 44, H - 60); c.shadowColor = 'transparent'; c.strokeStyle = '#d8b25a'; c.lineWidth = 4; c.strokeRect(24, 56, W - 92, H - 112);
         c.font = `900 54px ${FONT}`; c.textAlign = 'center'; c.fillStyle = '#e3c06a'; c.fillText('HAPPY BEAK', (W - 44) / 2, H / 2); c.restore(); }
     } },
-  { d: 4, title: '2 · Ab ins Meer', vo: 'So Pip does what pelicans do best …', say: '„Dinner’s out there!“', what: 'Pip denkt an Fisch (Denkblase), nimmt Anlauf, springt von der Insel und taucht mit Platsch ins Meer. Die Kamera folgt ihm nach unten.',
+  { d: 5, tag: 'NEU', title: '2 · Ab in die Arbeitskleidung', vo: 'Time to dress for work. Make Pip yours!', say: '„Dress for work!“ → „Make Pip yours.“', what: 'Pip allein im Rampenlicht auf dem Pappsockel, ohne Küken. Auf jedem Schlag ein neues Teil: Blume, Seemannsmütze, dann die Taucherbrille. Sie bleibt, und dazu kommt das Hawaiihemd in Koralle, Himmelblau und schließlich Minze. Unten springen die zwei Reihen hoch, oben „Accessoire“, unten „Hawaiihemd“, die gewählten Felder heben sich ab. Pip prüft den Look und nickt: fertig für die Arbeit.',
+    draw(c, t) {
+      sunburst(c, '#f2b880', '#fbe3c4', t);
+      const i = t < 1 ? 0 : Math.min(DRESS.length - 1, Math.floor((t - 1) / BEAT) + 1), look = DRESS[i];
+      c.fillStyle = '#fff6dc55'; c.beginPath(); c.moveTo(W / 2 - 60, 0); c.lineTo(W / 2 + 60, 0); c.lineTo(W / 2 + 210, 660); c.lineTo(W / 2 - 210, 660); c.closePath(); c.fill();
+      toy(c, [[P(p => p.ellipse(W / 2, 650, 190, 36, 0, 0, TAU)), '#f6c447']], 10);
+      const nod = t > 4.2 ? Math.sin(clamp01((t - 4.2) / .4) * Math.PI) * .12 : 0;
+      pip(c, W / 2 - 40, 520 - (t < 4 ? hopOn(t) * 14 : 0), { s: 1.6, look, tilt: nod });
+      if (t > 1 && (t - 1) % BEAT < .12 && i > 0 && t < 4.1) telop(c, '✦', W / 2 + 150, 380, 60, '#fff');
+      const row = (items, active, y, n, label) => popUp(c, y + 30, (t - .3 - n * .15) / .3, () => {
+        c.font = `800 20px ${FONT}`; c.textAlign = 'center'; c.fillStyle = '#5a3a22'; c.fillText(label, W / 2, y - 46);
+        items.forEach(([id, fill, mark], k) => { const x = W / 2 + (k - (items.length - 1) / 2) * 76, on = id === active;
+          toy(c, [[P(p => p.arc(x, y - (on ? 10 : 0), on ? 31 : 24, 0, TAU)), fill]], on ? 10 : 4);
+          if (mark) { c.font = `900 ${on ? 28 : 22}px ${FONT}`; c.textAlign = 'center'; c.fillStyle = INK; c.fillText(mark, x, y - (on ? 10 : 0) + 9); } }); });
+      row(ACCESSORIES.map(([id, mark]) => [id, PAPER, mark]), look.outfit, 770, 0, 'Accessory');
+      row([['none', PAPER, '╱'], ...Object.keys(SHIRTS).map(id => [id, SHIRTS[id].swatch])], look.shirt, 880, 1, 'Hawaiian shirt');
+      telop(c, 'Dress for work!', W / 2, 160, 56, '#fff3c4', clamp01((t - .3) / .3) * (1 - clamp01((t - 3.6) / .2)));
+      telop(c, 'Make Pip yours.', W / 2, 160, 58, '#fff3c4', clamp01((t - 3.9) / .3));
+    } },
+  { d: 4, title: '3 · Ab ins Meer', vo: 'So Pip does what pelicans do best …', say: '„Dinner’s out there!“', what: 'Pip, jetzt mit Taucherbrille und Minzhemd, denkt an Fisch (Denkblase), nimmt Anlauf, springt von der Insel und taucht mit Platsch ins Meer. Die Krabbe winkt ihm hinterher. Die Kamera folgt ihm nach unten.',
     draw(c, t) {
       spread(c, '#9fd3e6', '#f4fbff', t); sea(c); island(c, 9);
-      family(c, 390, 450, t, 'hungry');
-      if (t < 1.4) { pip(c, 210, 400 - (t > 1 ? Math.sin((t - 1) / .4 * Math.PI) * 20 : 0), { tilt: t > 1 ? -.2 : 0 });
+      family(c, 390, 450, t, 'hungry'); crab(c, 255, 525, t, { s: .95, wave: t > 1.2 ? 1 : 0 });
+      if (t < 1.4) { pip(c, 210, 400 - (t > 1 ? Math.sin((t - 1) / .4 * Math.PI) * 20 : 0), { tilt: t > 1 ? -.2 : 0, look: GEAR });
         porthole(c, 150, 270, 58, (t - .2) / .3, () => { c.fillStyle = '#fffdf6'; c.fillRect(0, 0, W, H); fish(c, 150, 270, 1.2, '#f28a6a', t * 6); }); }
-      else { const k = clamp01((t - 1.4) / 1), x = 210 - k * 120, y = 400 - Math.sin(k * Math.PI * .8) * 120 + Math.pow(k, 2) * 340; pip(c, x, y, { tilt: -.6 + k * 2.1 }); if (t > 2.3) splash(c, 110, SURF, (t - 2.3) / .5); }
+      else { const k = clamp01((t - 1.4) / 1), x = 210 - k * 120, y = 400 - Math.sin(k * Math.PI * .8) * 120 + Math.pow(k, 2) * 340; pip(c, x, y, { tilt: -.6 + k * 2.1, look: GEAR }); if (t > 2.3) splash(c, 110, SURF, (t - 2.3) / .5); }
       telop(c, 'Dinner’s out there!', W / 2, 200, 48, '#fff3c4', clamp01((t - 2.4) / .25));
     } },
-  { d: 5, title: '3 · Schnapp, schnapp!', vo: 'Dive deep. Snap them up!', say: '„5 IN A ROW!“', what: 'Unter Wasser zieht ein Fischschwarm heran. Pip schnappt auf jedem Schlag einen, der Zähler springt bis 5, dann knallt das Lobwort.',
+  { d: 5, title: '4 · Schnapp, schnapp!', vo: 'Dive deep. Snap them up!', say: '„5 IN A ROW!“', what: 'Unter Wasser zieht ein Fischschwarm heran. Pip schnappt auf jedem Schlag einen, der Zähler springt bis 5, dann knallt das Lobwort. Oben auf einer Kiste am Kai leckt sich die Hafenkatze das Maul, unten wippt ein Seepferdchen begeistert mit.',
     draw(c, t) {
-      spread(c, '#9fd3e6', '#f4fbff', t, 'none'); sea(c, '#5fb8a6', '#479f8f', 260, t + 1);
+      spread(c, '#9fd3e6', '#f4fbff', t, 'none'); cat(c, 300, 200, t); sea(c, '#5fb8a6', '#479f8f', 260, t + 1);
+      seahorse(c, 470, 820, t, 1.1); starfish(c, 90, 880, t, .9, '#ff8fb8');
       const caught = Math.max(0, Math.min(5, Math.floor((t - 1) / BEAT) + 1)), py = 600;
       for (let i = caught; i < 7; i++) { const fx = 300 + (i - caught) * 110 - ((t - 1) / BEAT % 1) * (t > 1 && caught < 5 ? 110 : 0); fish(c, fx, py - 30 + Math.sin(i * 1.3) * 26, 1.1, ['#f28a6a', '#ffd84a', '#ff8fb8'][i % 3], t * 10 + i); }
-      pip(c, 140, py, { mouth: t > 1 && caught < 6 && t < 3.6 ? hopOn(t - 1) : 0, s: 1 });
+      pip(c, 140, py, { mouth: t > 1 && caught < 6 && t < 3.6 ? hopOn(t - 1) : 0, s: 1, look: GEAR });
       sticker(c, `🐟 ${caught}`);
       judge(c, t, 3.6, '5 IN A ROW!', '#ffd84a', 230, 76);
     } },
-  { d: 3, title: '4 · Juchhu', vo: '(keine Stimme, nur Pips Jubel)', say: '„WHEEE!“', what: 'Mit vollem Schwung schießt Pip aus dem Wasser und dreht einen Salto vor der Sonne. Purer Übermut.',
+  { d: 3, title: '5 · Juchhu', vo: '(keine Stimme, nur Pips Jubel)', say: '„WHEEE!“', what: 'Mit vollem Schwung schießt Pip aus dem Wasser und dreht einen Salto vor der Sonne. Zwei Delfine springen links und rechts mit, und ein Flamingo am Ufer dreht staunend den Kopf mit. Purer Übermut.',
     draw(c, t) {
-      sunburst(c, '#c9b6e8', '#efe6fb', t); sea(c, '#7f8fd6', '#6676c2');
+      sunburst(c, '#c9b6e8', '#efe6fb', t); flamingo(c, 95, 468, t, 1.3, Math.cos(clamp01((t - .3) / 1.6) * Math.PI)); sea(c, '#7f8fd6', '#6676c2');
       const k = clamp01((t - .3) / 1.6), y = SURF - 30 - Math.sin(k * Math.PI) * 330;
-      pip(c, W / 2 - 10, y, { tilt: ease(k) * TAU }); if (t > .3 && t < .7) splash(c, W / 2, SURF, (t - .3) / .4); if (t > 1.9) splash(c, W / 2, SURF, (t - 1.9) / .4);
+      dolphin(c, 150, SURF + 20, (t - .5) / 1.4, .8); dolphin(c, 400, SURF + 30, (t - .7) / 1.4, .7);
+      pip(c, W / 2 - 10, y, { tilt: ease(k) * TAU, look: GEAR }); if (t > .3 && t < .7) splash(c, W / 2, SURF, (t - .3) / .4); if (t > 1.9) splash(c, W / 2, SURF, (t - 1.9) / .4);
       judge(c, t, 1.1, 'WHEEE!', '#f6c447', 780, 84);
     } },
-  { d: 4, title: '5 · Der Sturm', vo: 'Ride the storm …', say: '„RIDE THE STORM!“', what: 'Der Himmel wird dunkel, Blitze auf den Schlägen. Eine riesige Papierwelle hebt Pip hoch, und Pip reitet sie einfach.',
+  { d: 4, title: '6 · Der Sturm', vo: 'Ride out the storm!', say: '„WAVE RIDER!“', what: 'Der Himmel wird dunkel, Blitze auf den Schlägen. Eine riesige Papierwelle hebt Pip hoch, und Pip reitet sie einfach.',
     draw(c, t) {
       const flash = (t % 1) < .08 && t > 1; spread(c, flash ? '#6f78b8' : '#3d4478', '#8e97c8', t, 'stars');
       const rise = clamp01((t - .6) / 1.5), crest = SURF - Math.sin(rise * Math.PI * .5) * 260 * (t < 3 ? 1 : 1 - (t - 3));
       toy(c, [[P(p => { p.moveTo(30, H - 40); p.lineTo(30, SURF); for (let x = 30; x <= W - 30; x += 20) p.lineTo(x, SURF - Math.exp(-Math.pow((x - 200) / 140, 2)) * (SURF - crest)); p.lineTo(W - 30, H - 40); p.closePath(); }), '#3f6fae'],
         [P(p => p.ellipse(200, crest + 10, 40, 16, 0, Math.PI, 0)), '#e8f6ff']], 10);
       if (flash || (t % 1) < .16 && t > 1) bolt(c, 420, 340, 1.3);
-      pip(c, 190, crest - 60 - (t > 2.5 ? Math.sin(clamp01((t - 2.5) / 1) * Math.PI) * 120 : 0), { tilt: -.3 });
-      judge(c, t, 2.4, 'RIDE THE STORM!', '#8fd0ea', 800, 62);
+      pip(c, 190, crest - 60 - (t > 2.5 ? Math.sin(clamp01((t - 2.5) / 1) * Math.PI) * 120 : 0), { tilt: -.3, look: GEAR });
+      judge(c, t, 2.4, 'WAVE RIDER!', '#8fd0ea', 800, 70);
     } },
-  { d: 5, title: '6 · Der Hai', vo: '(Stille) … and dodge the very close calls.', say: 'Stille … „PHEW!“', what: 'Nacht im Riff, die Musik setzt aus. Ein Hai gleitet näher. Im Bullauge oben: Die Küken halten sich die Augen zu. Im letzten Moment springt Pip heraus, der Hai schnappt ins Leere.',
+  { d: 5, title: '7 · Der Hai', vo: '(Stille) … and dodge the very close calls.', say: 'Stille … „PHEW!“', what: 'Nacht im Riff, die Musik setzt aus. Ein Hai gleitet näher. Im Bullauge oben: Die Küken halten sich die Augen zu. Im letzten Moment springt Pip heraus, der Hai schnappt ins Leere. Fische, Schildkröte und Seepferdchen stieben davon, der Krake versteckt sich in seiner Tintenwolke.',
     draw(c, t) {
       spread(c, '#2c3566', '#8e97c8', t, 'stars'); sea(c, '#2f5f8f', '#264f7c', SURF, 9);
       const jump = clamp01((t - 2.4) / 1.4), py = SURF + 150 - Math.sin(jump * Math.PI) * 430 * (t > 2.4 ? 1 : 0);
       const sx = t < 2.5 ? -170 + t * 90 : 55 + Math.pow(t - 2.5, 1.7) * 520, flee = clamp01((t - 2.6) * 1.5);
       fish(c, 360 + flee * 200, SURF + 100 - flee * 120, 1, '#ffd84a', t * 9); turtle(c, 330 + flee * 260, SURF + 300 + flee * 60);
+      octopus(c, 430, H - 190, t, { s: 1.1, ink: clamp01((t - 2.5) * 2) }); seahorse(c, 70 - flee * 80, SURF + 260, t, .9);
       if (t > 2.5) { c.strokeStyle = '#fff6d899'; c.lineWidth = 5; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(sx - 160 - i * 30, SURF + 126 + i * 22); c.lineTo(sx - 300 - i * 40, SURF + 126 + i * 22); c.stroke(); } }
       shark(c, sx, SURF + 170, 1.5);
-      pip(c, 170, py, { tilt: t > 2.4 && t < 3.8 ? -.5 + jump : 0 });
+      pip(c, 170, py, { tilt: t > 2.4 && t < 3.8 ? -.5 + jump : 0, look: GEAR });
       porthole(c, 390, 200, 110, (t - .9) / .3, () => { c.fillStyle = '#f6c6d3'; c.fillRect(0, 0, W, H); family(c, 390, 240, t - 1, t < 3.6 ? 'scared' : 'still', .75); });
       judge(c, t, 3.6, 'PHEW!', '#ef7a9a', 470, 90);
     } },
-  { d: 6, title: '7 · Heimkehr', vo: 'Beak full. Heart too.', say: '„Beak full. Heart too.“', what: 'Abendrot. Pip fliegt mit Fisch im Schnabel heim und landet am Nest. Ein Küken nach dem anderen bekommt seinen Fisch, alle strahlen. Herzen steigen auf. Der emotionale Höhepunkt, ruhig und lange gehalten.',
+  { d: 6, title: '8 · Heimkehr', vo: 'Beak full. And heart full, too.', say: '„Beak full. Heart too.“', what: 'Abendrot. Pip fliegt mit Fisch im Schnabel heim und landet am Nest. Beide Küken bekommen nacheinander ihren Fisch, alle strahlen. Krabbe und Seestern tanzen mit. Herzen steigen auf. Der emotionale Höhepunkt, ruhig und lange gehalten.',
     draw(c, t) {
       spread(c, '#f4a98a', '#ffe3d0', t, 'sun'); sea(c, '#4f9dc4', '#3f88b1', SURF, 9); island(c, 9);
-      const fed = t < 2 ? 0 : Math.min(3, Math.floor((t - 2) / BEAT) + 1);
-      family(c, 390, 450, t, fed);
+      const fed = t < 2 ? 0 : Math.min(2, Math.floor((t - 2) / BEAT) + 1);
+      family(c, 390, 450, t, fed); crab(c, 205, 525, t, { s: .95, wave: t > 2.5 ? 1 : 0 }); starfish(c, 470, 545 - Math.abs(Math.sin(t * 6)) * (t > 2.5 ? 12 : 0), t, .7);
       const fly = ease(clamp01((t - .3) / 1.3)), px = -60 + fly * 270, py = 220 + fly * 180 - Math.sin(fly * Math.PI) * 40;
-      pip(c, px, py, { tilt: (1 - fly) * .2, mouth: t > 2 && fed < 3 ? hopOn(t - 2) * .6 : 0 }); if (fed < 3) beakFish(c, px, py, 1.1);
+      pip(c, px, py, { tilt: (1 - fly) * .2, mouth: t > 2 && fed < 2 ? hopOn(t - 2) * .6 : 0, look: GEAR }); if (fed < 2) beakFish(c, px, py, 1.1);
       if (t > 3.2) for (let i = 0; i < 5; i++) { const k = ((t - 3.2) * .6 + i * .2) % 1; heart(c, 330 + Math.sin(i * 2 + t * 2) * 90, 420 - k * 260, 1.2 * (1 - k * .5)); }
       telop(c, 'Beak full.', W / 2, 150, 64, '#fff3c4', clamp01((t - 3.4) / .3));
       telop(c, 'Heart too.', W / 2, 230, 64, '#ffd0de', clamp01((t - 4.2) / .3));
     } },
-  { d: 6, title: '8 · Pips Garderobe', say: '„Make Pip yours.“', what: 'Pip allein im Rampenlicht auf einem Pappsockel, wie in der Garderobe des Spiels. Auf jedem Schlag ein neuer Look: Blume, Matrosenmütze, Hawaiihemd in Koralle, Himmelblau, Minze und Flieder, dazu neue Feder- und Schnabelfarben. Unten springen die Farbfelder hoch, das gewählte hebt sich ab.',
-    vo: 'Feathers, beak, a shirt for every mood. Make Pip yours.',
-    draw(c, t) {
-      sunburst(c, '#f3b3c9', '#fde8f0', t);
-      const i = t < 1 ? 0 : Math.min(LOOKS.length - 1, Math.floor((t - 1) / BEAT) + 1), look = LOOKS[i];
-      c.fillStyle = '#fff6dc55'; c.beginPath(); c.moveTo(W / 2 - 60, 0); c.lineTo(W / 2 + 60, 0); c.lineTo(W / 2 + 210, 660); c.lineTo(W / 2 - 210, 660); c.closePath(); c.fill();
-      toy(c, [[P(p => p.ellipse(W / 2, 650, 190, 36, 0, 0, TAU)), '#f6c447']], 10);
-      pip(c, W / 2 - 40, 520 - hopOn(t) * 14, { s: 1.6, look });
-      if (t > 1 && (t - 1) % BEAT < .12 && i > 0) telop(c, '✦', W / 2 + 150, 380, 60, '#fff');
-      const row = (table, active, y, n) => popUp(c, y + 30, (t - .3 - n * .15) / .3, () => Object.keys(table).forEach((id, k, list) => { const x = W / 2 + (k - (list.length - 1) / 2) * 84, on = id === active;
-        toy(c, [[P(p => p.arc(x, y - (on ? 10 : 0), on ? 32 : 24, 0, TAU)), table[id].swatch]], on ? 10 : 4); }));
-      row(PLUMAGES, look.plumage || 'white', 750, 0); row(BEAKS, look.beak || 'orange', 836, 1); row(SHIRTS, look.outfit === 'hawaii' ? look.shirt : '', 922, 2);
-      telop(c, 'Make Pip yours.', W / 2, 170, 58, '#fff3c4', clamp01((t - 4.6) / .3));
-    } },
-  { d: 3, title: '9 · Die große Reise', vo: 'Five nests, all across the sea.', say: '„Five nests. One big journey.“', what: 'Eine Seekarte klappt auf: fünf Inseln mit Nestern, eine gestrichelte Route verbindet sie, ein kleiner Pip hüpft sie entlang.',
+  { d: 3, title: '9 · Die große Reise', vo: 'Five nests, all across the sea.', say: '„Five nests. One big journey.“', what: 'Eine Seekarte klappt auf: fünf Inseln mit Nestern, eine gestrichelte Route verbindet sie, ein kleiner Pip hüpft sie entlang bis zum fünften Nest.',
     draw(c, t) {
       spread(c, '#f4d58a', '#fff6dc', t, 'none');
       popUp(c, 860, t / .4, () => toy(c, [[P(p => p.roundRect(50, 300, W - 100, 560, 22)), '#cfe9e6']], 10));
@@ -332,11 +415,39 @@ const SHOTS = [
       if (t > .3) { c.save(); c.setLineDash([4, 12]); c.lineWidth = 5; c.strokeStyle = INK; c.lineCap = 'round'; c.beginPath(); nests.forEach(([x, y]) => c.lineTo(x, y)); c.stroke(); c.restore(); }
       nests.forEach(([x, y], n) => popUp(c, y + 20, (t - .4 - n * .2) / .25, () => { toy(c, [[P(p => p.ellipse(x, y + 8, 56, 22, 0, 0, TAU)), cols[n]]], 6); toy(c, [[P(p => p.ellipse(x, y - 2, 24, 10, 0, 0, TAU)), '#a0703f']], 4); }));
       const k = clamp01((t - .6) / 2.2) * 4, seg = Math.min(3, Math.floor(k)), f = k - seg, [ax, ay] = nests[seg], [bx, by] = nests[seg + 1];
-      pip(c, ax + (bx - ax) * f - 20, ay + (by - ay) * f - 40 - Math.sin(f * Math.PI) * 30, { s: .45 });
+      pip(c, ax + (bx - ax) * f - 20, ay + (by - ay) * f - 40 - Math.sin(f * Math.PI) * 30, { s: .45, look: GEAR });
       telop(c, 'Five nests.', W / 2, 160, 58, '#fff3c4', clamp01((t - .5) / .3));
       telop(c, 'One big journey.', W / 2, 240, 50, '#fffdf6', clamp01((t - 1.1) / .3));
     } },
-  { d: 6, title: '10 · Jetzt du!', vo: 'Can you get Pip home? Play Happy Beak, free in your browser.', say: '„Can you get Pip home?“', what: 'Pip zwinkert uns zu, hüpft vom Buchrand ins Handy auf dem Tisch, und dort läuft das echte Spiel. Darüber die Frage an die Zuschauer, unten Titel, Aufruf und Link. Mindestens 4 Sekunden stehen lassen.',
+  { d: 5, tag: 'NEU', title: '10 · Erinnerungsfoto', vo: 'Snap a souvenir… and share it with your friends!', say: '„ALL NESTS!“ → „Share it with friends!“', what: 'Am fünften Nest blitzt es. Das Polaroid aus dem Spiel springt heraus: Pip in Taucherbrille und Minzhemd jubelt neben der Urkunde „All nests!“. Pip tippt mit dem Flügel auf „Share“, und drei kleine Kopien des Fotos fliegen zu den Freunden, die Pip unterwegs getroffen hat: Krabbe, Krake und Seepferdchen. Jeder antwortet mit einem Herz. Ein kurzer, fröhlicher Moment, bevor es ins Handy geht.',
+    draw(c, t) {
+      spread(c, '#f4d58a', '#fff6dc', 9, 'none');
+      const send = ease(clamp01((t - 2.4) / .8)), shrink = 1 - send * .25;
+      // the Polaroid, as the game's souvenir photo: the stage behind, Pip cheering next to the certificate
+      const card = (x, y, s, alpha = 1) => { c.save(); c.globalAlpha = alpha; c.translate(x, y); c.scale(s, s); c.rotate(-.04);
+        toy(c, [[P(p => p.roundRect(-170, -220, 340, 420, 10)), '#fffdf6']], 10);
+        const sky = c.createLinearGradient(0, -200, 0, 120); sky.addColorStop(0, '#9fd3e6'); sky.addColorStop(1, '#f4fbff'); c.fillStyle = sky; c.fillRect(-150, -200, 300, 320);
+        c.fillStyle = '#4aa3c8'; c.fillRect(-150, 60, 300, 60); c.save(); c.beginPath(); c.rect(-150, -200, 300, 320); c.clip();
+        pip(c, -40, 10, { s: .85, look: GEAR, mouth: .5, tilt: -.1 });
+        c.save(); c.translate(70, 40); c.rotate(.12); toy(c, [[P(p => p.roundRect(-58, -40, 116, 80, 10)), '#ffe58a']], 4);
+        c.font = `900 20px ${FONT}`; c.textAlign = 'center'; c.fillStyle = INK; c.fillText('ALL NESTS!', 0, -6); c.font = `800 16px ${FONT}`; c.fillText('★ ★ ★ ★ ★', 0, 20); c.restore();
+        c.restore(); c.font = `800 22px ${FONT}`; c.textAlign = 'center'; c.fillStyle = '#5a3a22'; c.fillText('Pip · 5 / 5 nests', 0, 168); c.restore(); };
+      if (t > .25) popUp(c, 640, (t - .25) / .4, () => card(W / 2, 400 - send * 80, shrink));
+      // the Share button and Pip's wing tapping it
+      if (t > 1.3 && t < 3.2) { const press = t > 1.9 && t < 2.2 ? .92 : 1; c.save(); c.translate(W / 2, 700); c.scale(press * back((t - 1.3) / .3), press * back((t - 1.3) / .3));
+        toy(c, [[P(p => p.roundRect(-90, -32, 180, 64, 32)), '#e78c57']], 6); c.font = `900 30px ${FONT}`; c.textAlign = 'center'; c.fillStyle = '#fffaf0'; c.fillText('Share', 0, 11); c.restore();
+        if (t > 1.6 && t < 2.4) toy(c, [[P(p => p.ellipse(W / 2 + 60 - clamp01((t - 1.6) / .3) * 30, 760 - clamp01((t - 1.6) / .3) * 40, 26, 14, -.6, 0, TAU)), '#ffffff']], 6); }
+      // three friends receive it and answer with hearts
+      const friends = [[110, 820, '#8fd0ea', (x, y) => crab(c, x, y + 8, t, { s: .55, wave: 1 })], [W / 2, 860, '#ffb870', (x, y) => octopus(c, x, y - 4, t, { s: .55 })], [W - 110, 820, '#ff8fb8', (x, y) => seahorse(c, x, y, t, .7)]];
+      friends.forEach(([x, y, col, face], n) => popUp(c, y + 40, (t - 2.2 - n * .1) / .3, () => {
+        toy(c, [[P(p => p.arc(x, y, 44, 0, TAU)), col]], 6); face(x, y);
+        const k = ease(clamp01((t - 2.6 - n * .15) / .6)); if (k > 0 && k < 1) card(lerp(W / 2, x, k), lerp(400, y - 70, k), .18 + (1 - k) * .3);
+        if (k >= 1) { card(x + 30, y - 60, .16); const h = (t - 3.2 - n * .15) % 1.2; if (h > 0) heart(c, x - 30 + Math.sin(h * 6) * 8, y - 50 - h * 90, .9 * (1 - h * .4)); } }));
+      if (t < .25) { c.fillStyle = `rgba(255,255,255,${1 - t / .25})`; c.fillRect(0, 0, W, H); }
+      telop(c, 'Share it', W / 2, 120, 54, '#fff3c4', clamp01((t - 3.0) / .3));
+      telop(c, 'with friends!', W / 2, 186, 54, '#ffd0de', clamp01((t - 3.3) / .3));
+    } },
+  { d: 6, title: '11 · Jetzt du!', vo: 'Can you get Pip home? Play Happy Beak, free in your browser.', say: '„Can you get Pip home?“', what: 'Pip zwinkert uns zu, hüpft vom Buchrand ins Handy auf dem Tisch, und dort läuft das echte Spiel. Darüber die Frage an die Zuschauer, unten Titel, Aufruf und Link. Mindestens 4 Sekunden stehen lassen.',
     draw(c, t) {
       realGame(c, t);
       c.fillStyle = '#123d3b99'; c.fillRect(0, 0, W, 300); c.fillRect(0, H - 240, W, 240);
@@ -352,13 +463,17 @@ const host = document.getElementById('shots'), query = new URLSearchParams(locat
 const only = query.has('shot') ? Number(query.get('shot')) : null, freeze = query.has('t') ? Number(query.get('t')) : null;
 let start = 0;
 const fmt = s => `0:${String(Math.floor(s)).padStart(2, '0')}`;
+// Only the cards on screen are drawn: eleven full canvases every frame are too much for slower machines.
+const seen = new IntersectionObserver(entries => entries.forEach(e => { e.target.card.visible = e.isIntersecting; }));
 const cards = SHOTS.map((shot, i) => {
   const el = document.createElement('div'); el.className = 'shot';
   const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
   el.append(canvas);
-  el.insertAdjacentHTML('beforeend', `<h3>${shot.title}</h3><div class="time">${fmt(start)}–${fmt(start + shot.d)} · ${shot.d} s</div><div class="say">${shot.say}</div><div class="vo">🎙 ${shot.vo}</div><p>${shot.what}</p>`);
-  if (only === null || only === i) host.append(el); start += shot.d;
-  return { shot, c: canvas.getContext('2d') };
+  el.insertAdjacentHTML('beforeend', `<h3>${shot.title}${shot.tag ? `<span class="tag">${shot.tag}</span>` : ''}</h3><div class="time">${fmt(start)}–${fmt(start + shot.d)} · ${shot.d} s</div><div class="say">${shot.say}</div><div class="vo">🎙 ${shot.vo}</div><p>${shot.what}</p>`);
+  const shown = only === null || only === i; if (shown) host.append(el); start += shot.d;
+  const card = { shot, c: canvas.getContext('2d'), visible: false };
+  if (shown) seen.observe(canvas); canvas.card = card;
+  return card;
 });
 // Between rounds the page turns: a cream leaf sweeps from right to left with a soft shade on its edge.
 function pageTurn(c, k) {
@@ -366,7 +481,8 @@ function pageTurn(c, k) {
   c.beginPath(); c.moveTo(x, 0); c.quadraticCurveTo(x - 60, H / 2, x + 30, H); c.lineTo(W + 40, H); c.lineTo(W + 40, 0); c.closePath(); c.fill(); c.restore();
 }
 function frame(time) {
-  for (const { shot, c } of cards) {
+  for (const { shot, c, visible } of cards) {
+    if (!visible) continue;
     const t = freeze ?? (time / 1000) % shot.d;
     now = t; c.save(); try { shot.draw(c, t); } catch (error) { console.error(error); } c.restore();
     if (shot !== SHOTS[0] && t < .35) pageTurn(c, t / .35);
