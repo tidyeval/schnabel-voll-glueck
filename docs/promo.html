@@ -1,6 +1,7 @@
 <!doctype html>
 <!-- Dev-server page only (vite build has index.html as its single input): http://<dev-host>/docs/promo.html
-     Storyboard for the promo video of the new version: not the video itself, not game code. -->
+     Storyboard for the game's promo video in the Paper Pop-up Book look (Lemo-Opuscar): own sketches,
+     not the video itself and not game code. ?shot=N&t=S freezes one frame for checking. -->
 <html lang="de">
 <head>
 <meta charset="utf-8">
@@ -9,207 +10,299 @@
 <style>
   :root{color-scheme:light}
   body{margin:0;background:#f6f3ea;color:#214d4d;font:15px/1.45 ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif}
-  main{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+  main{max-width:1240px;margin:0 auto;padding:24px 16px 64px}
   h1{font-size:32px;letter-spacing:-1px;margin:0 0 4px}
   .badge{display:inline-block;background:#e78c57;color:#fffaf0;font-weight:800;font-size:12px;letter-spacing:.08em;border-radius:99px;padding:3px 10px;vertical-align:middle;margin-left:8px}
-  p.lead{margin:0 0 18px;color:#62827a;max-width:780px}
-  .shots{display:grid;gap:26px 18px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
-  .shot canvas{display:block;width:100%;max-width:270px;aspect-ratio:9/16;height:auto;border-radius:24px;border:6px solid #23403d;box-shadow:0 10px 30px #123d3b33;background:#2f7176}
+  p.lead{margin:0 0 18px;color:#62827a;max-width:800px}
+  .shots{display:grid;gap:26px 16px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+  .shot canvas{display:block;width:100%;max-width:260px;aspect-ratio:9/16;height:auto;border-radius:22px;border:6px solid #23403d;box-shadow:0 10px 30px #123d3b33}
   .shot h3{margin:10px 0 2px;font-size:15px}
   .shot .time{color:#b78250;font-weight:800;font-size:12px}
   .shot .say{font-weight:800;margin:4px 0}
-  .shot p{margin:3px 0 0;font-size:13px;color:#5f7a70}
-  .tag{display:inline-block;margin-top:6px;background:#dff0e6;color:#2f6b55;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700}
-  .rec{background:#fff4d8;border:1px solid #efd9a0;border-radius:12px;padding:10px 14px;margin:26px 0 0;max-width:780px}
+  .shot p{margin:3px 0 0;font-size:13px;color:#5f7a70;max-width:260px}
+  .rec{background:#fff4d8;border:1px solid #efd9a0;border-radius:12px;padding:10px 14px;margin:26px 0 0;max-width:800px}
 </style>
 </head>
 <body>
 <main>
-  <h1>Promo „Neue Version“<span class="badge">STORYBOARD</span></h1>
-  <p class="lead">Entwurf für ein ca. 30 Sekunden langes Hochkant-Video (9:16) für Reels, Shorts und den Status. Die Bilder sind mit der echten Spielgrafik gezeichnet. Jede Szene läuft hier in Schleife. Ton: die Menümusik, kurze Texte im Bild, keine Sprecherstimme nötig.</p>
+  <h1>Promo „Schnabelglück“<span class="badge">STORYBOARD</span></h1>
+  <p class="lead">Ein etwa 35 Sekunden langes Hochkant-Video (9:16) im Stil „Paper Pop-up Book“: Ein Bilderbuch liegt auf dem Schreibtisch und klappt auf, Pip und die Kulissen stehen als Papierfiguren auf. Jede Doppelseite ist eine Runde und zeigt, was man im Spiel tun kann. Die Runde beginnt mit einem Schild an Fäden und endet mit einem Lobwort. Zwischen den Runden wird umgeblättert. Alles läuft im 120er-Takt (ein Takt = 2 Sekunden). Am Ende kommt die echte Spielgrafik, damit man das Spiel wiedererkennt. Die Bilder sind eigene Skizzen, das fertige Video entsteht mit Lemo-Opuscar.</p>
   <div class="shots" id="shots"></div>
-  <div class="rec"><b>Dramaturgie:</b> Einstieg mit dem Sturm, der die meiste Action bietet. Danach in schneller Folge, was neu ist: Karte, Fischarten, Formationen, Weißer Hai, Garderobe, Punkte und Fischzähler. Am Ende 3 Sekunden Titel mit Link. Ein Schnitt passt auf einen Takt der Musik (120 bpm, also 2 Sekunden pro Takt).</div>
+  <div class="rec"><b>Ton:</b> warme Musik im 120er-Takt, dazu Papiergeräusche (Aufklappen, Umblättern, Rascheln) und Effekte wie Platschen, Schnappen und Jubel auf den Schlägen. Keine Sprecherstimme, die Texte im Bild erzählen. So funktioniert das Video auch stumm beim Durchscrollen. <b>Sprachen:</b> Weil es nur Texte im Bild gibt, sind deutsche, englische und spanische Fassungen schnell gemacht.</div>
 </main>
 <script type="module">
-import { pelican, fish, drawWorld } from '/src/art.js';
-import { drawMap, areaPoint } from '/src/map.js';
-import { drawSpecies } from '/src/fishes.js';
-import { FISH_SPECIES } from '/src/species.js';
+import { drawWorld } from '/src/art.js';
+import { createGame } from '/src/game.js';
 import { PLUMAGES, BEAKS } from '/src/looks.js';
-import { createGame, step, press } from '/src/game.js';
-import { STAGES } from '/src/stages.js';
 
-const W = 540, H = 960, K = W / 480, FONT = "ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif";
-const look = { outfit: 'classic', plumage: 'white', beak: 'orange' };
-const ease = k => k * k * (3 - 2 * k), clamp01 = k => Math.max(0, Math.min(1, k));
+const W = 540, H = 960, SURF = 560, INK = '#5a3a22', BEAT = .5, PAPER = '#fffdf6';
+const FONT = "ui-rounded,'Avenir Next',Avenir,'Trebuchet MS',sans-serif";
+const ease = k => k * k * (3 - 2 * k), clamp01 = k => Math.max(0, Math.min(1, k)), TAU = Math.PI * 2;
+const back = k => { const s = 1.70158; k = clamp01(k) - 1; return k * k * ((s + 1) * k + s) + 1; }; // pop-up overshoot
+const hopOn = t => Math.pow(1 - (t / BEAT) % 1, 3); // 1 on every beat, falling off
 
-function pill(c, text, y, { size = 38, bg = '#fffaf0ee', fg = '#214d4d', alpha = 1 } = {}) {
-  c.save(); c.globalAlpha = alpha; c.font = `900 ${size}px ${FONT}`; c.textAlign = 'center';
-  const w = c.measureText(text).width + size * 1.2;
-  c.beginPath(); c.roundRect(W / 2 - w / 2, y - size * .95, w, size * 1.5, size * .75); c.fillStyle = bg; c.fill();
-  c.fillStyle = fg; c.fillText(text, W / 2, y + size * .2); c.restore();
+// --- Paper kit: cut-paper pieces with a dark-brown ink line, an off-white border, a cardboard edge
+// and a soft cut-out shadow under the desk lamp; sets pop up from the page around their bottom edge.
+function toy(c, parts, lift = 12) {
+  c.save(); c.lineJoin = 'round'; c.shadowColor = '#3b2a1a66'; c.shadowBlur = 16; c.shadowOffsetX = lift * .5; c.shadowOffsetY = lift * .8;
+  c.translate(0, 3); c.strokeStyle = c.fillStyle = '#cbbfa8'; c.lineWidth = 20; parts.forEach(([path]) => { c.stroke(path); c.fill(path); });
+  c.shadowColor = 'transparent'; c.translate(0, -3); c.strokeStyle = c.fillStyle = PAPER; parts.forEach(([path]) => { c.stroke(path); c.fill(path); }); c.restore();
+  parts.forEach(([path, fill]) => { c.lineWidth = 5; c.lineJoin = 'round'; c.strokeStyle = INK; c.stroke(path); c.fillStyle = fill; c.fill(path); });
 }
-const pop = t => clamp01(t / .35); // captions slide in during the first third of a second
+const P = fn => { const p = new Path2D(); fn(p); return p; };
+// A piece that stands up from the page: squashed to its base line while k < 1, with overshoot.
+function popUp(c, baseY, k, draw) { if (k <= 0) return; c.save(); c.translate(0, baseY); c.scale(1, back(k)); c.translate(0, -baseY); draw(); c.restore(); }
+// The open book on the desk: a standing backdrop board in the spread's colour, the lower page as ground.
+function spread(c, hue, light, t, deco = 'clouds') {
+  const wood = c.createLinearGradient(0, 0, W, H); wood.addColorStop(0, '#a77a52'); wood.addColorStop(1, '#7d5634'); c.fillStyle = wood; c.fillRect(0, 0, W, H);
+  c.strokeStyle = '#00000014'; c.lineWidth = 2; for (let y = 10; y < H; y += 26) { c.beginPath(); c.moveTo(0, y); c.bezierCurveTo(W * .3, y + 8, W * .6, y - 8, W, y + 4); c.stroke(); }
+  c.fillStyle = '#efe4cc'; c.fillRect(22, SURF - 10, W - 44, H - SURF - 30);
+  c.save(); c.shadowColor = '#2a1a0a55'; c.shadowBlur = 24; c.shadowOffsetY = 12; c.fillStyle = hue; c.fillRect(30, 36, W - 60, SURF - 30); c.restore();
+  c.fillStyle = '#ffffff10'; for (let i = 0; i < 400; i++) c.fillRect((i * 97) % (W - 60) + 30, (i * 61) % (SURF - 30) + 36, 2, 2);
+  if (deco === 'clouds') [[130, 150, .9], [390, 110, 1.1], [300, 250, .7]].forEach(([x, y, s], i) => popUp(c, y + 30 * s, (t - i * .08) / .4, () =>
+    toy(c, [[P(p => { p.ellipse(x, y, 60 * s, 26 * s, 0, 0, TAU); p.ellipse(x - 34 * s, y + 8 * s, 34 * s, 20 * s, 0, 0, TAU); p.ellipse(x + 36 * s, y + 6 * s, 38 * s, 20 * s, 0, 0, TAU); }), light]], 6)));
+  if (deco === 'sun') popUp(c, 230, t / .4, () => { c.save(); c.translate(W / 2, 200); for (let i = 0; i < 10; i++) { c.rotate(TAU / 10 + Math.sin(t * 2) * .004); toy(c, [[P(p => { p.moveTo(-14, -70); p.lineTo(0, -120); p.lineTo(14, -70); p.closePath(); }), light]], 4); } c.restore(); toy(c, [[P(p => p.arc(W / 2, 200, 62, 0, TAU)), '#f6c447']], 8); });
+  if (deco === 'stars') for (let i = 0; i < 7; i++) popUp(c, 130 + (i % 3) * 90, (t - i * .05) / .35, () => { const x = 70 + i * 66, y = 100 + (i % 3) * 90; toy(c, [[P(p => { for (let k = 0; k < 10; k++) { const r = k % 2 ? 9 : 22, a = k * Math.PI / 5 - Math.PI / 2; p.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); } p.closePath(); }), light]], 4); });
+}
+const stripes = (c, hue, light, t) => spread(c, hue, light, t, 'clouds');
+const sunburst = (c, hue, light, t) => spread(c, hue, light, t, 'sun');
+const dots = (c, hue, light, t = 0) => spread(c, hue, light, t, 'clouds');
+// Water: three paper wave strips standing on the page, rising back to front and rocking gently.
+function sea(c, col = '#4aa3c8', spot = '#3b8fb5', y = SURF, t = now) {
+  [[y, col, 0], [y + 150, spot, 1.4], [y + 290, '#2f7fa3', 2.6]].forEach(([top, fill, ph], i) => popUp(c, H - 40, (t - i * .1) / .45, () =>
+    toy(c, [[P(p => { p.moveTo(30, H - 40); p.lineTo(30, top); for (let x = 30; x <= W - 30; x += 30) p.lineTo(x, top + Math.sin(x * .028 + ph + t * 1.8) * 10); p.lineTo(W - 30, H - 40); p.closePath(); }), fill]], 8)));
+}
+// Text set in the paper world: cream letters, a thick dark-brown outline, a soft shadow.
+function telop(c, text, x, y, size, fill = '#fff3c4', alpha = 1, rot = 0) {
+  if (alpha <= 0) return;
+  c.save(); c.globalAlpha = alpha; c.translate(x, y); c.rotate(rot); c.font = `900 ${size}px ${FONT}`; c.textAlign = 'center'; c.lineJoin = 'round';
+  c.shadowColor = '#2a1a0a55'; c.shadowBlur = 8; c.shadowOffsetY = 4; c.lineWidth = size * .26; c.strokeStyle = INK; c.strokeText(text, 0, 0);
+  c.shadowColor = 'transparent'; c.fillStyle = fill; c.fillText(text, 0, 0); c.restore();
+}
+// A cardboard sign that drops in on two strings and swings out; leaves again when the round starts.
+function hangingSign(c, t, w, h, y, fill, draw, out = 99) {
+  const drop = t < out ? back(t / .45) : 1 - ease(clamp01((t - out) / .25));
+  if (drop <= 0) return; const swing = Math.sin(t * 7) * .08 * Math.exp(-t * 1.5), cy = y - (1 - drop) * (y + h);
+  c.save(); c.translate(W / 2, 0); c.rotate(swing); c.strokeStyle = '#6b5440'; c.lineWidth = 3;
+  c.beginPath(); c.moveTo(-w * .32, 0); c.lineTo(-w * .32, cy - h / 2); c.moveTo(w * .32, 0); c.lineTo(w * .32, cy - h / 2); c.stroke();
+  toy(c, [[P(p => p.roundRect(-w / 2, cy - h / 2, w, h, 18)), fill]], 10); c.translate(0, cy); draw(); c.restore();
+}
+function card(c, t, n, title, hue) {
+  if (t > 1.2) return;
+  hangingSign(c, t, 400, 140, 210, hue, () => { telop(c, `RUNDE ${n}`, 0, -18, 28, '#fffdf6'); telop(c, title, 0, 40, 50, '#fff3c4'); }, .95);
+}
+// The action word: a rating stamp with rays, used once per round.
+function judge(c, t, at, word, fill = '#ff7aa8', y = 200, size = 84) {
+  if (t < at) return; const k = back((t - at) / .3);
+  c.save(); c.translate(W / 2, y - 20); c.rotate(Math.sin((t - at) * 2) * .05); c.fillStyle = '#fff3c4aa';
+  for (let i = 0; i < 14; i++) { c.rotate(TAU / 14); c.beginPath(); c.moveTo(0, -60 * k); c.lineTo(-10, -150 * k); c.lineTo(10, -150 * k); c.closePath(); c.fill(); } c.restore();
+  const fit = Math.min(size, 470 / (word.length * .62));
+  c.save(); c.translate(W / 2, y + fit * .3); c.scale(k, k); c.rotate(-.06); c.font = `italic 900 ${fit}px ${FONT}`; c.textAlign = 'center'; c.lineJoin = 'round';
+  c.lineWidth = fit * .42; c.strokeStyle = PAPER; c.shadowColor = '#2a1a0a66'; c.shadowBlur = 12; c.shadowOffsetY = 6; c.strokeText(word, 0, 0);
+  c.shadowColor = 'transparent'; c.lineWidth = fit * .2; c.strokeStyle = INK; c.strokeText(word, 0, 0); c.fillStyle = fill; c.fillText(word, 0, 0); c.restore();
+}
+function sticker(c, text, x = W - 112, y = 74, fill = '#f6c447') {
+  c.save(); c.translate(x, y); c.rotate(.08); toy(c, [[P(p => p.roundRect(-80, -34, 165, 68, 16)), fill]], 6); c.restore();
+  telop(c, text, x + 3, y + 14, 34, '#fffdf6');
+}
+// A paper puff where something hits the water.
+function splash(c, x, y, k) { if (k <= 0 || k >= 1) return;
+  for (let i = -2; i <= 2; i++) { const a = -Math.PI / 2 + i * .45, r = 30 + 70 * k; c.save(); c.globalAlpha = 1 - k * k;
+    toy(c, [[P(p => p.ellipse(x + Math.cos(a) * r, y + Math.sin(a) * r, 16 * (1 - k * .5), 11 * (1 - k * .5), a, 0, TAU)), '#e8f6ff']], 3); c.restore(); } }
+let now = 0;
 
-// A world from the real game, drawn at 9:16. `setup` fills it; no encounters spawn on their own.
-function world(stage, setup) { const g = createGame(() => .5, stage); g.nextEncounter = Infinity; g.items = []; setup?.(g); return g; }
-function drawGame(c, g, t, lookNow = look) { c.save(); c.scale(K, K); drawWorld(c, g, 'play', t, lookNow, [], false); c.restore(); }
+// --- The cast -------------------------------------------------------------------
+// Pip: a toy pelican. look = { plumage, beak, outfit } from the game's wardrobe; mouth 0..1.
+function pip(c, x, y, { s = 1.1, tilt = 0, mouth = 0, look = {} } = {}) {
+  const body = PLUMAGES[look.plumage || 'white'].swatch === '#fffaf0' ? '#ffffff' : PLUMAGES[look.plumage].swatch;
+  const wing = look.plumage && look.plumage !== 'white' ? PLUMAGES[look.plumage].tail : '#dfe7d6';
+  const beak = BEAKS[look.beak || 'orange'].swatch, pouch = BEAKS[look.beak || 'orange'].pouch[1], jaw = mouth * .45;
+  c.save(); c.translate(x, y); c.rotate(tilt); c.scale(s, s);
+  const parts = [
+    [P(p => { p.moveTo(-70, 5); p.lineTo(-108, -12); p.lineTo(-92, 26); p.closePath(); }), wing],
+    [P(p => p.ellipse(0, 18, 66, 48, 0, 0, TAU)), body],
+    [P(p => p.ellipse(-8, 18, 40, 24, -.2, 0, TAU)), wing],
+    [P(p => p.ellipse(34, -22, 24, 34, .3, 0, TAU)), body],
+    [P(p => p.arc(44, -50, 31, 0, TAU)), body],
+    [P(p => { p.moveTo(64, -40); p.quadraticCurveTo(120 + jaw * 20, -10 + jaw * 70, 156, -34 + jaw * 60); p.lineTo(68, -30); p.closePath(); }), pouch],
+    [P(p => { p.moveTo(62, -58); p.lineTo(160, -42); p.quadraticCurveTo(110, -36, 64, -38); p.closePath(); }), beak],
+  ];
+  if (look.outfit === 'sailor') parts.push([P(p => { p.moveTo(14, -74); p.lineTo(74, -74); p.lineTo(68, -98); p.lineTo(20, -98); p.closePath(); }), '#ffffff'], [P(p => p.rect(14, -82, 60, 9)), '#3b5ba5']);
+  if (look.outfit === 'flower') for (let i = 0; i < 5; i++) { const a = i * TAU / 5; parts.push([P(p => p.arc(30 + Math.cos(a) * 13, -80 + Math.sin(a) * 13, 10, 0, TAU)), '#ff8fb8']); }
+  toy(c, parts, 10);
+  if (look.outfit === 'flower') toy(c, [[P(p => p.arc(30, -80, 8, 0, TAU)), '#f6c447']], 0);
+  c.fillStyle = INK; c.beginPath(); c.arc(50, -58, 7, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(52, -60, 2.5, 0, TAU); c.fill();
+  c.restore();
+}
+function fish(c, x, y, s = 1.3, col = '#f28a6a', wiggle = 0) {
+  c.save(); c.translate(x, y); c.scale(s, s); c.rotate(Math.sin(wiggle) * .12);
+  toy(c, [[P(p => { p.moveTo(20, 0); p.lineTo(44, -18); p.lineTo(44, 18); p.closePath(); }), '#e0664c'], [P(p => p.ellipse(0, 0, 30, 16, 0, 0, TAU)), col]], 6);
+  c.fillStyle = INK; c.beginPath(); c.arc(-14, -3, 4, 0, TAU); c.fill(); c.restore();
+}
+function shark(c, x, y, s = 1.6, flip = false) {
+  c.save(); c.translate(x, y); c.scale(flip ? -s : s, s);
+  toy(c, [[P(p => { p.moveTo(-90, 0); p.lineTo(-130, -30); p.lineTo(-122, 0); p.lineTo(-130, 30); p.closePath(); }), '#8a98a8'],
+    [P(p => { p.moveTo(-10, -30); p.lineTo(10, -70); p.lineTo(30, -28); p.closePath(); }), '#8a98a8'],
+    [P(p => p.ellipse(0, 0, 100, 34, 0, 0, TAU)), '#a9b6c4'], [P(p => p.ellipse(20, 14, 70, 16, 0, 0, TAU)), '#ffffff']], 10);
+  c.fillStyle = INK; c.beginPath(); c.arc(62, -8, 6, 0, TAU); c.fill();
+  c.strokeStyle = INK; c.lineWidth = 4; c.beginPath(); c.moveTo(48, 12); for (let i = 0; i < 5; i++) c.lineTo(54 + i * 6, i % 2 ? 12 : 18); c.stroke();
+  c.restore();
+}
+function turtle(c, x, y, s = 1.2) {
+  c.save(); c.translate(x, y); c.scale(s, s);
+  toy(c, [[P(p => p.ellipse(52, -4, 18, 14, 0, 0, TAU)), '#7cc576'], [P(p => p.ellipse(-30, 22, 16, 9, .5, 0, TAU)), '#7cc576'], [P(p => p.ellipse(30, 22, 16, 9, -.5, 0, TAU)), '#7cc576'],
+    [P(p => p.ellipse(0, 0, 46, 30, 0, 0, TAU)), '#3f9e5a']], 8);
+  c.fillStyle = INK; c.beginPath(); c.arc(60, -8, 4, 0, TAU); c.fill(); c.restore();
+}
+function nest(c, x, y, t, open) {
+  toy(c, [[P(p => p.ellipse(x, y + 20, 110, 34, 0, 0, TAU)), '#a0703f']], 10);
+  [-1, 1].forEach((side, i) => {
+    const bob = open ? Math.abs(Math.sin(t * 8 + i)) * 10 : 0, cx = x + side * 38, cy = y - 20 - bob;
+    toy(c, [[P(p => p.arc(cx, cy, 30, 0, TAU)), '#ffe58a'], [P(p => { p.moveTo(cx - 22 * side, cy - 4); p.lineTo(cx - (62 + (open ? 6 : 0)) * side, cy - (open ? 20 : 8)); p.lineTo(cx - 22 * side, cy + 8); p.closePath(); }), '#ffa53d']], 6);
+    if (open) toy(c, [[P(p => { p.moveTo(cx - 22 * side, cy + 8); p.lineTo(cx - 58 * side, cy + 14); p.lineTo(cx - 22 * side, cy + 16); p.closePath(); }), '#ff8a2a']], 0);
+    c.fillStyle = INK; c.beginPath(); c.arc(cx - 10 * side, cy - 8, 5, 0, TAU); c.fill();
+  });
+  toy(c, [[P(p => { p.moveTo(x - 110, y + 16); p.quadraticCurveTo(x, y + 64, x + 110, y + 16); p.lineTo(x + 100, y + 2); p.quadraticCurveTo(x, y + 40, x - 100, y + 2); p.closePath(); }), '#7a5230']], 0);
+}
+function heart(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s, s); toy(c, [[P(p => { p.moveTo(0, 12); p.bezierCurveTo(-26, -6, -14, -26, 0, -12); p.bezierCurveTo(14, -26, 26, -6, 0, 12); }), '#ef7a9a']], 4); c.restore(); }
+function bolt(c, x, y, s) { c.save(); c.translate(x, y); c.scale(s, s); toy(c, [[P(p => { p.moveTo(0, -60); p.lineTo(-24, 6); p.lineTo(-2, 6); p.lineTo(-14, 64); p.lineTo(26, -10); p.lineTo(4, -10); p.lineTo(16, -60); p.closePath(); }), '#f6c447']], 8); c.restore(); }
 
-// A short live run: the real game steps on, a simple autopilot dives for fish and comes up for air.
-function liveRun(stage, extra) {
-  let g = null, last = false;
-  const reset = () => { g = createGame(Math.random, stage); extra?.(g); last = false; };
-  reset();
-  return (c, t, dt) => {
-    if (g.ended || g.time > 40) reset();
-    const p = g.player, next = g.items.filter(i => i.kind === 'fish' && i.x > p.x).sort((a, b) => a.x - b.x)[0];
-    const sharkNear = g.items.some(i => (i.kind === 'shark' || i.kind === 'whiteshark') && Math.abs(i.x - p.x) < 220);
-    const hold = !sharkNear && p.breath > 3 && next && next.x < p.x + 170 && next.y > p.y + p.vy * .1;
-    if (hold && !last) press(g); last = hold;
-    step(g, Math.min(dt, 1 / 30), hold);
-    drawGame(c, g, t);
-    return g;
-  };
+// --- The real game, for the end card ---------------------------------------------
+const real = createGame(() => .5, 0); real.nextEncounter = Infinity;
+function realGame(c, t) {
+  const K = W / 480, p = real.player, dive = Math.sin(clamp01(t / 2.4) * Math.PI);
+  const prev = p.y; p.y = 330 + dive * 220; p.vy = (p.y - prev) * 60; p.wet = p.y > 360; p.x = 150;
+  real.items = Array.from({ length: 6 }, (_, i) => ({ kind: 'fish', x: 260 + i * 60 - t * 60, y: 440 + Math.sin(i / 5 * Math.PI) * 110, golden: false, species: 'classic', lane: 'main' })).filter(f => f.x > p.x + 20);
+  real.distance = t * 150; c.save(); c.scale(K, K); drawWorld(c, real, 'play', t, { outfit: 'sailor', plumage: 'white', beak: 'orange' }, [], false); c.restore();
 }
 
-const storm = liveRun(3);
-const reef = liveRun(4, g => { g.score = 4820; });
-let reefScoreStart = 4820;
-
+// --- The shots -----------------------------------------------------------------------
+const LOOKS = [['classic', 'white', 'orange'], ['flower', 'white', 'orange'], ['flower', 'rose', 'pink'], ['sailor', 'rose', 'pink'], ['sailor', 'sun', 'coral'], ['sailor', 'lilac', 'lilac'], ['flower', 'stone', 'lemon'], ['sailor', 'white', 'orange']];
 const SHOTS = [
-  { d: 3.5, title: 'Hook: Sturmkap', say: '„Neu: das Sturmkap“',
-    what: 'Gewitter, Brecher, Blitze: Pip taucht durch die Wellen und reitet einen Brecher hoch in die Luft. Das Spiel läuft hier live.',
-    tag: 'Neue Etappe 4: Sturmkap',
-    draw(c, t, dt) { storm(c, t, dt); pill(c, 'NEU: Das Sturmkap ⚡', 130, { alpha: pop(t) }); } },
-  { d: 4, title: 'Die Reise', say: '„5 Bereiche. Eine Reise.“',
-    what: 'Die neue Seekarte: Pip fliegt von der Lagune zum Sturmkap. Geschaffte Bereiche tragen Häkchen und Rekord, das Riff liegt noch im Nebel.',
-    tag: 'Reisekarte + Flug vor jeder Etappe',
+  { d: 3, title: 'Auftakt', say: 'Schnabelglück', what: 'Ein Bilderbuch auf dem Schreibtisch, der Titel in Goldprägung. Der Deckel klappt auf, die Wellen stellen sich auf, Pip springt aus dem Wasser und das Titelschild fällt an Fäden herab.',
     draw(c, t) {
-      const from = areaPoint('lagoon', W, H), to = areaPoint('storm', W, H), k = ease(clamp01((t - .6) / 2.2));
-      const areas = STAGES.map((s, i) => ({ id: s.id, name: s.names.de, done: i < 3, current: i === 3, locked: i > 3, best: ['1.240', '1.870', '2.310', '', ''][i] }));
-      drawMap(c, { width: W, height: H, areas, pip: { x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k - Math.sin(k * Math.PI) * 60 }, reached: k < 1 ? 2 : 3, t, look });
-      pill(c, '5 Bereiche. Eine Reise.', 90, { alpha: pop(t) });
+      spread(c, '#f2b880', '#fbe3c4', t - .5, 'sun'); sea(c, '#4aa3c8', '#3b8fb5', SURF, t - .6);
+      const jump = clamp01((t - 1.1) / .8); if (t > 1.1) pip(c, W / 2 - 20, SURF - 30 - Math.sin(jump * Math.PI) * 200, { tilt: -.4 + jump * .8 });
+      if (t > 1.9) splash(c, W / 2 + 20, SURF, (t - 1.9) / .5);
+      if (t > 1.6) hangingSign(c, t - 1.6, 440, 120, 250, '#e9765f', () => telop(c, 'Schnabelglück', 0, 20, 56, '#fff3c4'));
+      // The cover: teal cloth with a gold title, folding open to the left.
+      const open = ease(clamp01(t / .7)); if (open < 1) { c.save(); c.translate(22, 0); c.scale(1 - open, 1); c.shadowColor = '#2a1a0a88'; c.shadowBlur = 30;
+        c.fillStyle = '#2f6f6b'; c.fillRect(0, 30, W - 44, H - 60); c.shadowColor = 'transparent'; c.strokeStyle = '#d8b25a'; c.lineWidth = 4; c.strokeRect(24, 56, W - 92, H - 112);
+        c.font = `900 54px ${FONT}`; c.textAlign = 'center'; c.fillStyle = '#e3c06a'; c.fillText('Schnabelglück', (W - 44) / 2, H / 2); c.restore(); }
     } },
-  { d: 4, title: 'Fischarten', say: '„Jeder Bereich hat seine Fische“',
-    what: 'Sardine, Makrele, Kaiserfisch, Fliegender Fisch, Clownfisch, Laternenfisch, Doktorfisch erscheinen nacheinander mit ihren Punkten. Der seltene Doktorfisch glänzt.',
-    tag: '7 Fischarten mit eigenen Punkten und eigenem Ausweichen',
+  { d: 4, title: '1 · Tauchen', say: '„PLATSCH!“', what: 'Rundenkarte, dann taucht Pip auf den Schlägen dreimal ab und wieder auf, jedes Mal mit Spritzer.',
     draw(c, t) {
-      const g = this.g ||= world(2);
-      drawGame(c, g, t);
-      const list = ['sardine', 'mackerel', 'angelfish', 'flyingfish', 'clownfish', 'lanternfish', 'tang'];
-      list.forEach((id, i) => {
-        const k = clamp01((t - .3 - i * .38) / .3); if (!k) return;
-        const x = i % 2 ? 360 : 180, y = 300 + i * 84;
-        c.save(); c.globalAlpha = k; drawSpecies(c, id, x, y, 2.1 * (.6 + .4 * k), t + i);
-        const rare = id === 'tang';
-        c.font = `900 ${rare ? 30 : 26}px ${FONT}`; c.textAlign = 'center'; c.fillStyle = rare ? '#ffe27a' : '#fffaf0';
-        c.fillText(`+${FISH_SPECIES[id].points}${rare ? ' · selten!' : ''}`, x + (i % 2 ? -150 : 150), y + 10); c.restore();
+      stripes(c, '#9fd3e6', '#f4fbff', t); sea(c); card(c, t, 1, 'TAUCHEN!', '#6fb7d6');
+      const k = t < 1 ? 0 : ((t - 1) / .8) % 1, n = Math.floor((t - 1) / .8), on = t >= 1 && n < 3;
+      const y = SURF - 30 + (on ? Math.sin(k * Math.PI) * 220 : 0);
+      pip(c, W / 2 - 30, y, { tilt: on ? Math.cos(k * Math.PI) * .6 : 0 }); if (on) splash(c, W / 2, SURF, k * 2);
+      judge(c, t, 3.4, 'PLATSCH!', '#8fd0ea');
+    } },
+  { d: 4, title: '2 · Schnappen', say: '„LECKER!“', what: 'Eine Fischwelle zieht durchs Bild, Pip schnappt auf jedem Schlag einen Fisch. Der Zähler springt 1, 2, 3, 4.',
+    draw(c, t) {
+      stripes(c, '#bfe3b8', '#f4fff2', t); sea(c, '#5fb8a6', '#479f8f'); card(c, t, 2, 'SCHNAPPEN!', '#79c08f');
+      const caught = Math.max(0, Math.min(4, Math.floor((t - 1) / BEAT) + 1)), py = SURF + 150;
+      for (let i = caught; i < 6; i++) { const fx = 300 + (i - caught) * 110 - ((t - 1) / BEAT % 1) * (t > 1 && caught < 4 ? 110 : 0); fish(c, fx, py - 30 + Math.sin(i * 1.3) * 26, 1.1, ['#f28a6a', '#ffd84a', '#ff8fb8'][i % 3], t * 10 + i); }
+      pip(c, 140, py, { mouth: t > 1 && caught < 5 ? hopOn(t - 1) : 0, s: 1 });
+      sticker(c, `🐟 ${caught}`);
+      judge(c, t, 3.1, 'LECKER!');
+    } },
+  { d: 4, title: '3 · Salto', say: '„DOPPELSALTO!“', what: 'Pip schießt aus dem Wasser, dreht zwei Saltos im Takt und landet wieder. Punkte fliegen.',
+    draw(c, t) {
+      sunburst(c, '#c9b6e8', '#efe6fb', t); sea(c, '#7f8fd6', '#6676c2'); card(c, t, 3, 'SALTO!', '#a58bd6');
+      const k = clamp01((t - 1) / 1.6), y = SURF - 30 - Math.sin(k * Math.PI) * 330;
+      pip(c, W / 2 - 10, y, { tilt: ease(k) * TAU * 2 }); if (t > 1 && t < 1.4) splash(c, W / 2, SURF, (t - 1) / .4); if (t > 2.6) splash(c, W / 2, SURF, (t - 2.6) / .4);
+      if (t > 1.8) telop(c, '+100', W / 2 + 140, y - 40 - (t - 1.8) * 60, 44, '#f6c447', clamp01(3 - t));
+      judge(c, t, 2.7, 'DOPPELSALTO!', '#f6c447', 200, 70);
+    } },
+  { d: 4, title: '4 · Ausweichen', say: '„KNAPP!“', what: 'Ein Hai kommt näher. Pip springt raus, der Hai fegt mit Speed-Linien durchs Bild, Fische und Schildkröte stieben auseinander.',
+    draw(c, t) {
+      stripes(c, '#f2b6a8', '#fff1ec', t); sea(c, '#4f8fc0', '#3f7cad'); card(c, t, 4, 'AUSWEICHEN!', '#e08a76');
+      const jump = clamp01((t - 1.3) / 1.4), py = SURF + 120 - Math.sin(jump * Math.PI) * 420 * (t > 1.3 ? 1 : 0);
+      const sx = t < 1.5 ? -160 + t * 120 : 20 + Math.pow(t - 1.5, 1.7) * 520, flee = clamp01((t - 1.7) * 1.5);
+      fish(c, 330 + flee * 200, SURF + 90 - flee * 120, 1, '#ffd84a', t * 9); fish(c, 400 + flee * 150, SURF + 230 + flee * 160, 1, '#f28a6a', t * 9);
+      turtle(c, 300 + flee * 260, SURF + 300 + flee * 60);
+      if (t > 1.5) { c.strokeStyle = '#5a3a2299'; c.lineWidth = 5; for (let i = 0; i < 5; i++) { c.beginPath(); c.moveTo(sx - 160 - i * 30, SURF + 150 + i * 22 - 44); c.lineTo(sx - 300 - i * 40, SURF + 150 + i * 22 - 44); c.stroke(); } }
+      shark(c, sx, SURF + 160, 1.5);
+      pip(c, 150, py, { tilt: t > 1.3 && t < 2.7 ? -.5 + jump : 0 });
+      judge(c, t, 2.8, 'KNAPP!', '#ef7a9a');
+    } },
+  { d: 4, title: '5 · Sturm', say: '„WELLENREITER!“', what: 'Nacht, Blitze auf den Schlägen. Eine riesige Welle hebt Pip hoch in die Luft.',
+    draw(c, t) {
+      const flash = (t % 1) < .08 && t > 1; spread(c, flash ? '#6f78b8' : '#3d4478', '#8e97c8', t, 'stars'); card(c, t, 5, 'STURM!', '#7a86c8');
+      const rise = clamp01((t - 1) / 1.5), crest = SURF - Math.sin(rise * Math.PI * .5) * 260 * (t < 3 ? 1 : 1 - (t - 3));
+      toy(c, [[P(p => { p.moveTo(30, H - 40); p.lineTo(30, SURF); for (let x = 30; x <= W - 30; x += 20) p.lineTo(x, SURF - Math.exp(-Math.pow((x - 200) / 140, 2)) * (SURF - crest)); p.lineTo(W - 30, H - 40); p.closePath(); }), '#3f6fae'],
+        [P(p => p.ellipse(200, crest + 10, 40, 16, 0, Math.PI, 0)), '#e8f6ff']], 10);
+      if (flash || (t % 1) < .16 && t > 1) bolt(c, 420, 340, 1.3);
+      pip(c, 190, crest - 60 - (t > 2.5 ? Math.sin(clamp01((t - 2.5) / 1) * Math.PI) * 120 : 0), { tilt: -.3 });
+      judge(c, t, 2.6, 'WELLENREITER!', '#8fd0ea', 200, 66);
+    } },
+  { d: 4, title: '6 · Füttern', say: '„SATT & GLÜCKLICH!“', what: 'Pip fliegt mit vollem Schnabel zum Nest. Die Küken reißen die Schnäbel auf und hüpfen im Takt, Herzchen steigen auf.',
+    draw(c, t) {
+      dots(c, '#f6c6d3', '#fff3f6', t); card(c, t, 6, 'FÜTTERN!', '#e594ad');
+      popUp(c, H - 40, t / .4, () => toy(c, [[P(p => { p.moveTo(30, H - 40); p.quadraticCurveTo(W / 2, 560, W - 30, H - 40); p.closePath(); }), '#9ccf86']], 8));
+      nest(c, 340, 690, t, t > 1.2);
+      const fly = ease(clamp01((t - .8) / 1)); pip(c, 40 + fly * 160, 440 + fly * 160 - Math.sin(fly * Math.PI) * 60, { mouth: t > 1.8 ? hopOn(t - 1.8) : 0, look: {} });
+      if (t > 2) for (let i = 0; i < 4; i++) { const k = ((t - 2) * .8 + i * .25) % 1; heart(c, 300 + Math.sin(i * 2 + t * 3) * 60, 600 - k * 300, 1.2 * (1 - k * .5)); }
+      judge(c, t, 2.7, 'SATT & GLÜCKLICH!', '#ef7a9a', 200, 60);
+    } },
+  { d: 4, title: '7 · Stylen', say: '„SCHICK!“', what: 'Pip im Rampenlicht: Auf jedem Schlag wechselt eine Sache, mal Blume oder Matrosenmütze, mal Federkleid, mal Schnabelfarbe. Unten leuchtet das gewählte Farbfeld auf.',
+    draw(c, t) {
+      sunburst(c, '#f3b3c9', '#fde8f0', t); card(c, t, 7, 'STYLEN!', '#e086a8');
+      const i = t < 1 ? 0 : Math.min(LOOKS.length - 1, Math.floor((t - 1) / BEAT) + 1), [outfit, plumage, beak] = LOOKS[i];
+      c.fillStyle = '#fff6dc55'; c.beginPath(); c.moveTo(W / 2 - 60, 0); c.lineTo(W / 2 + 60, 0); c.lineTo(W / 2 + 210, 700); c.lineTo(W / 2 - 210, 700); c.closePath(); c.fill();
+      toy(c, [[P(p => p.ellipse(W / 2, 690, 200, 40, 0, 0, TAU)), '#f6c447']], 10);
+      pip(c, W / 2 - 40, 560 - hopOn(t) * 18, { s: 1.6, look: { outfit, plumage, beak } });
+      if (t > 1 && (t - 1) % BEAT < .12) telop(c, '✦', W / 2 + 150, 420, 60, '#fff');
+      const row = (table, active, y) => Object.keys(table).forEach((id, k, list) => { const x = W / 2 + (k - (list.length - 1) / 2) * 84, on = id === active;
+        toy(c, [[P(p => p.arc(x, y, on ? 32 : 26, 0, TAU)), table[id].swatch]], on ? 8 : 5); });
+      row(PLUMAGES, plumage, 790); row(BEAKS, beak, 878);
+      judge(c, t, 3.3, 'SCHICK!', '#f6c447', 190);
+    } },
+  { d: 2, title: 'Die Reise', say: '„5 WELTEN!“', what: 'Fünf Karten springen im Takt herein: Bucht, Hafen, Lagune, Sturmkap, Riff, jede in ihrer Farbe.',
+    draw(c, t) {
+      stripes(c, '#f4d58a', '#fff6dc', t);
+      [['BUCHT', '#8fd0ea'], ['HAFEN', '#ffb870'], ['LAGUNE', '#9ff0c4'], ['STURMKAP', '#9aa3ff'], ['RIFF', '#ff8fb8']].forEach(([name, col], i) => {
+        const k = ease(clamp01((t - i * .25) / .15)); if (!k) return;
+        c.save(); c.translate(W / 2 + (i % 2 ? 70 : -70), 300 + i * 120); c.rotate((i % 2 ? .05 : -.05)); c.scale(k, k);
+        toy(c, [[P(p => p.roundRect(-150, -46, 300, 92, 24)), col]], 10); c.restore();
+        telop(c, name, W / 2 + (i % 2 ? 70 : -70), 300 + i * 120 + 16, 44 * k, '#fff');
       });
-      pill(c, 'Jeder Bereich, eigene Fische', 130, { alpha: pop(t), size: 34 });
+      judge(c, t, 1.4, '5 WELTEN!', '#f6c447', 170, 80);
     } },
-  { d: 4, title: 'Formationen', say: '„Nie zweimal gleich“',
-    what: 'Pip taucht hintereinander durch eine Welle, eine Treppe und einen wogenden Schwarm. Die Formation wird jede Runde neu gewürfelt.',
-    tag: 'Fischformationen (gerade im Bau)',
+  { d: 3, title: 'Abspann', say: '„Kostenlos im Browser spielen“', what: 'Schnitt auf die echte Spielgrafik: Pip taucht im echten Spiel, darüber Titel, Aufruf und Link. Mindestens 3 Sekunden stehen lassen.',
     draw(c, t) {
-      const g = this.g ||= world(1), part = Math.min(2, Math.floor(t / (this.d / 3))), local = t - part * this.d / 3;
-      const shapes = [k => 450 + Math.abs(Math.sin(k * Math.PI * 2)) * 90, k => 425 + (k < .3 ? 0 : k < .65 ? 1 : 2) * 65, null];
-      const scroll = local * 300;
-      g.items = part < 2 ? Array.from({ length: 11 }, (_, i) => ({ kind: 'fish', x: 300 + i * 64 - scroll, y: shapes[part](i / 10), golden: false }))
-        : Array.from({ length: 9 }, (_, i) => { const a = i * 2.4, r = Math.sqrt((i + .5) / 9); return { kind: 'fish', x: 420 + Math.cos(a) * r * 120 - scroll, y: 490 + Math.sin(a) * r * 48 + Math.sin(t * 2.6) * 38, golden: false }; });
-      g.items = g.items.filter(f => f.x > 150);
-      const p = g.player, ahead = g.items.filter(f => f.x > p.x).sort((a, b) => a.x - b.x)[0];
-      p.y += ((ahead ? ahead.y : 300) - p.y) * .12; p.wet = p.y > 360; g.distance = t * 300;
-      drawGame(c, g, t);
-      pill(c, ['Welle', 'Treppe', 'Schwarm'][part], 230, { size: 30, bg: '#214d4dcc', fg: '#fff6d8' });
-      pill(c, 'Nie zweimal gleich', 130, { alpha: pop(t) });
-    } },
-  { d: 4.5, title: 'Der Weiße Hai', say: '„Spring raus – der Hai fegt vorbei!“',
-    what: 'Ein großer Weißer folgt Pip. Pip springt aus dem Wasser, der Hai nimmt Fahrt auf, fegt quer durchs Bild und verscheucht alle Tiere.',
-    tag: 'Neuer Weißer Hai: springen oder im Wasser davonsprinten',
-    draw(c, t) {
-      const g = this.g ||= world(1, g => {
-        g.items = [...Array.from({ length: 6 }, (_, i) => ({ kind: 'fish', x: 220 + i * 45, y: 470 + (i % 3) * 40, golden: false, home: 470 + (i % 3) * 40 })),
-          { kind: 'turtle', x: 330, y: 600, baseY: 600, lane: 'lower', home: 600 }, { kind: 'whiteshark', x: -150, y: 520, phase: 'stalk', timer: 0 }];
-      });
-      const shark = g.items.find(i => i.kind === 'whiteshark'), p = g.player;
-      // Pip: swims, jumps out at 1.2 s, glides back in at 3.6 s.
-      const air = clamp01((t - 1.2) / 2.4);
-      p.y = t < 1.2 ? 470 : 470 - Math.sin(air * Math.PI) * 300; p.wet = p.y > 360; p.vy = Math.cos(air * Math.PI) * -400;
-      shark.phase = t < 1.5 ? 'stalk' : 'sweep'; shark.timer = Math.max(0, t - 1.5);
-      shark.x = t < 1.5 ? -150 + t * 60 : -60 + Math.pow(t - 1.5, 1.6) * 330;
-      for (const it of g.items) if (it !== shark && it.home !== undefined) {
-        const gap = it.x - shark.x; it.x = it.x0 ??= it.x;
-        if (t > 1.5 && gap < 150 && gap > -400) { it.fleeAt ??= t; } else if (t < 1.5) it.fleeAt = undefined;
-        if (it.fleeAt) { const k = t - it.fleeAt; it.x = it.x0 + k * 160; it.y = it.home + (it.home < 520 ? -1 : 1) * Math.min(120, k * 200); }
-        else it.y = it.home;
-      }
-      g.distance = t * 200;
-      drawGame(c, g, t);
-      pill(c, t < 1.3 ? 'Ein Weißer Hai!' : 'Raus springen!', 130, { alpha: pop(t) });
-      if (t > 2) pill(c, 'Alle weg! 💨', 820, { size: 30, alpha: clamp01((t - 2) * 3) });
-    } },
-  { d: 4, title: 'Garderobe', say: '„Dein Pip, deine Farben“',
-    what: 'Pip probiert Outfits (klassisch, Blume, Matrosenmütze) und wechselt Federkleid und Schnabelfarbe. Darunter die Farbfelder aus der Garderobe.',
-    tag: 'Garderobe: Outfits + Federkleid- und Schnabelfarben',
-    draw(c, t) {
-      const bg = c.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, '#fbf3df'); bg.addColorStop(1, '#f1d9b8'); c.fillStyle = bg; c.fillRect(0, 0, W, H);
-      const combos = [['classic', 'white', 'orange'], ['flower', 'rose', 'pink'], ['sailor', 'sun', 'coral'], ['sailor', 'lilac', 'lilac']];
-      const i = Math.min(combos.length - 1, Math.floor(t / (this.d / combos.length))), [outfit, plumage, beak] = combos[i];
-      const hop = Math.max(0, Math.sin((t % 1) * Math.PI * 2)) * 14;
-      pelican(c, { x: W / 2 - 10, y: 520 - hop, scale: 2.2, time: t, happy: true, outfit, plumage, beak });
-      const row = (table, active, y) => Object.keys(table).forEach((id, k, list) => {
-        const x = W / 2 + (k - (list.length - 1) / 2) * 74; c.beginPath(); c.arc(x, y, 26, 0, Math.PI * 2);
-        c.fillStyle = table[id].swatch; c.fill();
-        c.lineWidth = id === active ? 6 : 2; c.strokeStyle = id === active ? '#e78c57' : '#21404033'; c.stroke();
-      });
-      row(PLUMAGES, plumage, 790); row(BEAKS, beak, 870);
-      pill(c, 'Dein Pip, deine Farben', 130, { alpha: pop(t) });
-    } },
-  { d: 3.5, title: 'Punkte reisen mit', say: '„Jeder Fisch zählt“',
-    what: 'Nachts am Riff: Die Punkte aus den vorigen Etappen sind schon da (4.820), daneben zählt der neue Fischzähler mit.',
-    tag: 'Fischzähler im HUD + Punkte über die ganze Reise',
-    draw(c, t, dt) {
-      if (t < dt * 1.5) reefScoreStart = 4820;
-      const g = reef(c, t, dt);
-      c.save(); c.beginPath(); c.roundRect(24, 24, 300, 92, 24); c.fillStyle = '#fffaf0e6'; c.fill();
-      c.fillStyle = '#214d4d'; c.font = `900 50px ${FONT}`; c.textAlign = 'left'; c.fillText((g.score || reefScoreStart).toLocaleString('de-DE'), 46, 86);
-      c.font = `800 26px ${FONT}`; c.fillStyle = '#5f7a70'; c.fillText(`🐟 ${g.fish}`, 220, 84); c.restore();
-      pill(c, 'Punkte reisen mit', 210, { alpha: pop(t) });
-    } },
-  { d: 3, title: 'Abspann', say: '„Schnabelglück – jetzt kostenlos spielen“',
-    what: 'Pip mit Matrosenmütze vor der Seekarte, Titel und Link. Mindestens 3 Sekunden stehen lassen.',
-    tag: 'Aufruf + Link',
-    draw(c, t) {
-      const areas = STAGES.map((s, i) => ({ id: s.id, name: s.names.de, done: true, current: false, locked: false, best: '' }));
-      drawMap(c, { width: W, height: H, areas, pip: { x: -999, y: -999 }, reached: 4, t, look });
-      c.fillStyle = '#123d3be0'; c.fillRect(0, 0, W, H);
-      pelican(c, { x: W / 2 - 10, y: 470 + Math.sin(t * 3) * 8, scale: 1.9, time: t, happy: true, outfit: 'sailor', plumage: 'white', beak: 'orange' });
-      c.textAlign = 'center'; c.fillStyle = '#fff6d8'; c.font = `900 56px ${FONT}`; c.fillText('Schnabelglück', W / 2, 220);
-      c.font = `800 28px ${FONT}`; c.fillText('Jetzt kostenlos im Browser', W / 2, 700);
-      c.font = `700 20px ${FONT}`; c.fillStyle = '#bfe3da'; c.fillText('tidyeval.github.io/schnabel-voll-glueck', W / 2, 745);
+      realGame(c, t);
+      c.fillStyle = '#123d3b99'; c.fillRect(0, 0, W, 300); c.fillRect(0, H - 220, W, 220);
+      telop(c, 'Schnabelglück', W / 2, 150, 58, '#fff6d8', ease(clamp01(t / .3)));
+      telop(c, 'Kostenlos im Browser spielen', W / 2, H - 140, 34, '#f6c447', ease(clamp01((t - .4) / .3)));
+      c.font = `800 22px ${FONT}`; c.textAlign = 'center'; c.fillStyle = '#e6f5f0'; c.globalAlpha = clamp01((t - .7) / .3); c.fillText('tidyeval.github.io/schnabel-voll-glueck', W / 2, H - 80); c.globalAlpha = 1;
     } },
 ];
 
-const host = document.getElementById('shots');
+const host = document.getElementById('shots'), query = new URLSearchParams(location.search);
+const only = query.has('shot') ? Number(query.get('shot')) : null, freeze = query.has('t') ? Number(query.get('t')) : null;
 let start = 0;
-const fmt = s => `0:${s.toFixed(1).padStart(4, '0')}`.replace('.0', '');
+const fmt = s => `0:${String(Math.floor(s)).padStart(2, '0')}`;
 const cards = SHOTS.map((shot, i) => {
   const el = document.createElement('div'); el.className = 'shot';
   const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
   el.append(canvas);
-  el.insertAdjacentHTML('beforeend', `<h3>${i + 1} · ${shot.title}</h3><div class="time">${fmt(start)}–${fmt(start + shot.d)} · ${shot.d} s</div><div class="say">${shot.say}</div><p>${shot.what}</p><span class="tag">${shot.tag}</span>`);
-  host.append(el); start += shot.d;
+  el.insertAdjacentHTML('beforeend', `<h3>${shot.title}</h3><div class="time">${fmt(start)}–${fmt(start + shot.d)} · ${shot.d} s</div><div class="say">${shot.say}</div><p>${shot.what}</p>`);
+  if (only === null || only === i) host.append(el); start += shot.d;
   return { shot, c: canvas.getContext('2d') };
 });
-
-let before = performance.now();
-function frame(now) {
-  const dt = Math.min(.05, (now - before) / 1000); before = now;
+// Between rounds the page turns: a cream leaf sweeps from right to left with a soft shade on its edge.
+function pageTurn(c, k) {
+  const x = W * (1 - ease(k)) - 40; c.save(); c.shadowColor = '#2a1a0a66'; c.shadowBlur = 30; c.shadowOffsetX = -12; c.fillStyle = '#f3ead6';
+  c.beginPath(); c.moveTo(x, 0); c.quadraticCurveTo(x - 60, H / 2, x + 30, H); c.lineTo(W + 40, H); c.lineTo(W + 40, 0); c.closePath(); c.fill(); c.restore();
+}
+function frame(time) {
   for (const { shot, c } of cards) {
-    const t = (now / 1000) % shot.d;
-    c.save();
-    try { shot.draw(c, t, dt); } catch (error) { c.restore(); c.save(); c.fillStyle = '#7a2f2f'; c.fillRect(0, 0, W, H); c.fillStyle = '#fff'; c.font = `24px ${FONT}`; c.fillText(String(error.message).slice(0, 40), 20, 60); console.error(error); }
-    c.restore();
+    const t = freeze ?? (time / 1000) % shot.d;
+    now = t; c.save(); try { shot.draw(c, t); } catch (error) { console.error(error); } c.restore();
+    if (shot !== SHOTS[0] && t < .35) pageTurn(c, t / .35);
+    const lamp = c.createRadialGradient(90, 40, 60, 90, 40, 1050); lamp.addColorStop(0, '#fff2d018'); lamp.addColorStop(1, '#2a1a0a66'); c.fillStyle = lamp; c.fillRect(0, 0, W, H);
   }
   requestAnimationFrame(frame);
 }
