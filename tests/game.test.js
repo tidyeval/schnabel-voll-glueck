@@ -457,7 +457,7 @@ test('contacts cost energy once, protect briefly, and never take cargo or air', 
   g.items = [{kind: 'gull', x: 118, y: 285}]; step(g, .01, false);
   assert.equal(g.energy, 70, 'overlapping actors cannot stack damage during protection');
   g.player.hurt = 0; g.energy = 10; step(g, .01, false);
-  assert.equal(g.endReason, 'energy'); assert.equal(g.energy, 0);
+  assert.equal(g.endReason, 'gull', 'the result names what took the last energy'); assert.equal(g.energy, 0);
 });
 
 test('sharks, fishermen and divers end the stage while other creatures only drain energy', () => {

@@ -732,7 +732,8 @@ function resolveHazard(game, item, events) {
       if (game.energy > 0) return;
     }
     game.ended = true;
-    game.endReason = contactDamage[item.kind] ? 'energy' : item.kind;
+    // The result names what took the last energy (the net, or the boat hull as the fisher's).
+    game.endReason = item.kind === 'boat' ? (netHit ? 'net' : 'fisher') : item.kind;
     events.push(...(contactDamage[item.kind] ? [] : [{ kind: 'hurt', x: p.x, y: p.y }]), { kind: 'end' });
     return;
   }

@@ -366,7 +366,8 @@ test('events, end reasons and haptics match the code', () => {
   for (const kind of pushed) assert.ok(union.includes(kind), `event '${kind}' is emitted but missing from the GameEvent typedef`);
   none(setEquals(union, ids(entitiesOf(ontology, 'GameEvent')).map(id => id.slice(6)), 'GameEvent entities'));
   const fatal = game.match(/const fatalHit = ([^;]+);/)[1], reasons = [...game.matchAll(/endReason = '(\w+)'/g)].map(m => m[1]);
-  const reachable = sorted([...reasons, 'fisher', ...[...fatal.matchAll(/item\.kind === '(\w+)'/g)].map(m => m[1] === 'whiteshark' ? 'shark' : m[1])]);
+  const contact = Object.keys(CONTACT_DAMAGE).filter(k => k !== 'boat').concat('net');
+  const reachable = sorted([...reasons, ...contact, 'fisher', ...[...fatal.matchAll(/item\.kind === '(\w+)'/g)].map(m => m[1] === 'whiteshark' ? 'shark' : m[1])]);
   const endReasons = entitiesOf(ontology, 'EndReason');
   none(setEquals(reachable, ids(built(endReasons)).map(id => id.slice(10)), 'built EndReason entities (reasons a run can end with)'));
   // Translated reasons no run can reach are documented as status "unused".
