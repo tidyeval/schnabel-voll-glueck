@@ -234,6 +234,16 @@ export function pelican(c, {
     ellipse(c, 23, -73, 2.6, 2.6, '#f1c56d');
     c.restore();
   }
+  if (outfit === 'snorkel') {
+    // A diving mask over the eye (eye at (25.5,-46)), its strap round the back of the head and a snorkel
+    // standing up behind it. The glass is see-through so Pip's eye and expressions still show.
+    path(c, null, p => { p.moveTo(14, -49); p.quadraticCurveTo(-4, -52, -9, -40); }, '#2f6f86', 4.2);
+    path(c, '#e9f0a8', p => { p.moveTo(-7, -36); p.lineTo(-11, -74); p.quadraticCurveTo(-11, -81, -4, -81); p.lineTo(2, -81); p.lineTo(2, -75); p.lineTo(-3, -75); p.lineTo(1, -37); p.closePath(); }, outline, 1);
+    path(c, '#f08a5d', p => { p.moveTo(-12, -77); p.lineTo(-12, -85); p.quadraticCurveTo(-5, -89, 3, -85); p.lineTo(3, -78); p.closePath(); }, outline, .9);
+    path(c, '#cdeff455', p => p.roundRect(14.5, -56, 23, 19, 7), outline, 5.2);
+    path(c, null, p => p.roundRect(14.5, -56, 23, 19, 7), '#2f6f86', 3.4);
+    path(c, null, p => { p.moveTo(19, -52); p.lineTo(24, -52); }, '#ffffffcc', 1.6);
+  }
   c.restore(); c.restore();
 }
 // A loose Hawaiian shirt over Pip's body: hibiscus print, an open collar at the neck and a button line.

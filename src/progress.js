@@ -2,7 +2,7 @@ import { STAGES } from './stages.js';
 import { localeFrom } from './i18n.js';
 import { PLUMAGES, BEAKS, SHIRTS } from './looks.js';
 /** Pip's looks in the wardrobe, all available from the start. */
-export const OUTFITS = ['classic', 'flower', 'sailor', 'hawaii'];
+export const OUTFITS = ['classic', 'flower', 'sailor', 'hawaii', 'snorkel'];
 const count = value => Number.isSafeInteger(value) && value >= 0 ? value : 0;
 const attemptIds = value => Array.isArray(value) ? [...new Set(value.filter(id => typeof id === 'string' && id))] : [];
 // Saved stage numbers by save layout: where each old stage index sits today.

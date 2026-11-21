@@ -55,7 +55,7 @@ test('saves from before the storm moved ahead of the reef keep each record on it
 });
 
 test('every outfit is available from the start, whatever the fish count; unknown outfits fall back to classic', () => {
-  for (const outfit of ['flower', 'sailor', 'hawaii']) assert.equal(readProgress(JSON.stringify({ totalFish: 0, outfit })).outfit, outfit);
+  for (const outfit of ['flower', 'sailor', 'hawaii', 'snorkel']) assert.equal(readProgress(JSON.stringify({ totalFish: 0, outfit })).outfit, outfit);
   assert.equal(readProgress(JSON.stringify({ outfit: 'tuxedo' })).outfit, 'classic');
 });
 
