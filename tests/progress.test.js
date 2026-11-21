@@ -51,3 +51,10 @@ test('collecting fish announces each outfit once, at the round that crosses its 
   assert.deepEqual(newOutfits(10, 90), ['flower', 'sailor']);
   assert.deepEqual(newOutfits(80, 85), []);
 });
+
+test('Pip keeps the saved feather and beak colours; unknown colours fall back to white and orange', () => {
+  const saved = readProgress(JSON.stringify({ plumage: 'rose', beak: 'lemon' }));
+  assert.equal(saved.plumage, 'rose'); assert.equal(saved.beak, 'lemon');
+  const odd = readProgress(JSON.stringify({ plumage: 'teal', beak: 42 }));
+  assert.equal(odd.plumage, 'white'); assert.equal(odd.beak, 'orange');
+});

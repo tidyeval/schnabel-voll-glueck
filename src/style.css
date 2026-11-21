@@ -38,6 +38,11 @@ h1 em{color:#e78c57;font-style:normal}
 .wardrobe-button canvas{position:static;width:100%;height:100%;border-radius:50%}
 .wardrobe-new{position:absolute;top:-2px;right:-2px;width:12px;height:12px;border-radius:50%;background:#e78c57;border:2px solid #fff8db}
 .outfits button canvas{position:static;display:block;width:64px;height:64px}
+.swatches{display:flex;flex-direction:column;align-items:center;gap:6px;margin:3cqw 0}
+.swatches>span{font-size:12px;font-weight:700}
+.swatches>div{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.swatch{width:36px;height:36px;min-width:36px;padding:0;border-radius:50%;border:3px solid #fff9e9;box-shadow:0 0 0 1px #786f5d}
+.swatch[aria-pressed=true]{box-shadow:0 0 0 3px #6e9e7c}
 .outfits button:disabled canvas{filter:grayscale(1);opacity:.45}
 .language-picker{display:flex;justify-content:center;gap:2.5cqw;padding:1.5cqw 0;pointer-events:auto}
 .language-picker button{display:grid;place-items:center;width:9cqw;height:9cqw;min-width:34px;min-height:34px;padding:0;border:2px solid #fff7d9aa;border-radius:50%;background:#164a4966;font-size:5cqw;line-height:1;box-shadow:0 2px 5px #123d3b33}

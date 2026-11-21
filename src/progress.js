@@ -1,5 +1,6 @@
 import { STAGES } from './stages.js';
 import { localeFrom } from './i18n.js';
+import { PLUMAGES, BEAKS } from './looks.js';
 export const unlocks = { classic: 0, flower: 25, sailor: 80 };
 /** Outfits a player unlocked by going from `before` to `after` collected fish. */
 export const newOutfits = (before, after) => Object.keys(unlocks).filter(outfit => before < unlocks[outfit] && after >= unlocks[outfit]);
@@ -13,9 +14,11 @@ export function readProgress(raw) {
   try { saved = JSON.parse(raw); } catch { /* Old or unavailable storage starts fresh. */ }
   saved = saved && typeof saved === 'object' ? saved : {};
   if (saved.layout !== LAYOUT) saved = { ...saved, bests: legacyBests(saved.bests), difficultyBests: Object.fromEntries(Object.entries(saved.difficultyBests || {}).map(([id, list]) => [id, legacyBests(list)])) };
-  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
+  const prefs = { layout: LAYOUT, record: count(saved.record), totalFish: count(saved.totalFish), outfit: 'classic', plumage: 'white', beak: 'orange', music: true, sound: true, haptics: true, tutorial: false, language: localeFrom(saved.language), attemptIds: attemptIds(saved.attemptIds),
     completed: Math.min(STAGES.length, count(saved.completed)), bests: STAGES.map((_, i) => Math.max(count(saved.bests?.[i]), ...['easy', 'medium', 'hard'].map(id => count(saved.difficultyBests?.[id]?.[i])))) };
   for (const key of ['music', 'sound', 'haptics', 'tutorial']) if (typeof saved[key] === 'boolean') prefs[key] = saved[key];
+  if (Object.hasOwn(PLUMAGES, saved.plumage)) prefs.plumage = saved.plumage;
+  if (Object.hasOwn(BEAKS, saved.beak)) prefs.beak = saved.beak;
   if (Object.hasOwn(unlocks, saved.outfit) && prefs.totalFish >= unlocks[saved.outfit]) prefs.outfit = saved.outfit;
   return prefs;
 }

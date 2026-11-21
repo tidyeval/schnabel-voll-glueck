@@ -12,6 +12,7 @@ import { createAudio } from './audio.js';
 import { drawPhoto, photoFile, photoScene } from './photo.js';
 import { createJuice } from './juice.js';
 import { recordAttempt, attemptFromGame, unlocks, newOutfits } from './progress.js';
+import { PLUMAGES, BEAKS } from './looks.js';
 import { restoreProgress, readStoredProgress, prepareProgress, saveSetting, saveAttempt, isProgressKey } from './storage.js';
 import { setupPwa } from './pwa.js';
 import { keyAction } from './controls.js';
@@ -98,7 +99,7 @@ let lastResult = null, photoRun = 0, photoReady = null;
 function photoCard() {
   const r = lastResult;
   return {
-    stage: r.stage, outfit: prefs.outfit, score: formatNumber(r.score), fish: formatNumber(r.fish), stageName: stageName(r.stage),
+    stage: r.stage, look: pipLook(), score: formatNumber(r.score), fish: formatNumber(r.fish), stageName: stageName(r.stage),
     title: r.final ? t('photoAllNests') : r.complete ? t('photoNest') : t('photoRound'), points: t('points'), fishLabel: t('fish'),
     record: r.record ? t('photoRecord') : null, date: new Intl.DateTimeFormat(currentLocale()).format(new Date()),
     game: { de: 'Schnabelglück', en: 'Happy Beak', es: 'Pico Feliz' }[currentLocale()],
@@ -254,11 +255,20 @@ $('settings-dialog').querySelector('.close').onclick = afterSettings;
 $('settings-dialog').querySelector('.close-settings').onclick = afterSettings;
 for (const key of ['music', 'sound', 'haptics']) { $(key).checked = prefs[key]; $(key).onchange = () => { prefs[key] = $(key).checked; persistSettings(key); }; }
 // Pip's wardrobe: collected fish unlock looks; each one is shown as a small portrait of Pip.
+function pipLook(outfit = prefs.outfit) { return { outfit, plumage: prefs.plumage, beak: prefs.beak }; }
 function portrait(canvas, outfit) {
   const c = canvas.getContext('2d'), size = canvas.width;
   c.clearRect(0, 0, size, size);
-  pelican(c, { x: size * .4, y: size * .84, scale: size / 150, time: 0, outfit, happy: true, reducedMotion: true });
+  pelican(c, { x: size * .4, y: size * .84, scale: size / 150, time: 0, ...pipLook(outfit), happy: true, reducedMotion: true });
 }
+// Colour swatches for Pip's feathers and beak: choosing one recolours Pip at once and keeps the wardrobe open.
+const SWATCHES = { plumage: PLUMAGES, beak: BEAKS };
+for (const [key, table] of Object.entries(SWATCHES)) $(`${key}-swatches`).replaceChildren(...Object.entries(table).map(([id, colours]) => {
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'swatch'; button.dataset[key] = id;
+  button.style.background = colours.swatch;
+  button.onclick = () => { prefs[key] = id; persistSettings(key); needsDraw = true; refreshWardrobe(); };
+  return button;
+}));
 function refreshWardrobe() {
   portrait($('wardrobe').querySelector('canvas'), prefs.outfit);
   $('wardrobe-new').classList.toggle('hidden', !unseenOutfit);
@@ -269,6 +279,10 @@ function refreshWardrobe() {
     button.setAttribute('aria-pressed', String(prefs.outfit === outfit));
     button.querySelector('small').textContent = locked ? `🔒 ${t('outfitFrom', { fish: formatNumber(unlocks[outfit]) })}` : unlocks[outfit] ? '' : t('outfitAlways');
     portrait(button.querySelector('canvas'), outfit);
+  });
+  for (const key of Object.keys(SWATCHES)) document.querySelectorAll(`[data-${key}]`).forEach(button => {
+    button.setAttribute('aria-pressed', String(prefs[key] === button.dataset[key]));
+    button.setAttribute('aria-label', t(`${key}_${button.dataset[key]}`));
   });
 }
 $('wardrobe').onclick = () => { unseenOutfit = false; refreshWardrobe(); $('wardrobe-dialog').showModal(); };
@@ -375,7 +389,7 @@ function frame(now, seconds) {
     if (mode === 'menu') cameraAhead = 0;
     phaserScene?.cameras?.main?.setScroll(cameraAhead, 0);
     ctx.save(); ctx.translate(-cameraAhead, 0);
-    drawWorld(ctx, game, mode, reducedMotion && mode === 'menu' ? 0 : animation, prefs.outfit, effects, reducedMotion, juice.view());
+    drawWorld(ctx, game, mode, reducedMotion && mode === 'menu' ? 0 : animation, pipLook(), effects, reducedMotion, juice.view());
     ctx.restore();
     needsDraw = false;
   }

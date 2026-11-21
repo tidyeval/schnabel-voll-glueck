@@ -1,3 +1,4 @@
+import { plumageOf, beakOf } from './looks.js';
 import { STAGES } from './stages.js';
 import { t as translate } from './i18n.js';
 import { WORLD, clamp, netShape, playerTilt, terrainBlocks, airState, pufferRadius, LEAP } from './game.js';
@@ -68,12 +69,12 @@ export function fish(c, x, y, scale = 1, golden = false, t = 0, scared = 0, tilt
   if (golden) { c.strokeStyle = '#fff0bd'; c.lineWidth = 1.7; c.beginPath(); c.moveTo(-4, -19); c.lineTo(-4, -27); c.moveTo(-8, -23); c.lineTo(0, -23); c.stroke(); }
   c.restore();
 }
-function pelicanWing(c, lift, fold, back) {
+function pelicanWing(c, lift, fold, back, fe = plumageOf()) {
   c.save(); c.translate(back ? -14 : -10, back ? -5 : 0);
   if (back) c.scale(.88, .9);
   const elbow = -23 + fold * 6, tip = -57 + fold * 18;
   const ey = -lift * 24, ty = -lift * 57;
-  path(c, back ? '#dce7d3' : gradient(c, -55, 55, '#fffbed', '#d1dfca'), p => {
+  path(c, back ? fe.back : gradient(c, -55, 55, ...fe.flight), p => {
     p.moveTo(2,-4); p.quadraticCurveTo(-9,-11,elbow,ey-7);
     p.quadraticCurveTo(tip+13,ty-7,tip,ty);
     p.quadraticCurveTo(tip-4,ty+5,tip+8,ty+7);
@@ -81,11 +82,11 @@ function pelicanWing(c, lift, fold, back) {
     p.quadraticCurveTo(tip+8,ty+20,tip+23,ty+17);
     p.quadraticCurveTo(elbow-2,ey+15,-7,10);p.quadraticCurveTo(3,7,2,-4);
   },back?'#a4b9a3':'#87957b',1.1);
-  for(let i=0;i<3;i++) path(c,null,p=>{p.moveTo(elbow+8,ey+3+i*2);p.quadraticCurveTo(tip+25,ty+7+i*3,tip+9+i*6,ty+6+i*5)},'#b7cbb2',1);
+  for(let i=0;i<3;i++) path(c,null,p=>{p.moveTo(elbow+8,ey+3+i*2);p.quadraticCurveTo(tip+25,ty+7+i*3,tip+9+i*6,ty+6+i*5)},fe.quill,1);
   c.restore();
 }
 export function pelican(c, {
-  x, y, scale, time: t, tilt = 0, outfit = 'classic', wet = false, happy = false,
+  x, y, scale, time: t, tilt = 0, outfit = 'classic', plumage = 'white', beak = 'orange', wet = false, happy = false,
   gulp = 0, breach = 0, cargo = 0, breath = WORLD.breath, reducedMotion = false, expression = {},
 }) {
   const confused = expression.confused || 0;
@@ -131,11 +132,11 @@ export function pelican(c, {
   }
   // A held cheering pose (souvenir photo): both wings raised high and open.
   if (!wet && expression.cheer) { wingLift = 1.15; wingFold = 0; }
-  const outline = '#786f5d';
+  const outline = '#786f5d', fe = plumageOf(plumage), bk = beakOf(beak);
   // A soft painted shadow and separated tail feathers keep Pip readable over sea and sky.
   ellipse(c, -5, 17, 47, 25, '#315e5a22', -.12);
-  path(c, '#d8e3ce', p => { p.moveTo(-39, 7); p.lineTo(-68, -4); p.quadraticCurveTo(-62, 10, -39, 20); p.moveTo(-40, 11); p.lineTo(-65, 17); p.quadraticCurveTo(-53, 25, -31, 22); }, outline, 1.2);
-  if (!wet) pelicanWing(c, wingLift, wingFold, true);
+  path(c, fe.tail, p => { p.moveTo(-39, 7); p.lineTo(-68, -4); p.quadraticCurveTo(-62, 10, -39, 20); p.moveTo(-40, 11); p.lineTo(-65, 17); p.quadraticCurveTo(-53, 25, -31, 22); }, outline, 1.2);
+  if (!wet) pelicanWing(c, wingLift, wingFold, true, fe);
   c.save(); if (wet) { c.translate(-5, -8); c.rotate(-.3); }
   c.strokeStyle = '#d9955c'; c.lineWidth = 5; c.lineCap = 'round';
   for (let i = 0; i < 2; i++) {
@@ -147,15 +148,15 @@ export function pelican(c, {
     path(c, '#e7a662', p => { p.moveTo(dx - 5, dy - 3); p.lineTo(dx + (kicking ? 15 : -12), dy + 4); p.lineTo(dx + (kicking ? 7 : -1), dy + 8); p.lineTo(dx + (kicking ? 17 : 7), dy + 12); p.lineTo(dx + 4, dy + 10); p.closePath(); }, '#c98550', .8);
   }
   c.restore();
-  ellipse(c, -17, 7, 38, 30 + bite * 2, gradient(c, -20, 38, '#fffaf0', '#dce6d0'), -.16);
+  ellipse(c, -17, 7, 38, 30 + bite * 2, gradient(c, -20, 38, ...fe.body), -.16);
   c.save(); headPose();
-  path(c, gradient(c, -57, 21, '#fffdf2', '#ecedd7'), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
+  path(c, gradient(c, -57, 21, ...fe.head), p => { p.moveTo(1, 17); p.bezierCurveTo(-11, 3, -5, -15, -1, -39); p.bezierCurveTo(5, -69, 42, -65, 44, -40); p.bezierCurveTo(45, -25, 20, -15, 20, 4); p.quadraticCurveTo(17, 20, 1, 17); }, outline, 1.1);
   // Pip's tousled crown is his main character mark at every rendered scale.
   // (Under the sailor cap the crown is tucked away.)
-  if (outfit !== 'sailor') path(c, '#fffdf2', p => { p.moveTo(4, -56); p.quadraticCurveTo(-5, -70, 4, -73); p.quadraticCurveTo(10, -70, 12, -61); p.quadraticCurveTo(10, -77, 18, -75); p.quadraticCurveTo(25, -68, 21, -59); }, outline, 1);
+  if (outfit !== 'sailor') path(c, fe.head[0], p => { p.moveTo(4, -56); p.quadraticCurveTo(-5, -70, 4, -73); p.quadraticCurveTo(10, -70, 12, -61); p.quadraticCurveTo(10, -77, 18, -75); p.quadraticCurveTo(25, -68, 21, -59); }, outline, 1);
   const pouch = p => { p.moveTo(37, -40); p.lineTo(91, -25); p.bezierCurveTo(72, -15 + bite * 11, 57, 7 + bite * 15 + fullness * 46 + wobble, 40, -7); p.quadraticCurveTo(31, -18, 37, -40); };
-  path(c, gradient(c, -35, 8, '#f3c574', '#dc9758'), pouch, '#bd774b', 1.1);
-  path(c, '#f8d79055', p => { p.moveTo(42, -31); p.quadraticCurveTo(63, -23, 82, -23); p.quadraticCurveTo(64, -14, 47, -9); p.quadraticCurveTo(39, -18, 42, -31); });
+  path(c, gradient(c, -35, 8, ...bk.pouch), pouch, bk.edge, 1.1);
+  path(c, bk.shine, p => { p.moveTo(42, -31); p.quadraticCurveTo(63, -23, 82, -23); p.quadraticCurveTo(64, -14, 47, -9); p.quadraticCurveTo(39, -18, 42, -31); });
   // The catch wriggles inside the pouch; when it is nearly full a tail pokes out of the beak.
   c.save(); c.beginPath(); pouch(c); c.clip();
   if (fullness > .2) for (let i = 0; i < Math.ceil(fullness * 3); i++) {
@@ -169,9 +170,9 @@ export function pelican(c, {
     path(c, '#d68172', p => { p.moveTo(76, -28); p.lineTo(82, -42 + flap); p.quadraticCurveTo(84, -35, 89, -38 + flap); p.lineTo(83, -27); p.closePath(); }, '#af6f66', .8);
   }
   c.save(); c.translate(35, -40); c.rotate(-bite * .22); c.translate(-35, 40);
-  path(c, gradient(c, -44, -21, '#ffe19a', '#efb75f'), p => { p.moveTo(35, -43); p.quadraticCurveTo(67, -38, 94, -27); p.quadraticCurveTo(101, -22, 87, -22); p.lineTo(35, -30); p.closePath(); }, '#bd774b', 1);
+  path(c, gradient(c, -44, -21, ...bk.upper), p => { p.moveTo(35, -43); p.quadraticCurveTo(67, -38, 94, -27); p.quadraticCurveTo(101, -22, 87, -22); p.lineTo(35, -30); p.closePath(); }, bk.edge, 1);
   c.restore();
-  path(c, null, p => { p.moveTo(38, -30); p.quadraticCurveTo(66, -26, 90, -25); }, '#b8764c', 1.3);
+  path(c, null, p => { p.moveTo(38, -30); p.quadraticCurveTo(66, -26, 90, -25); }, bk.line, 1.3);
   if (lowAir) {
     ellipse(c, 25, -46, 4.8 + urgency, 5.8 + urgency, '#294b49'); ellipse(c, 25.5, -49.5, 1.5, 1.7, '#fffdf1');
     path(c, null, p => { p.moveTo(18, -54 - urgency * 2); p.lineTo(32, -51 + urgency); }, '#8f765f', 1.8);
@@ -198,10 +199,10 @@ export function pelican(c, {
   const dive = reducedMotion ? 0 : expression.dive || 0, rise = reducedMotion ? 0 : expression.rise || 0;
   const strokeBeat = dive * Math.pow(Math.max(0, Math.sin(t * 4.2)), 4);
   c.save(); c.translate(-12, 5); c.rotate(-strokeBeat * 1.05 - rise * .35); c.scale(.8 + strokeBeat * .5 + rise * .2, .6 + strokeBeat * .45 + rise * .25);
-  path(c, gradient(c, 0, 35, '#f3f5e4', '#ccdcca'), p => { p.moveTo(-35, -3); p.bezierCurveTo(-16, -7, 0, 7, -5, 22); p.quadraticCurveTo(-14, 32, -23, 26); p.quadraticCurveTo(-37, 25, -43, 12); p.quadraticCurveTo(-48, 3, -35, -3); }, outline, 1);
-  for (let i = 0; i < 4; i++) path(c, null, p => { p.moveTo(-36 + i * 8, 10); p.quadraticCurveTo(-31 + i * 8, 19, -25 + i * 7, 21); }, i === 3 ? '#b4c9b7' : '#c1d3c0', 1.1);
+  path(c, gradient(c, 0, 35, ...fe.wing), p => { p.moveTo(-35, -3); p.bezierCurveTo(-16, -7, 0, 7, -5, 22); p.quadraticCurveTo(-14, 32, -23, 26); p.quadraticCurveTo(-37, 25, -43, 12); p.quadraticCurveTo(-48, 3, -35, -3); }, outline, 1);
+  for (let i = 0; i < 4; i++) path(c, null, p => { p.moveTo(-36 + i * 8, 10); p.quadraticCurveTo(-31 + i * 8, 19, -25 + i * 7, 21); }, i === 3 ? fe.lines[1] : fe.lines[0], 1.1);
   c.restore();
-  } else pelicanWing(c, wingLift, wingFold, false);
+  } else pelicanWing(c, wingLift, wingFold, false, fe);
   if (!wet && !reducedMotion && breach > 0) {
     // The big lift-off stroke flings the sea off the wings in a spray of drops.
     const u = 1 - clamp(breach / .6, 0, 1);
@@ -607,7 +608,9 @@ function rock(c, b, item, index, water, t, night, pink = false) {
   }
 }
 
-export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = false, fx = null) {
+export function drawWorld(c, game, mode, t, look, effects, reducedMotion = false, fx = null) {
+  // `look` is Pip's wardrobe: { outfit, plumage, beak }, or just an outfit name.
+  const { outfit = 'classic', plumage, beak } = typeof look === 'string' ? { outfit: look } : look || {};
   const menu = mode === 'menu';
   const water = menu ? 466 : WORLD.water;
   const d = menu ? (reducedMotion ? 0 : t * 12) : game.distance;
@@ -714,7 +717,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     }
     if (yawn > .5) { c.globalAlpha = (yawn - .5) * 2; c.fillStyle = '#7a8a9a'; c.font = "bold 14px 'Trebuchet MS'"; c.fillText('z', 300 + yawn * 6, y - 96 - yawn * 10); c.globalAlpha = 1; }
     pelican(c, {
-      x: 217, y, scale: 1.55, time: motion, tilt: -.06, outfit,
+      x: 217, y, scale: 1.55, time: motion, tilt: -.06, outfit, plumage, beak,
       happy: hop < 0 || (hearts > 0 && hearts < .7), gulp, reducedMotion,
       expression: { look, wink, yawn, shiver },
     });
@@ -906,7 +909,7 @@ export function drawWorld(c, game, mode, t, outfit, effects, reducedMotion = fal
     pelican(c, {
       x: p.feedX ?? p.x, y: p.y, scale: .76, time: motion,
       tilt: game.feeding ? -.12 + Math.sin(motion * 10) * .06 : playerTilt(p),
-      outfit, wet: p.wet, happy: game.feeding > 0 || p.gulp > .1 || fx?.joy > 0,
+      outfit, plumage, beak, wet: p.wet, happy: game.feeding > 0 || p.gulp > .1 || fx?.joy > 0,
       gulp: game.feeding ? .2 : p.gulp, breach: p.breach, cargo: game.cargo, breath: p.breath, reducedMotion,
       expression: {
         energy: game.energy, hurt: p.hurt, relief: p.relief, bump: p.bump, confused: p.confused, kick: p.kick,
